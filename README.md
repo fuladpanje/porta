@@ -120,81 +120,77 @@ DB_PASSWORD=
 
 ## نصب روی هاست cPanel
 
-> بدون نیاز به SSH! فقط فایل‌های آماده را دانلود و آپلود کنید.
+### مرحله ۱: بیلد محلی
 
-### مرحله ۱: دانلود فایل‌های آماده
+روی کامپیوترت این دستورات رو اجرا کن:
 
-1. به صفحه [Release ها](https://github.com/fuladpanje/porta/releases) بروید
-2. آخرین Release را پیدا کنید و روی **Assets** کلیک کنید
-3. فایل **porta-deploy.zip** را دانلود کنید
-4. فایل ZIP را از حالت فشرده خارج کنید
+```powershell
+.\deploy.ps1
+```
 
-### مرحله ۲: آپلود فایل‌ها
+اسکریپت خودش فرانت‌اند رو بیلد می‌کنه، dependencyهای بک‌اند رو نصب می‌کنه، فایل `.env` رو میسازه و APP_KEY رو تولید می‌کنه.
 
-1. وارد **cPanel** شوید
-2. به **File Manager** بروید
-3. به پوشه دامنه خود بروید (مثلاً `public_html/porta.fuladpanjeh.ir/`)
-4. محتویات پوشه `deploy/` را اینجا آپلود کنید
+### مرحله ۲: تنظیم `.env`
+
+فایل `deploy/backend/.env` رو باز کن و اطلاعات دیتابیست رو پر کن:
+
+```
+DB_DATABASE=نام_دیتابیس
+DB_USERNAME=نام_کاربر_dیتابیس
+DB_PASSWORD=رمز_دیتابیس
+```
+(از **MySQL Databases** توی cPanel پیدا میشه)
+
+### مرحله ۳: آپلود فایل‌ها
+
+۱. وارد **cPanel** شو
+۲. به **File Manager** برو
+۳. به پوشه دامنه برو (مثلاً `public_html/`)
+۴. محتویات پوشه `deploy/` رو اینجا آپلود کن (نه خود پوشه deploy، بلکه فایل‌های داخلش)
 
 ساختار نهایی:
 
 ```
-public_html/porta.fuladpanjeh.ir/
-├── installer.php          ← نصب‌کننده (در ریشه برای دسترسی اولیه)
-└── backend/
-    ├── public/
-    │   ├── index.php      ← Laravel entry
-    │   ├── installer.php  ← همین نصب‌کننده همینجا هم هست
-    │   ├── .htaccess
-    │   └── assets/        ← فایل‌های فرانت‌اند
-    ├── app/
-    ├── vendor/
-    └── ...
+public_html/
+├── backend/
+│   ├── public/
+│   │   ├── index.php
+│   │   ├── .htaccess
+│   │   └── assets/
+│   ├── vendor/
+│   ├── app/
+│   └── ...
+├── database.sql
 ```
 
-### مرحله ۳: اجرای نصب‌کننده
+### مرحله ۴: ایمپورت دیتابیس
 
-> در این مرحله Document Root هنوز تنظیم شده نیست (روی پوشه ریشه‌ی آپلود).
+۱. cPanel → **phpMyAdmin**
+۲. روی دیتابیست کلیک کن
+۳. تب **SQL**
+۴. محتوای `database.sql` رو کپی و Paste کن
+۵. **Go** رو بزن
 
-مرورگر را به آدرس زیر باز کنید:
+### مرحله ۵: تغییر Document Root
 
-```
-https://porta.fuladpanjeh.ir/installer.php
-```
+cPanel → **Domains** → دامنه‌ات → **Manage**
 
-فرم را پر کنید. فرم در مرحله ۲، دقیقاً همان اطلاعاتی که در مرحله ساخت دیتابیس یادداشت کردید را وارد کنید:
-
-- **آدرس سرور دیتابیس** → `127.0.0.1`
-- **نام دیتابیس** → از MySQL Databases
-- **نام کاربری دیتابیس** → از MySQL Databases
-- **رمز عبور دیتابیس** → از MySQL Databases
-- **آدرس دامنه** → `porta.fuladpanjeh.ir` (بدون https://)
-- **نام مدیر** → نام دلخواه
-- **ایمیل مدیر** → ایمیل دلخواه
-- **رمز عبور مدیر** → حداقل ۸ کاراکتر
-
-دکمه **نصب کن** را بزنید. تمام!
-
-### مرحله ۴: تغییر Document Root
-
-**بعد از نصب موفق**، به cPanel → **Domains** بروید و Document Root را عوض کنید به:
+Document Root رو عوض کن به:
 
 ```
-public_html/porta.fuladpanjeh.ir/backend/public
+public_html/backend/public
 ```
 
-(برای دامنه اصلی: `public_html/backend/public`)
+### مرحله ۶: تنظیم پرمیشن‌ها
 
-### مرحله ۵: حذف نصب‌کننده
+توی File Manager:
+- `storage/` → راست کلیک → **Permissions** → `755`
+- `bootstrap/cache/` → راست کلیک → **Permissions** → `755`
 
-**مهم:** فایل `installer.php` را از دو مکان حذف کنید:
-- پوشه ریشه (`public_html/porta.fuladpanjeh.ir/installer.php`)
-- داخل `backend/public/`
-
-### مرحله ۶: تست
+### مرحله ۷: تست
 
 ```
-https://porta.fuladpanjeh.ir/
+https://porto.fuladpanjeh.ir/
 ```
 
 باید سایت نمایش داده شود. 🎉
@@ -282,8 +278,8 @@ porta/
 │
 ├── deploy.bat                  # اسکریپت deploy ویندوز
 ├── deploy.ps1                  # اسکریپت deploy PowerShell
+├── database.sql                # فایل SQL برای ایمپورت دیتابیس
 ├── install.sh                  # اسکریپت deploy لینوکس
-├── installer.php               # نصب‌کننده وب (بدون SSH)
 ├── porta-scr.jpg               # اسکرین‌شات سایت
 ├── porta-deploy.zip            # بسته آماده استقرار
 ├── setup.bat                   # راه‌اندازی محلی ویندوز

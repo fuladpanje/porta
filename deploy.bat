@@ -78,17 +78,46 @@ mkdir deploy
 echo Copying backend...
 xcopy backend deploy\backend\ /E /I /H /Q /Y
 
-:: Copy frontend dist into backend/public
+:: Copy frontend dist into public
 echo Merging frontend into public...
 xcopy frontend\dist\* deploy\backend\public\ /E /I /H /Q /Y
 
-:: Copy installer to root
-copy installer.php deploy\installer.php
+:: Copy database.sql
+if exist database.sql (
+    copy database.sql deploy\database.sql
+)
 
 :: Remove test files and logs
 del /q deploy\backend\test_*.php 2>nul
 del /q deploy\backend\php_server*.log 2>nul
 rmdir /s /q deploy\backend\tests 2>nul
+
+:: Generate .env with APP_KEY
+echo Generating .env...
+cd deploy\backend
+for /f "tokens=*" %%i in ('php artisan key:generate --show') do set APP_KEY=%%i
+cd ..\..
+echo APP_NAME=Porta> deploy\backend\.env
+echo APP_ENV=production>> deploy\backend\.env
+echo APP_KEY=%APP_KEY%>> deploy\backend\.env
+echo APP_DEBUG=false>> deploy\backend\.env
+echo APP_URL=https://yourdomain.com>> deploy\backend\.env
+echo.>> deploy\backend\.env
+echo DB_CONNECTION=mysql>> deploy\backend\.env
+echo DB_HOST=127.0.0.1>> deploy\backend\.env
+echo DB_PORT=3306>> deploy\backend\.env
+echo DB_DATABASE=YOUR_DB_NAME>> deploy\backend\.env
+echo DB_USERNAME=YOUR_DB_USER>> deploy\backend\.env
+echo DB_PASSWORD=YOUR_DB_PASSWORD>> deploy\backend\.env
+echo.>> deploy\backend\.env
+echo BROADCAST_DRIVER=log>> deploy\backend\.env
+echo CACHE_DRIVER=file>> deploy\backend\.env
+echo FILESYSTEM_DISK=local>> deploy\backend\.env
+echo QUEUE_CONNECTION=sync>> deploy\backend\.env
+echo SESSION_DRIVER=database>> deploy\backend\.env
+echo SESSION_LIFETIME=120>> deploy\backend\.env
+echo.>> deploy\backend\.env
+echo BRS_API_KEY=>> deploy\backend\.env
 
 echo [DONE] Deployment package created in deploy\ folder
 echo.
@@ -97,35 +126,12 @@ echo ========================================
 echo   INSTRUCTIONS:
 echo ========================================
 echo.
-echo   1. Upload EVERYTHING inside deploy\ folder
-echo      (including installer.php) to public_html/
-echo.
-echo   2. The folder structure on server should be:
-echo      public_html/
-echo      ├── installer.php      (NEW!)
-echo      ├── backend/
-echo      │   ├── index.php
-echo      │   ├── .htaccess
-echo      │   ├── app/
-echo      │   ├── config/
-echo      │   ├── database/
-echo      │   ├── public/        (frontend files)
-echo      │   ├── routes/
-echo      │   ├── storage/
-echo      │   └── vendor/
-echo.
-echo   3. In cPanel, set Document Root to:
-echo      public_html/backend/public
-echo      (or yourdomain.com/backend/public)
-echo.
-echo   4. Open browser and go to:
-echo      https://yourdomain.com/installer.php
-echo.
-echo   5. Fill in the form and click Install!
-echo      (No SSH needed!)
-echo.
-echo   6. After install, DELETE installer.php!
-echo.
-echo   DONE! Visit your domain.
+echo   1. Edit deploy\backend\.env with your DB info
+echo   2. Zip everything from deploy\ folder
+echo   3. Upload ZIP to cPanel File Manager -> public_html/
+echo   4. Extract ZIP in public_html/
+echo   5. Import database.sql in phpMyAdmin
+echo   6. Set Document Root to: public_html/backend/public
+echo   7. Set storage/ and bootstrap/cache/ permissions to 755
 echo.
 pause

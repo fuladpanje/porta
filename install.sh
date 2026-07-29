@@ -88,8 +88,10 @@ cp -r backend "$DEPLOY_DIR/backend"
 # Copy frontend dist into public
 cp -r frontend/dist/* "$DEPLOY_DIR/backend/public/"
 
-# Copy installer to root
-cp installer.php "$DEPLOY_DIR/installer.php"
+# Copy database.sql
+if [ -f database.sql ]; then
+    cp database.sql "$DEPLOY_DIR/database.sql"
+fi
 
 # Remove unnecessary files
 rm -rf "$DEPLOY_DIR/backend/tests"
@@ -146,16 +148,21 @@ echo "   (or yourdomain.com/backend/public)"
 echo ""
 echo -e "${YELLOW}2. Upload Files:${NC}"
 echo "   - Upload EVERYTHING inside deploy/ to public_html/"
-echo "   - Including installer.php"
+echo "   - Including database.sql"
 echo ""
-echo -e "${YELLOW}3. Open Browser:${NC}"
-echo "   - Go to: https://$DOMAIN/installer.php"
-echo "   - Fill in the form and click Install!"
-echo "   - NO SSH NEEDED!"
+echo -e "${YELLOW}3. Import database.sql in phpMyAdmin:${NC}"
+echo "   - Go to phpMyAdmin → select database → SQL tab → paste database.sql"
 echo ""
-echo -e "${YELLOW}4. After Install:${NC}"
-echo "   - DELETE installer.php from server"
-echo "   - Visit your site!"
+echo -e "${YELLOW}4. Edit deploy/backend/.env on server (or before zipping):${NC}"
+echo "   - Set DB_DATABASE, DB_USERNAME, DB_PASSWORD"
+echo "   - Set APP_URL to your domain"
+echo ""
+echo -e "${YELLOW}5. Set Document Root${NC}"
+echo "   - public_html/backend/public"
+echo ""
+echo -e "${YELLOW}6. Set permissions${NC}"
+echo "   - storage/ → 755"
+echo "   - bootstrap/cache/ → 755"
 echo ""
 echo -e "${GREEN}Done! 🚀${NC}"
 echo ""
