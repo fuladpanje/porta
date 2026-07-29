@@ -60,6 +60,7 @@
 1. به صفحه [Release ها](https://github.com/fuladpanje/porta/releases) بروید
 2. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
 3. فایل ZIP را از حالت فشرده خارج کنید. محتوای پوشه `deploy/` آماده است.
+4. فایل `deploy/backend/.env` رو باز کن و `APP_URL` و `SANCTUM_STATEFUL_DOMAINS` رو به دامنه خودت عوض کن. همچنین `DB_DATABASE`، `DB_USERNAME`، `DB_PASSWORD` رو پر کن.
 
 ### ساخت خودت (برای توسعه‌دهندگان)
 
@@ -68,7 +69,7 @@
 ```powershell
 .\deploy.ps1
 ```
-بعد فایل‌های داخل `deploy/` رو ZIP کن و در صفحه Release ضمیم کن.
+اگه نام دامنه رو نداری، `Enter` بزن (پیش‌فرض `yourdomain.com`). بعد فایل‌های داخل `deploy/` رو ZIP کن و در صفحه Release ضمیم کن.
 
 ## نصب روی هاست cPanel
 

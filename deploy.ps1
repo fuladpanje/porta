@@ -18,8 +18,8 @@ if (-not (Test-Command "node"))  { Write-Host "[ERROR] Node.js not found" -Foreg
 Write-Host "[OK] All dependencies found" -ForegroundColor Green
 Write-Host ""
 
-$DOMAIN = Read-Host "Enter your domain (e.g., mysite.com)"
-if ([string]::IsNullOrEmpty($DOMAIN)) { Write-Host "[ERROR] Domain cannot be empty" -ForegroundColor Red; exit 1 }
+$DOMAIN = Read-Host "Enter your domain (e.g., mysite.com) [Enter for yourdomain.com]"
+if ([string]::IsNullOrEmpty($DOMAIN)) { $DOMAIN = "yourdomain.com" }
 
 Write-Host "[INFO] Domain: $DOMAIN" -ForegroundColor Cyan
 Write-Host ""
