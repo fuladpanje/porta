@@ -229,10 +229,10 @@ if ($STEP === 3) {
             $ERROR = 'اتصال به دیتابیس ناموفق بود.';
             $STEP = 2;
         } else {
-                    // Build errors string to collect all issues
-        $errs = [];
+            // Build errors string to collect all issues
+            $errs = [];
 
-        // 1. Run migrations
+            // 1. Run migrations
         try { runMigrations($pdo); } catch (Exception $e) { $errs[] = 'Migration failed: ' . $e->getMessage(); }
 
         // 2. Generate APP_KEY
@@ -263,7 +263,7 @@ if ($STEP === 3) {
         ];
         if (!writeEnvFile($envData)) { $errs[] = 'Failed to write .env file'; }
 
-// 4. Create admin user
+        // 4. Create admin user
         try {
             $hash = password_hash($data['admin_pass'], PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO `users` (`name`, `email`, `password`, `created_at`, `updated_at`) VALUES (?, ?, ?, NOW(), NOW())");
@@ -271,26 +271,25 @@ if ($STEP === 3) {
         } catch (Exception $e) { $errs[] = 'Failed to create admin: ' . $e->getMessage(); }
 
         // 5. Set permissions (skip vendor to avoid timeout)
-            $storagePath = __DIR__ . '/backend/storage';
-            $cachePath = __DIR__ . '/backend/bootstrap/cache';
-            foreach ([$storagePath, $cachePath] as $p) {
-                if (is_dir($p)) @chmod($p, 0755);
-            }
-            $dirs = [$storagePath . '/framework', $storagePath . '/logs', $cachePath];
-            foreach ($dirs as $d) { if (is_dir($d)) @chmod($d, 0755); }
+        $storagePath = __DIR__ . '/backend/storage';
+        $cachePath = __DIR__ . '/backend/bootstrap/cache';
+        foreach ([$storagePath, $cachePath] as $p) {
+            if (is_dir($p)) @chmod($p, 0755);
+        }
+        $dirs = [$storagePath . '/framework', $storagePath . '/logs', $cachePath];
+        foreach ($dirs as $d) { if (is_dir($d)) @chmod($d, 0755); }
 
-            // 6. Delete installer
-            if (!empty($errs)) {
-                $ERROR = 'Installation completed with errors: ' . implode(' | ', $errs);
-            } else {
-                $SUCCESS = 'نصب با موفقیت انجام شد!';
-                header('Location: installer.php?step=4');
-                exit;
-            }
+        // 6. Handle result
+        if (!empty($errs)) {
+            $ERROR = 'Installation completed with errors: ' . implode(' | ', $errs);
+        } else {
+            $SUCCESS = 'نصب با موفقیت انجام شد!';
+            header('Location: installer.php?step=4');
+            exit;
+        }
         }
     }
 }
-
 function chmodRecursive($dir, $mode) {
     foreach (scandir($dir) as $item) {
         if ($item === '.' || $item === '..') continue;
@@ -709,10 +708,14 @@ foreach ($requirements as $req) {
 
         <!-- STEP 3: Installing -->
         <?php elseif ($STEP === 3): ?>
+            <form method="POST" action="installer.php?step=3" id="autoInstall">
+                <input type="hidden" name="run" value="1">
+            </form>
             <div style="text-align:center;padding:40px 0">
                 <div style="font-size:3rem;animation:pulse 1s infinite">⚙️</div>
                 <p style="margin-top:16px;color:rgba(255,255,255,0.7)">در حال نصب...</p>
             </div>
+            <script>document.getElementById('autoInstall').submit();</script>
 
         <!-- STEP 4: Success -->
         <?php elseif ($STEP === 4): ?>
