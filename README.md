@@ -5,11 +5,7 @@
 <h1 align="center">پورتا | Porta</h1>
 
 <p align="center">
-  یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران. محاسبه سود و زیان، سطوح مقاومت و حمایت، نمودار قیمت و بسیاری امکانات دیگر.
-</p>
-
-<p align="center">
-  <img src="porta-scr.jpg" alt="Porta Screenshot" width="100%">
+  پورتفولیوی هوشمند سهام بورس ایران
 </p>
 
 <p align="center">
@@ -26,6 +22,10 @@
 <p align="center">
   یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران.
   محاسبه سود و زیان، سطوح مقاومت و حمایت، نمودار قیمت و بسیاری امکانات دیگر.
+</p>
+
+<p align="center">
+  <img src="porta-scr.jpg" alt="Porta Screenshot" width="100%">
 </p>
 
 <p align="center">
@@ -71,17 +71,6 @@
 2. روی دکمه **Code** کلیک کنید
 3. گزینه **Download ZIP** را انتخاب کنید
 4. فایل دانلود شده را از حالت فشرده خارج کنید
-
-## دریافت API Key از BRS
-
-برای استفاده از قابلیت بروزرسانی خودکار قیمت‌ها، باید API Key از سایت [brsapi.ir](https://brsapi.ir) دریافت کنید:
-
-1. به سایت [brsapi.ir](https://brsapi.ir) بروید
-2. ثبت‌نام کنید
-3. به بخش **پنل کاربری** بروید
-4. API Key خود را کپی کنید
-5. در پنل مدیریت پورتا به مسیر **Settings → API Keys** بروید
-6. کلید را اضافه کنید و فعال کنید
 
 ## نصب سریع
 
@@ -144,79 +133,74 @@ DB_PASSWORD=
 
 1. وارد **cPanel** شوید
 2. به **File Manager** بروید
-3. محتویات پوشه `deploy/` را در `public_html/` آپلود کنید
-4. ساختار پوشه‌ها باید اینطور باشد:
+3. به پوشه دامنه خود بروید (مثلاً `public_html/porta.fuladpanjeh.ir/`)
+4. محتویات پوشه `deploy/` را اینجا آپلود کنید
+
+ساختار نهایی:
 
 ```
-public_html/
-├── installer.php          ← فایل نصب وب
-└── backend/
-    ├── index.php
-    ├── .htaccess
-    ├── app/
-    ├── config/
-    ├── database/
-    ├── public/             ← فایل‌های فرانت‌اند
-    ├── routes/
-    ├── storage/
-    └── vendor/
+public_html/porta.fuladpanjeh.ir/
+├── backend/
+│   ├── public/          ← Document Root باید اینجا باشه
+│   │   ├── index.php    ← Laravel entry
+│   │   ├── installer.php ← نصب‌کننده (هم‌جا!)
+│   │   ├── .htaccess
+│   │   └── assets/      ← فایل‌های فرانت‌اند
+│   ├── app/
+│   ├── vendor/
+│   └── ...
 ```
 
-### مرحله ۳: ساخت دیتابیس
+### مرحله ۳: تنظیم Document Root
 
-در cPanel به **MySQL Databases** بروید. اطلاعات زیر را پیدا و یادداشت کنید:
-
-| اطلاعات | کجا پیدا کنید |
-|----------|---------------|
-| **نام دیتابیس** | ابتدای نام دیتابیس (مثلاً `userna57_mydb`) |
-| **نام کاربری** | ابتدای نام کاربر دیتابیس (مثلاً `userna57_myuser`) |
-| **رمز عبور** | رمزی که هنگام ساخت کاربر تعیین کردید |
-
-هم دیتابیس و هم کاربر را به هم **Assign** کنید و دسترسی **ALL PRIVILEGES** بدهید.
-
-### مرحله ۴: اجرای نصب‌کننده
-
-> ⚠️ در این مرحله Document Root هنوز تنظیم شده نیست (روی پوشه ریشه‌ی آپلود).
-
-مرورگر را به آدرس زیر باز کنید:
-
-```
-https://yourdomain.com/installer.php
-```
-
-فرم را پر کنید. در مرحله ۲ فرم، دقیقاً همان اطلاعاتی که بالا یادداشت کردید را وارد کنید:
-
-- **نام دیتابیس** → از MySQL Databases
-- **نام کاربری** → از MySQL Databases  
-- **رمز عبور** → رمزی که هنگام ساخت تعیین کردید
-- **آدرس دامنه** → دامنه خودتان (بدون https://)
-- **حساب مدیر** → نام، ایمیل و رمز عبور دلخواه
-
-دکمه **نصب کن** را بزنید. تمام!
-
-### مرحله ۵: تغییر Document Root
-
-**بعد از نصب موفق**، به cPanel → **Domains** بروید و Document Root را عوض کنید:
-
-```
-public_html/YOUR_DOMAIN_FOLDER/backend/public
-```
-
-مثلاً برای `porta.fuladpanjeh.ir`:
+در cPanel به بخش **Domains** بروید، دامنه خود را پیدا کنید و **Document Root** را روی:
 
 ```
 public_html/porta.fuladpanjeh.ir/backend/public
 ```
 
-اگر دامنه اصلی (main/primary domain) هستید:
+تنظیم کنید. (برای دامنه اصلی: `public_html/backend/public`)
+
+### مرحله ۴: ساخت دیتابیس
+
+در cPanel به **MySQL Databases** بروید:
+
+1. یک دیتابیس جدید بسازید
+2. یک کاربر جدید بسازید و به دیتابیس اضافه کنید
+3. دسترسی **ALL PRIVILEGES** بدهید
+4. اطلاعات دیتابیس را یادداشت کنید (نام دیتابیس، نام کاربری، رمز عبور)
+
+### مرحله ۵: اجرای نصب‌کننده
+
+مرورگر را به آدرس زیر باز کنید:
 
 ```
-public_html/backend/public
+https://porta.fuladpanjeh.ir/installer.php
 ```
+
+فرم را پر کنید:
+
+- **آدرس دامنه** → `porta.fuladpanjeh.ir` (بدون https://)
+- **آدرس سرور دیتابیس** → `127.0.0.1`
+- **نام دیتابیس** → از مرحله ۴
+- **نام کاربری دیتابیس** → از مرحله ۴
+- **رمز عبور دیتابیس** → از مرحله ۴
+- **نام مدیر** → نام دلخواه
+- **ایمیل مدیر** → ایمیل دلخواه
+- **رمز عبور مدیر** → حداقل ۸ کاراکتر
+
+دکمه **نصب کن** را بزنید. تمام!
 
 ### مرحله ۶: حذف نصب‌کننده
 
-**مهم:** بعد از تغییر Document Root، فایل `installer.php` را از روی سرور حذف کنید.
+**مهم:** بعد از نصب موفق، فایل `installer.php` داخل `backend/public/` را از سرور حذف کنید.
+
+### مرحله ۷: تست
+
+```
+https://porta.fuladpanjeh.ir/
+```
+باید سایت نمایش داده شود. 🎉
 
 ## ساخت و توسعه
 
@@ -239,6 +223,19 @@ php artisan migrate
 php artisan migrate:fresh --seed   # با داده تستی
 ```
 
+### ساخت فایل deploy و Release
+
+```bash
+# ویندوز
+.\deploy.ps1
+
+# لینوکس/Mac
+chmod +x install.sh
+./install.sh
+```
+
+سپس فایل‌های داخل پوشه `deploy/` را به صورت ZIP فشرده کنید و در صفحه [Releases](https://github.com/fuladpanje/porta/releases) یک Release جدید بسازید. فایل ZIP را به عنوان Asset ضمیم کنید.
+
 ## ساختار پروژه
 
 ```
@@ -259,7 +256,7 @@ porta/
 │   ├── config/
 │   ├── database/migrations/    # 13 migration
 │   ├── routes/api.php          # مسیرهای API
-│   └── public/                 # نقطه ورود Laravel
+│   └── public/                 # نقطه ورود Laravel + فرانت‌اند
 │
 ├── frontend/                   # React + Vite + Tailwind
 │   ├── src/
@@ -290,7 +287,10 @@ porta/
 ├── deploy.ps1                  # اسکریپت deploy PowerShell
 ├── install.sh                  # اسکریپت deploy لینوکس
 ├── installer.php               # نصب‌کننده وب (بدون SSH)
-└── setup.bat                   # راه‌اندازی محلی ویندوز
+├── porta-scr.jpg               # اسکرین‌شات سایت
+├── porta-deploy.zip            # بسته آماده استقرار
+├── setup.bat                   # راه‌اندازی محلی ویندوز
+└── .env.example                # متغیرهای محیطی نمونه
 ```
 
 ## API
@@ -308,6 +308,17 @@ porta/
 | `/api/stocks/refresh` | POST | بروزرسانی قیمت‌ها |
 | `/api/stocks/symbols?q=` | GET | جستجوی نماد |
 | `/api/api-keys` | GET/POST | مدیریت کلیدهای API |
+
+## دریافت API Key از BRS
+
+برای استفاده از قابلیت بروزرسانی خودکار قیمت‌ها، باید API Key از سایت [brsapi.ir](https://brsapi.ir) دریافت کنید:
+
+1. به سایت [brsapi.ir](https://brsapi.ir) بروید
+2. ثبت‌نام کنید
+3. به بخش **پنل کاربری** بروید
+4. API Key خود را کپی کنید
+5. در پنل مدیریت پورتا به مسیر **Settings → API Keys** بروید
+6. کلید را اضافه کنید و فعال کنید
 
 ## تکنولوژی‌ها
 
