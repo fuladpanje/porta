@@ -74,15 +74,6 @@ Remove-Item -Path "$DEPLOY\backend\.env.*" -Force -ErrorAction SilentlyContinue
 # Remove git files
 Remove-Item -Path "$DEPLOY\backend\.git" -Recurse -Force -ErrorAction SilentlyContinue
 
-# Create root .htaccess
-$htaccessRoot = @"
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/`$1 [L]
-</IfModule>
-"@
-Set-Content -Path "$DEPLOY\backend\.htaccess" -Value $htaccessRoot
-
 # Create public .htaccess
 $htaccessPublic = @"
 <IfModule mod_rewrite.c>

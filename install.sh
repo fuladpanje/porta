@@ -96,14 +96,8 @@ rm -rf "$DEPLOY_DIR/backend/tests"
 rm -rf "$DEPLOY_DIR/backend/.git"
 rm -rf "$DEPLOY_DIR/backend/test_*.php"
 rm -rf "$DEPLOY_DIR/backend/php_server*.log"
-
-# Create root .htaccess
-cat > "$DEPLOY_DIR/backend/.htaccess" << 'EOF'
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
-EOF
+rm -f "$DEPLOY_DIR/backend/.env"
+rm -f "$DEPLOY_DIR/backend/.env.*"
 
 # Create public .htaccess
 cat > "$DEPLOY_DIR/backend/public/.htaccess" << 'EOF'
