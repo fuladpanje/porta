@@ -34,3 +34,6 @@ deploy/
 
 # Error logs
 php_server.error
+
+# Release archive
+*.zip
