@@ -55,69 +55,38 @@
 
 ## دانلود
 
-### آماده استقرار
-
 1. به صفحه [Release ها](https://github.com/fuladpanje/porta/releases) بروید
-2. آخرین Release را پیدا کنید
-3. فایل **porta-deploy.zip** را دانلود کنید
-4. فایل ZIP را از حالت فشرده خارج کنید
+2. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
 
-اگر می‌خواهید روی سرور خودتان بیلد کنید، کد را کلون کنید و اسکریپت‌های deploy را اجرا کنید.
-
-### کلون کردن برای توسعه
-
-1. به صفحه اصلی [ریپوزیتوری](https://github.com/fuladpanje/porta) بروید
-2. روی دکمه **Code** کلیک کنید
-3. گزینه **Download ZIP** را انتخاب کنید
-4. فایل دانلود شده را از حالت فشرده خارج کنید
-
-## نصب سریع
-
-### پیش‌نیازها
-
-- PHP 8.2 یا بالاتر
-- Composer
-- Node.js 18+ و npm
-- MySQL
-
-### راه‌اندازی محلی (Development)
+برای ساخت محلی:
 
 ```bash
-# ۱. کلون کردن پروژه
 git clone https://github.com/fuladpanje/porta.git
 cd porta
-
-# ۲. نصب وابستگی‌های بک‌اند
-cd backend
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan serve --port=8000 &
-
-# ۳. نصب وابستگی‌های فرانت‌اند (پنجره جدید)
-cd frontend
-npm install
-npm run dev
+.\deploy.ps1
 ```
 
-اکنون مرورگر را به آدرس `http://localhost:5173` باز کنید.
+## نصب روی هاست cPanel
 
-### متغیرهای محیطی
+> بدون نیاز به SSH!
 
-فایل `.env` در پوشه `backend`:
+فایل‌های داخل پوشه `deploy/` رو آپلود کن به `public_html/` سایتت:
 
-```env
-APP_NAME=Porta
-APP_URL=http://localhost:8000
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_DATABASE=porta
-DB_USERNAME=root
-DB_PASSWORD=
+```
+public_html/
+├── backend/
+│   ├── public/   ← نقطه ورود Laravel
+│   └── ...
+└── database.sql  ← ایمپورت توی phpMyAdmin
 ```
 
-## ساخت و توسعه
+سپس:
+
+1. توی **phpMyAdmin** فایل `database.sql` رو ایمپورت کن
+2. **Document Root** رو عوض کن به `backend/public`
+3. پرمیشن `storage/` و `bootstrap/cache/` رو بذار `755`
+4. فایل `.env` رو با اطلاعات دیتابیست ویرایش کن
+5. تست کن 🎉
 
 ### دستورات مفید
 
