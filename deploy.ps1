@@ -56,7 +56,7 @@ New-Item -ItemType Directory -Path $DEPLOY | Out-Null
 # Copy backend
 Copy-Item -Path "backend" -Destination "$DEPLOY\backend" -Recurse
 
-# Copy frontend dist into public
+# Copy frontend dist into backend/public
 Copy-Item -Path "frontend\dist\*" -Destination "$DEPLOY\backend\public" -Recurse -Force
 
 # Copy installer to root
