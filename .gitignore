@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+backend/vendor/
+
+# Environment
+backend/.env
+
+# Logs
+backend/storage/logs/*.log
+php_server*.log
+
+# Cache
+backend/storage/framework/
+backend/bootstrap/cache/*.php
+
+# Build output
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+*.local
+
+# Deploy folder
+deploy/
+
+# Error logs
+php_server.error
