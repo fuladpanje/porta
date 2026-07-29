@@ -5,7 +5,11 @@
 <h1 align="center">پورتا | Porta</h1>
 
 <p align="center">
-  پورتفولیوی هوشمند سهام بورس ایران
+  یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران. محاسبه سود و زیان، سطوح مقاومت و حمایت، نمودار قیمت و بسیاری امکانات دیگر.
+</p>
+
+<p align="center">
+  <img src="porta-scr.jpg" alt="Porta Screenshot" width="100%">
 </p>
 
 <p align="center">
