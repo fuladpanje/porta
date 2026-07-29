@@ -67,6 +67,13 @@ Remove-Item -Path "$DEPLOY\backend\tests" -Recurse -Force -ErrorAction SilentlyC
 Remove-Item -Path "$DEPLOY\backend\test_*.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\php_server*.log" -Force -ErrorAction SilentlyContinue
 
+# Remove env files
+Remove-Item -Path "$DEPLOY\backend\.env" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$DEPLOY\backend\.env.*" -Force -ErrorAction SilentlyContinue
+
+# Remove git files
+Remove-Item -Path "$DEPLOY\backend\.git" -Recurse -Force -ErrorAction SilentlyContinue
+
 # Create root .htaccess
 $htaccessRoot = @"
 <IfModule mod_rewrite.c>
