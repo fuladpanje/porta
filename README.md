@@ -55,16 +55,20 @@
 
 ## دانلود
 
+### آماده استقرار (برای هاست cPanel)
+
 1. به صفحه [Release ها](https://github.com/fuladpanje/porta/releases) بروید
 2. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
+3. فایل ZIP را از حالت فشرده خارج کنید. محتوای پوشه `deploy/` آماده است.
 
-برای ساخت محلی:
+### ساخت خودت (برای توسعه‌دهندگان)
 
-```bash
-git clone https://github.com/fuladpanje/porta.git
-cd porta
+برای ساخت فایل `porta-deploy.zip` برای release بعدی:
+
+```powershell
 .\deploy.ps1
 ```
+بعد فایل‌های داخل `deploy/` رو ZIP کن و در صفحه Release ضمیم کن.
 
 ## نصب روی هاست cPanel
 
@@ -140,7 +144,7 @@ chmod +x install.sh
 ./install.sh
 ```
 
-سپس فایل‌های داخل پوشه `deploy/` را به صورت ZIP فشرده کنید و در صفحه [Releases](https://github.com/fuladpanje/porta/releases) یک Release جدید بسازید. فایل ZIP را به عنوان Asset ضمیم کنید.
+سپس فایل‌های داخل پوشه `deploy/` رو ZIP کن با نام `porta-deploy.zip` و در صفحه [Releases](https://github.com/fuladpanje/porta/releases) یک Release جدید بسازید. `porta-deploy.zip` رو به عنوان Asset ضمیم کن.
 
 ## ساختار پروژه
 
