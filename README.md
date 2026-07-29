@@ -55,10 +55,11 @@
 
 ## دانلود
 
-### آماده استقرار (برای هاست cPanel)
+### دانلود (برای هاست cPanel)
 
 1. به صفحه [Release ها](https://github.com/fuladpanje/porta/releases) بروید
 2. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
+3. فایل ZIP را از حالت فشرده خارج کنید و محتوایش رو آپلود کن به `public_html/` سایتت.
 
 ## نصب روی هاست cPanel
 
