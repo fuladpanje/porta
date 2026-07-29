@@ -83,7 +83,19 @@ public_html/
 سپس:
 
 1. توی **phpMyAdmin** فایل `database.sql` رو ایمپورت کن
-2. **Document Root** رو عوض کن به `backend/public`
+2. **Document Root** رو عوض کن به `backend/public` (راهنمای مسیر دقیق):
+
+   **دامنه اصلی** (مثلاً `porto.fuladpanjeh.ir`):
+   ```
+   public_html/porto.fuladpanjeh.ir/backend/public
+   ```
+
+   **ساب‌دامنه** (مثلاً `porto.fuladpanjeh.ir`):
+   ```
+   public_html/porto.fuladpanjeh.ir/backend/public
+   ```
+
+   یا ساده‌تر: هر مکانی که پوشه `backend/` آپلود شده، مسیرش رو اضافه کن `backend/public`. در cPanel فرم مستقیم بنویس.
 3. پرمیشن `storage/` و `bootstrap/cache/` رو بذار `755`
 4. فایل `.env` رو با اطلاعات دیتابیست ویرایش کن
 5. تست کن 🎉
