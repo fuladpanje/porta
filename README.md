@@ -77,8 +77,9 @@ public_html/
 
 سپس:
 
-1. توی **phpMyAdmin** فایل `database.sql` رو ایمپورت کن
-2. **Document Root** رو عوض کن به `backend/public` (راهنمای مسیر دقیق):
+1. توی cPanel یک دیتابیس بساز (MySQL Databases) و یک کاربر بهش اختصاص بده
+2. توی **phpMyAdmin** دیتابیس رو انتخاب کن و فایل `database.sql` رو ایمپورت کن
+3. **Document Root** رو عوض کن به `backend/public` (راهنمای مسیر دقیق):
 
    **دامنه اصلی** (مثلاً `example.com`):
    ```
@@ -91,8 +92,8 @@ public_html/
    ```
 
    یا ساده‌تر: هر مکانی که پوشه `backend/` آپلود شده، مسیرش رو اضافه کن `backend/public`. در cPanel فرم مستقیم بنویس.
-3. پرمیشن `storage/` و `bootstrap/cache/` رو بذار `755`
-4. فایل `.env` رو ویرایش کن (پیش‌فرض در `deploy/backend/.env`). دو تا چیز عوض کن:
+4. پرمیشن `storage/` و `bootstrap/cache/` رو بذار `755`
+5. فایل `.env` رو ویرایش کن (پیش‌فرض در `deploy/backend/.env`). دو تا چیز عوض کن:
 
    **اول:** اطلاعات دیتابیس (فقط این سه تا):
    ```env
