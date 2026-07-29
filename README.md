@@ -2,7 +2,7 @@
   <img src="frontend/public/favicon.svg" width="100" alt="Porta Logo">
 </p>
 
-<h1 align="center">Porta</h1>
+<h1 align="center">پورتا | Porta</h1>
 
 <p align="center">
   پورتفولیوی هوشمند سهام و ارز دیجیتال
@@ -49,6 +49,13 @@
 - واحد پول ریال/تومان
 - کارمزد خرید/فروش قابل تنظیم
 
+## دانلود
+
+1. به صفحه اصلی [ریپوزیتوری](https://github.com/fuladpanje/porta) بروید
+2. روی دکمه **Code** کلیک کنید
+3. گزینه **Download ZIP** را انتخاب کنید
+4. فایل دانلود شده را از حالت فشرده خارج کنید
+
 ## نصب سریع
 
 ### پیش‌نیازها
@@ -62,8 +69,8 @@
 
 ```bash
 # ۱. کلون کردن پروژه
-git clone https://github.com/fuladpanje/portfo.git
-cd portfo
+git clone https://github.com/fuladpanje/porta.git
+cd porta
 
 # ۲. نصب وابستگی‌های بک‌اند
 cd backend
@@ -200,7 +207,7 @@ chmod +x install.sh
 ## ساختار پروژه
 
 ```
-portfo/
+porta/
 ├── backend/                    # Laravel 11 API
 │   ├── app/
 │   │   ├── Http/Controllers/
