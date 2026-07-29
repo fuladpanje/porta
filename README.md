@@ -85,14 +85,14 @@ public_html/
 1. توی **phpMyAdmin** فایل `database.sql` رو ایمپورت کن
 2. **Document Root** رو عوض کن به `backend/public` (راهنمای مسیر دقیق):
 
-   **دامنه اصلی** (مثلاً `porto.fuladpanjeh.ir`):
+   **دامنه اصلی** (مثلاً `example.com`):
    ```
-   public_html/porto.fuladpanjeh.ir/backend/public
+   public_html/example.com/backend/public
    ```
 
-   **ساب‌دامنه** (مثلاً `porto.fuladpanjeh.ir`):
+   **ساب‌دامنه** (مثلاً `sub.example.com`):
    ```
-   public_html/porto.fuladpanjeh.ir/backend/public
+   public_html/sub.example.com/backend/public
    ```
 
    یا ساده‌تر: هر مکانی که پوشه `backend/` آپلود شده، مسیرش رو اضافه کن `backend/public`. در cPanel فرم مستقیم بنویس.
