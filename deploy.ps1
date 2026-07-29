@@ -55,6 +55,9 @@ Copy-Item -Path "frontend/dist/*" -Destination "$DEPLOY/backend/public" -Recurse
 
 Copy-Item -Path "installer.php" -Destination "$DEPLOY/backend/public/installer.php"
 
+# Also copy installer to root for initial access before Document Root change
+Copy-Item -Path "installer.php" -Destination "$DEPLOY/installer.php"
+
 Remove-Item -Path "$DEPLOY/backend/tests" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY/backend/test_*.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY/backend/php_server*.log" -Force -ErrorAction SilentlyContinue

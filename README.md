@@ -140,37 +140,21 @@ DB_PASSWORD=
 
 ```
 public_html/porta.fuladpanjeh.ir/
-├── backend/
-│   ├── public/          ← Document Root باید اینجا باشه
-│   │   ├── index.php    ← Laravel entry
-│   │   ├── installer.php ← نصب‌کننده (هم‌جا!)
-│   │   ├── .htaccess
-│   │   └── assets/      ← فایل‌های فرانت‌اند
-│   ├── app/
-│   ├── vendor/
-│   └── ...
+├── installer.php          ← نصب‌کننده (در ریشه برای دسترسی اولیه)
+└── backend/
+    ├── public/
+    │   ├── index.php      ← Laravel entry
+    │   ├── installer.php  ← همین نصب‌کننده همینجا هم هست
+    │   ├── .htaccess
+    │   └── assets/        ← فایل‌های فرانت‌اند
+    ├── app/
+    ├── vendor/
+    └── ...
 ```
 
-### مرحله ۳: تنظیم Document Root
+### مرحله ۳: اجرای نصب‌کننده
 
-در cPanel به بخش **Domains** بروید، دامنه خود را پیدا کنید و **Document Root** را روی:
-
-```
-public_html/porta.fuladpanjeh.ir/backend/public
-```
-
-تنظیم کنید. (برای دامنه اصلی: `public_html/backend/public`)
-
-### مرحله ۴: ساخت دیتابیس
-
-در cPanel به **MySQL Databases** بروید:
-
-1. یک دیتابیس جدید بسازید
-2. یک کاربر جدید بسازید و به دیتابیس اضافه کنید
-3. دسترسی **ALL PRIVILEGES** بدهید
-4. اطلاعات دیتابیس را یادداشت کنید (نام دیتابیس، نام کاربری، رمز عبور)
-
-### مرحله ۵: اجرای نصب‌کننده
+> در این مرحله Document Root هنوز تنظیم شده نیست (روی پوشه ریشه‌ی آپلود).
 
 مرورگر را به آدرس زیر باز کنید:
 
@@ -178,28 +162,41 @@ public_html/porta.fuladpanjeh.ir/backend/public
 https://porta.fuladpanjeh.ir/installer.php
 ```
 
-فرم را پر کنید:
+فرم را پر کنید. فرم در مرحله ۲، دقیقاً همان اطلاعاتی که در مرحله ساخت دیتابیس یادداشت کردید را وارد کنید:
 
-- **آدرس دامنه** → `porta.fuladpanjeh.ir` (بدون https://)
 - **آدرس سرور دیتابیس** → `127.0.0.1`
-- **نام دیتابیس** → از مرحله ۴
-- **نام کاربری دیتابیس** → از مرحله ۴
-- **رمز عبور دیتابیس** → از مرحله ۴
+- **نام دیتابیس** → از MySQL Databases
+- **نام کاربری دیتابیس** → از MySQL Databases
+- **رمز عبور دیتابیس** → از MySQL Databases
+- **آدرس دامنه** → `porta.fuladpanjeh.ir` (بدون https://)
 - **نام مدیر** → نام دلخواه
 - **ایمیل مدیر** → ایمیل دلخواه
 - **رمز عبور مدیر** → حداقل ۸ کاراکتر
 
 دکمه **نصب کن** را بزنید. تمام!
 
-### مرحله ۶: حذف نصب‌کننده
+### مرحله ۴: تغییر Document Root
 
-**مهم:** بعد از نصب موفق، فایل `installer.php` داخل `backend/public/` را از سرور حذف کنید.
+**بعد از نصب موفق**، به cPanel → **Domains** بروید و Document Root را عوض کنید به:
 
-### مرحله ۷: تست
+```
+public_html/porta.fuladpanjeh.ir/backend/public
+```
+
+(برای دامنه اصلی: `public_html/backend/public`)
+
+### مرحله ۵: حذف نصب‌کننده
+
+**مهم:** فایل `installer.php` را از دو مکان حذف کنید:
+- پوشه ریشه (`public_html/porta.fuladpanjeh.ir/installer.php`)
+- داخل `backend/public/`
+
+### مرحله ۶: تست
 
 ```
 https://porta.fuladpanjeh.ir/
 ```
+
 باید سایت نمایش داده شود. 🎉
 
 ## ساخت و توسعه
