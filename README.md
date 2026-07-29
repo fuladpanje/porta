@@ -223,19 +223,6 @@ php artisan migrate
 php artisan migrate:fresh --seed   # با داده تستی
 ```
 
-### ساخت فایل deploy و Release
-
-```bash
-# ویندوز
-.\deploy.ps1
-
-# لینوکس/Mac
-chmod +x install.sh
-./install.sh
-```
-
-سپس فایل‌های داخل پوشه `deploy/` را به صورت ZIP فشرده کنید و در صفحه [Releases](https://github.com/fuladpanje/porta/releases) یک Release جدید بسازید. فایل ZIP را به عنوان Asset ضمیم کنید.
-
 ## ساختار پروژه
 
 ```
