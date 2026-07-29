@@ -12,7 +12,6 @@
   <a href="#ویژگی‌ها">ویژگی‌ها</a> •
   <a href="#دانلود">دانلود</a> •
   <a href="#نصب-سریع">نصب سریع</a> •
-  <a href="#نصب-روی-hosting">هاست cPanel</a> •
   <a href="#ساخت-و-توسعه">توسعه</a> •
   <a href="#ساختار-پروژه">ساختار</a>
 </p>
@@ -56,7 +55,7 @@
 
 ## دانلود
 
-### آماده استقرار (برای هاست cPanel)
+### آماده استقرار
 
 1. به صفحه [Release ها](https://github.com/fuladpanje/porta/releases) بروید
 2. آخرین Release را پیدا کنید
@@ -117,83 +116,6 @@ DB_DATABASE=porta
 DB_USERNAME=root
 DB_PASSWORD=
 ```
-
-## نصب روی هاست cPanel
-
-### مرحله ۱: بیلد محلی
-
-روی کامپیوترت این دستورات رو اجرا کن:
-
-```powershell
-.\deploy.ps1
-```
-
-اسکریپت خودش فرانت‌اند رو بیلد می‌کنه، dependencyهای بک‌اند رو نصب می‌کنه، فایل `.env` رو میسازه و APP_KEY رو تولید می‌کنه.
-
-### مرحله ۲: تنظیم `.env`
-
-فایل `deploy/backend/.env` رو باز کن و اطلاعات دیتابیست رو پر کن:
-
-```
-DB_DATABASE=نام_دیتابیس
-DB_USERNAME=نام_کاربر_dیتابیس
-DB_PASSWORD=رمز_دیتابیس
-```
-(از **MySQL Databases** توی cPanel پیدا میشه)
-
-### مرحله ۳: آپلود فایل‌ها
-
-۱. وارد **cPanel** شو
-۲. به **File Manager** برو
-۳. به پوشه دامنه برو (مثلاً `public_html/`)
-۴. محتویات پوشه `deploy/` رو اینجا آپلود کن (نه خود پوشه deploy، بلکه فایل‌های داخلش)
-
-ساختار نهایی:
-
-```
-public_html/
-├── backend/
-│   ├── public/
-│   │   ├── index.php
-│   │   ├── .htaccess
-│   │   └── assets/
-│   ├── vendor/
-│   ├── app/
-│   └── ...
-├── database.sql
-```
-
-### مرحله ۴: ایمپورت دیتابیس
-
-۱. cPanel → **phpMyAdmin**
-۲. روی دیتابیست کلیک کن
-۳. تب **SQL**
-۴. محتوای `database.sql` رو کپی و Paste کن
-۵. **Go** رو بزن
-
-### مرحله ۵: تغییر Document Root
-
-cPanel → **Domains** → دامنه‌ات → **Manage**
-
-Document Root رو عوض کن به:
-
-```
-public_html/backend/public
-```
-
-### مرحله ۶: تنظیم پرمیشن‌ها
-
-توی File Manager:
-- `storage/` → راست کلیک → **Permissions** → `755`
-- `bootstrap/cache/` → راست کلیک → **Permissions** → `755`
-
-### مرحله ۷: تست
-
-```
-https://porto.fuladpanjeh.ir/
-```
-
-باید سایت نمایش داده شود. 🎉
 
 ## ساخت و توسعه
 
