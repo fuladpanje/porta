@@ -162,27 +162,7 @@ public_html/
     └── vendor/
 ```
 
-### مرحله ۳: تنظیم Document Root
-
-در cPanel به بخش **Domains** بروید، دامنه خود را پیدا کنید و **Document Root** را روی این مسیر تنظیم کنید:
-
-```
-public_html/YOUR_DOMAIN_FOLDER/backend/public
-```
-
-جای `YOUR_DOMAIN_FOLDER` اسم پوشه دامنه خود را بنویسید (معمولاً `subdomain.maindomain.com`). مثلاً برای `porta.fuladpanjeh.ir` این مسیر خواهد بود:
-
-```
-public_html/porta.fuladpanjeh.ir/backend/public
-```
-
-اگر دامنه اصلی (main/primary domain) هستید، مسیر به این شکل خواهد بود:
-
-```
-public_html/backend/public
-```
-
-### مرحله ۴: ساخت دیتابیس
+### مرحله ۳: ساخت دیتابیس
 
 در cPanel به **MySQL Databases** بروید. اطلاعات زیر را پیدا و یادداشت کنید:
 
@@ -194,7 +174,9 @@ public_html/backend/public
 
 هم دیتابیس و هم کاربر را به هم **Assign** کنید و دسترسی **ALL PRIVILEGES** بدهید.
 
-### مرحله ۵: اجرای نصب‌کننده
+### مرحله ۴: اجرای نصب‌کننده
+
+> ⚠️ در این مرحله Document Root هنوز تنظیم شده نیست (روی پوشه ریشه‌ی آپلود).
 
 مرورگر را به آدرس زیر باز کنید:
 
@@ -212,9 +194,29 @@ https://yourdomain.com/installer.php
 
 دکمه **نصب کن** را بزنید. تمام!
 
+### مرحله ۵: تغییر Document Root
+
+**بعد از نصب موفق**، به cPanel → **Domains** بروید و Document Root را عوض کنید:
+
+```
+public_html/YOUR_DOMAIN_FOLDER/backend/public
+```
+
+مثلاً برای `porta.fuladpanjeh.ir`:
+
+```
+public_html/porta.fuladpanjeh.ir/backend/public
+```
+
+اگر دامنه اصلی (main/primary domain) هستید:
+
+```
+public_html/backend/public
+```
+
 ### مرحله ۶: حذف نصب‌کننده
 
-**مهم:** بعد از نصب موفق، فایل `installer.php` را از روی سرور حذف کنید.
+**مهم:** بعد از تغییر Document Root، فایل `installer.php` را از روی سرور حذف کنید.
 
 ## ساخت و توسعه
 
