@@ -79,7 +79,7 @@ public_html/
 
 1. توی cPanel یک دیتابیس بساز (MySQL Databases) و یک کاربر بهش اختصاص بده
 2. توی **phpMyAdmin** دیتابیس رو انتخاب کن و فایل `database.sql` رو ایمپورت کن
-3. **Document Root** رو عوض کن به `backend/public` (راهنمای مسیر دقیق):
+3. مسیر Document Root رو عوض کن:
 
    **دامنه اصلی** (مثلاً `example.com`):
    ```
