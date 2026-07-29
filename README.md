@@ -164,13 +164,13 @@ public_html/
 
 ### مرحله ۳: تنظیم Document Root
 
-در cPanel به بخش **Domains** بروید و Document Root را روی:
+در cPanel به بخش **Domains** بروید، دامنه خود را پیدا کنید و **Document Root** را روی:
 
 ```
 public_html/backend/public
 ```
 
-تنظیم کنید.
+تنظیم کنید. این فقط یک بار انجام می‌شود.
 
 ### مرحله ۴: ساخت دیتابیس
 
