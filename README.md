@@ -93,12 +93,19 @@ public_html/
 
    یا ساده‌تر: هر مکانی که پوشه `backend/` آپلود شده، مسیرش رو اضافه کن `backend/public`. در cPanel فرم مستقیم بنویس.
 3. پرمیشن `storage/` و `bootstrap/cache/` رو بذار `755`
-4. فایل `.env` رو ویرایش کن (پیش‌فرض در `deploy/backend/.env`). فقط سه تا خط رو عوض کن:
+4. فایل `.env` رو ویرایش کن (پیش‌فرض در `deploy/backend/.env`). دو تا چیز عوض کن:
 
+   **اول:** اطلاعات دیتابیس (فقط این سه تا):
    ```env
    DB_DATABASE=نام_دیتابیس_توی_cPanel
    DB_USERNAME=نام_کاربر_dیتابیس
    DB_PASSWORD=رمز_دیتابیس
+   ```
+
+   **دوم:** نام دامنه خودت رو تغییر بده. این دو خط رو پیدا کن و عوض کن:
+   ```env
+   APP_URL=https://example.com
+   SANCTUM_STATEFUL_DOMAINS=example.com
    ```
    اطلاعات دیتابیس رو از بخش **MySQL Databases** توی cPanel پیدا می‌کنی. بقیه فیلدها رو دست نزن.
 
