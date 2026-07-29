@@ -181,6 +181,7 @@ function runMigrations($pdo) {
 
 // --- Process Form Submission ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    set_time_limit(120);
     if ($STEP === 2) {
         $host = trim($_POST['db_host'] ?? '127.0.0.1');
         $dbname = trim($_POST['db_name'] ?? '');
@@ -215,8 +216,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($STEP === 3) {
-        $data = $_SESSION['install'] ?? null;
+if ($STEP === 3) {
+    set_time_limit(60);
+    $data = $_SESSION['install'] ?? null;
         if (!$data) {
             header('Location: installer.php?step=1');
             exit;
@@ -227,57 +229,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ERROR = 'اتصال به دیتابیس ناموفق بود.';
             $STEP = 2;
         } else {
-            // 1. Run migrations
-            runMigrations($pdo);
+                    // Build errors string to collect all issues
+        $errs = [];
 
-            // 2. Generate APP_KEY
-            $appKey = generateAppKey();
+        // 1. Run migrations
+        try { runMigrations($pdo); } catch (Exception $e) { $errs[] = 'Migration failed: ' . $e->getMessage(); }
 
-            // 3. Write .env
-            $envData = [
-                'APP_NAME' => 'Porta',
-                'APP_ENV' => 'production',
-                'APP_KEY' => $appKey,
-                'APP_DEBUG' => 'false',
-                'APP_URL' => 'https://' . $data['domain'],
-                'DB_CONNECTION' => 'mysql',
-                'DB_HOST' => $data['host'],
-                'DB_PORT' => '3306',
-                'DB_DATABASE' => $data['db_name'],
-                'DB_USERNAME' => $data['db_user'],
-                'DB_PASSWORD' => $data['db_pass'],
-                'BROADCAST_DRIVER' => 'log',
-                'CACHE_DRIVER' => 'file',
-                'FILESYSTEM_DISK' => 'local',
-                'QUEUE_CONNECTION' => 'sync',
-                'SESSION_DRIVER' => 'database',
-                'SESSION_LIFETIME' => '120',
-                'SANCTUM_STATEFUL_DOMAINS' => $data['domain'],
-                'SANCTUM_COLLISION_HASH_LENGTH' => '16',
-                'BRS_API_KEY' => '',
-            ];
-            writeEnvFile($envData);
+        // 2. Generate APP_KEY
+        $appKey = generateAppKey();
 
-            // 4. Create admin user
+        // 3. Write .env
+        $envData = [
+            'APP_NAME' => 'Porta',
+            'APP_ENV' => 'production',
+            'APP_KEY' => $appKey,
+            'APP_DEBUG' => 'false',
+            'APP_URL' => 'https://' . $data['domain'],
+            'DB_CONNECTION' => 'mysql',
+            'DB_HOST' => $data['host'],
+            'DB_PORT' => '3306',
+            'DB_DATABASE' => $data['db_name'],
+            'DB_USERNAME' => $data['db_user'],
+            'DB_PASSWORD' => $data['db_pass'],
+            'BROADCAST_DRIVER' => 'log',
+            'CACHE_DRIVER' => 'file',
+            'FILESYSTEM_DISK' => 'local',
+            'QUEUE_CONNECTION' => 'sync',
+            'SESSION_DRIVER' => 'database',
+            'SESSION_LIFETIME' => '120',
+            'SANCTUM_STATEFUL_DOMAINS' => $data['domain'],
+            'SANCTUM_COLLISION_HASH_LENGTH' => '16',
+            'BRS_API_KEY' => '',
+        ];
+        if (!writeEnvFile($envData)) { $errs[] = 'Failed to write .env file'; }
+
+// 4. Create admin user
+        try {
             $hash = password_hash($data['admin_pass'], PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO `users` (`name`, `email`, `password`, `created_at`, `updated_at`) VALUES (?, ?, ?, NOW(), NOW())");
             $stmt->execute([$data['admin_name'], $data['admin_email'], $hash]);
+        } catch (Exception $e) { $errs[] = 'Failed to create admin: ' . $e->getMessage(); }
 
-            // 5. Set permissions
+        // 5. Set permissions (skip vendor to avoid timeout)
             $storagePath = __DIR__ . '/backend/storage';
             $cachePath = __DIR__ . '/backend/bootstrap/cache';
-            if (is_dir($storagePath)) {
-                chmodRecursive($storagePath, 0755);
+            foreach ([$storagePath, $cachePath] as $p) {
+                if (is_dir($p)) @chmod($p, 0755);
             }
-            if (is_dir($cachePath)) {
-                chmodRecursive($cachePath, 0777);
-            }
+            $dirs = [$storagePath . '/framework', $storagePath . '/logs', $cachePath];
+            foreach ($dirs as $d) { if (is_dir($d)) @chmod($d, 0755); }
 
             // 6. Delete installer
-            $SUCCESS = 'نصب با موفقیت انجام شد!';
-
-            header('Location: installer.php?step=4');
-            exit;
+            if (!empty($errs)) {
+                $ERROR = 'Installation completed with errors: ' . implode(' | ', $errs);
+            } else {
+                $SUCCESS = 'نصب با موفقیت انجام شد!';
+                header('Location: installer.php?step=4');
+                exit;
+            }
         }
     }
 }
