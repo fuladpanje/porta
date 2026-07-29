@@ -97,10 +97,18 @@ public_html/
 
    یا ساده‌تر: هر مکانی که پوشه `backend/` آپلود شده، مسیرش رو اضافه کن `backend/public`. در cPanel فرم مستقیم بنویس.
 3. پرمیشن `storage/` و `bootstrap/cache/` رو بذار `755`
-4. فایل `.env` رو با اطلاعات دیتابیست ویرایش کن
+4. فایل `.env` رو ویرایش کن (پیش‌فرض در `deploy/backend/.env`). فقط سه تا خط رو عوض کن:
+
+   ```env
+   DB_DATABASE=نام_دیتابیس_توی_cPanel
+   DB_USERNAME=نام_کاربر_dیتابیس
+   DB_PASSWORD=رمز_دیتابیس
+   ```
+   اطلاعات دیتابیس رو از بخش **MySQL Databases** توی cPanel پیدا می‌کنی. بقیه فیلدها رو دست نزن.
+
 5. تست کن 🎉
 
-### دستورات مفید
+## دستورات مفید
 
 ```bash
 # بیلد فرانت‌اند برای پروداکشن
@@ -119,7 +127,7 @@ php artisan migrate
 php artisan migrate:fresh --seed   # با داده تستی
 ```
 
-### ساخت فایل deploy و Release
+## ساخت فایل deploy و Release
 
 ```bash
 # ویندوز
