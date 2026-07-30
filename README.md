@@ -4,11 +4,41 @@
 
 <h1 align="center">پورتا | Porta</h1>
 
-<p align="center">
+<p align="center" dir="rtl">
   پورتفولیوی هوشمند سهام بورس ایران
 </p>
 
 <p align="center">
+  <em>Smart Portfolio Manager for Tehran Stock Exchange</em>
+</p>
+
+---
+
+<p align="center" dir="rtl">
+  یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران.
+  محاسبه سود و زیان، سطوح مقاومت و حمایت، نمودار قیمت و بسیاری امکانات دیگر.
+</p>
+
+<p align="center">
+  <em>A professional RTL dashboard for managing Tehran Stock Exchange portfolios.
+  Calculate profit/loss, support & resistance levels, price charts, and much more.</em>
+</p>
+
+<p align="center">
+  <img src="porta-scr.jpg" alt="Porta Screenshot" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=flat-square&logo=laravel" alt="Laravel">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" alt="React">
+  <img src="https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind">
+  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php" alt="PHP">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT">
+</p>
+
+---
+
+<p align="center" dir="rtl">
   <a href="#ویژگی‌ها">ویژگی‌ها</a> •
   <a href="#دانلود">دانلود</a> •
   <a href="#نصب-روی-هاست-cpanel">نصب</a> •
@@ -17,28 +47,20 @@
   <a href="#ساختار-پروژه">ساختار</a>
 </p>
 
----
-
 <p align="center">
-  یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران.
-  محاسبه سود و زیان، سطوح مقاومت و حمایت، نمودار قیمت و بسیاری امکانات دیگر.
-</p>
-
-<p align="center">
-  <img src="porta-scr.jpg" alt="نمای پورتا" width="100%">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=flat-square&logo=laravel" alt="Laravel">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind">
-  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php" alt="PHP">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="مجوز">
+  <a href="#features">Features</a> •
+  <a href="#download">Download</a> •
+  <a href="#cpanel-installation">Installation</a> •
+  <a href="#development">Development</a> •
+  <a href="#api-1">API</a> •
+  <a href="#project-structure">Structure</a>
 </p>
 
 ---
 
-## ویژگی‌ها
+## ویژگی‌ها | Features
+
+<div dir="rtl">
 
 - مدیریت چند پورتفولیو با نام‌های دلخواه
 - اضافه/ویرایش/حذف سهام در هر پورتفولیو
@@ -54,7 +76,27 @@
 - واحد پول ریال/تومان
 - کارمزد خرید/فروش قابل تنظیم
 
-## دانلود
+</div>
+
+- Multiple portfolio management with custom names
+- Add/edit/delete stocks in each portfolio
+- Automatic profit/loss calculation with commission
+- Percentage profit/loss relative to buy price
+- Price chart with support & resistance levels
+- Auto price update from BRS API (Tehran Stock Exchange)
+- Symbol search in Iran stock market
+- Portfolio KPIs (total value, P/L, change %)
+- Dark/Light mode
+- Full RTL & Persian language support
+- Responsive design (mobile, tablet, desktop)
+- Rial/Toman currency unit
+- Configurable buy/sell commission
+
+---
+
+## دانلود | Download
+
+<div dir="rtl">
 
 ### دانلود آخرین نسخه (برای هاست cPanel)
 
@@ -62,7 +104,19 @@
 ۲. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
 ۳. فایل ZIP را از حالت فشرده خارج کنید و محتوایش را به `public_html/` سایت خود آپلود کنید
 
-## نصب روی هاست cPanel
+</div>
+
+### Download Latest Release (for cPanel hosting)
+
+1. Go to [Releases page](https://github.com/fuladpanje/porta/releases)
+2. Find the latest release and download **porta-deploy.zip**
+3. Extract the ZIP and upload contents to your site's `public_html/`
+
+---
+
+## نصب روی هاست cPanel | cPanel Installation
+
+<div dir="rtl">
 
 > بدون نیاز به SSH!
 
@@ -98,9 +152,9 @@ public_html/
 
    **اطلاعات دیتابیس:**
    ```env
-   DB_DATABASE=نام_دیتابیس
-   DB_USERNAME=نام_کاربر
-   DB_PASSWORD=رمز_عبور
+   DB_DATABASE=YOUR_DB_NAME
+   DB_USERNAME=YOUR_DB_USER
+   DB_PASSWORD=YOUR_DB_PASSWORD
    ```
 
    **نام دامنه:**
@@ -112,9 +166,61 @@ public_html/
 
 ۶. تست کنید 🎉
 
+</div>
+
+> No SSH required!
+
+Upload the contents of the `deploy/` folder to your site's `public_html/`:
+
+```
+public_html/
+├── backend/
+│   ├── public/   ← Laravel entry point
+│   └── ...
+└── database.sql  ← Import in phpMyAdmin
+```
+
+Then follow these steps:
+
+1. Create a MySQL database in cPanel and assign a user to it
+2. In **phpMyAdmin**, select the database and import `database.sql`
+3. Change the Document Root path:
+
+   **Main domain** (e.g. `example.com`):
+   ```
+   public_html/example.com/backend/public
+   ```
+
+   **Subdomain** (e.g. `sub.example.com`):
+   ```
+   public_html/sub.example.com/backend/public
+   ```
+
+   Or simply: wherever `backend/` is uploaded, append `backend/public` to the path.
+4. Set `storage/` and `bootstrap/cache/` permissions to `755`
+5. Edit `.env` file (default at `deploy/backend/.env`):
+
+   **Database credentials:**
+   ```env
+   DB_DATABASE=YOUR_DB_NAME
+   DB_USERNAME=YOUR_DB_USER
+   DB_PASSWORD=YOUR_DB_PASSWORD
+   ```
+
+   **Domain name:**
+   ```env
+   APP_URL=https://example.com
+   SANCTUM_STATEFUL_DOMAINS=example.com
+   ```
+   Don't change other fields.
+
+6. Test it 🎉
+
 ---
 
-## دستورات مفید
+## دستورات مفید | Useful Commands
+
+<div dir="rtl">
 
 ```bash
 # بیلد فرانت‌اند برای پروداکشن
@@ -133,7 +239,28 @@ php artisan migrate
 php artisan migrate:fresh --seed   # با داده تستی
 ```
 
-## ساخت فایل deploy و Release
+</div>
+
+```bash
+# Build frontend for production
+cd frontend
+npm run build
+
+# Clear cache
+cd backend
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+
+# Run migrations
+cd backend
+php artisan migrate
+php artisan migrate:fresh --seed   # with test data
+```
+
+## ساخت فایل deploy و Release | Build Deploy Package
+
+<div dir="rtl">
 
 ```bash
 # ویندوز (PowerShell)
@@ -146,32 +273,51 @@ chmod +x install.sh
 
 سپس فایل‌های داخل پوشه `deploy/` را ZIP کنید با نام `porta-deploy.zip` و در صفحه [Releases](https://github.com/fuladpanje/porta/releases) یک Release جدید بسازید. فایل `porta-deploy.zip` را به عنوان Asset ضمیمه کنید.
 
+</div>
+
+```bash
+# Windows (PowerShell)
+.\deploy.ps1
+
+# Linux/Mac
+chmod +x install.sh
+./install.sh
+```
+
+Then ZIP the contents of the `deploy/` folder as `porta-deploy.zip` and create a new Release on the [Releases page](https://github.com/fuladpanje/porta/releases). Attach `porta-deploy.zip` as an Asset.
+
+---
+
 ## API
 
-| مسیر | متد | توضیح |
-|------|-----|-------|
-| `/api/register` | POST | ثبت‌نام کاربر جدید |
-| `/api/login` | POST | ورود به حساب کاربری |
-| `/api/logout` | POST | خروج (نیاز به احراز هویت) |
-| `/api/user` | GET | دریافت اطلاعات کاربر |
-| `/api/user/unit` | PUT | تغییر واحد پول (ریال/تومان) |
-| `/api/user/auto-switch` | PUT | تنظیم سوییچ خودکار حالت بازار |
-| `/api/user/schedule` | PUT | تنظیم زمان‌بندی بروزرسانی خودکار |
-| `/api/user/fee-settings` | PUT | تنظیمات کارمزد خرید/فروش |
-| `/api/portfolios` | GET/POST | لیست/ساخت پورتفولیو |
-| `/api/portfolios/{id}` | GET/PUT/DELETE | مدیریت پورتفولیو |
-| `/api/portfolios/{id}/items` | GET/POST | آیتم‌های یک پورتفولیو |
-| `/api/portfolios/{id}/items/{itemId}` | PUT/DELETE | مدیریت یک سهم |
-| `/api/dashboard` | GET | داده‌های داشبورد |
-| `/api/portfolios/{id}/fee-settings` | PUT | تنظیم کارمزد اختصاصی پورتفولیو |
-| `/api/portfolios/{id}/toggle-active` | PUT | فعال/غیرفعال کردن پورتفولیو |
-| `/api/stocks/refresh` | POST | بروزرسانی قیمت‌ها از بورس |
-| `/api/stocks/symbols?q=` | GET | جستجوی نماد بورسی |
-| `/api/api-keys` | GET/POST | مدیریت کلیدهای API |
-| `/api/api-keys/{id}` | PUT/DELETE | ویرایش/حذف کلید API |
-| `/api/api-keys/{id}/default` | POST | تنظیم کلید پیش‌فرض |
+| Method | Endpoint | توضیح | Description |
+|--------|----------|-------|-------------|
+| POST | `/api/register` | ثبت‌نام | Register |
+| POST | `/api/login` | ورود | Login |
+| POST | `/api/logout` | خروج | Logout |
+| GET | `/api/user` | اطلاعات کاربر | User info |
+| PUT | `/api/user/unit` | تغییر واحد پول | Change currency unit |
+| PUT | `/api/user/auto-switch` | تنظیم سوییچ خودکار | Auto switch config |
+| PUT | `/api/user/schedule` | تنظیم زمان‌بندی | Schedule config |
+| PUT | `/api/user/fee-settings` | تنظیم کارمزد | Fee/commission settings |
+| GET/POST | `/api/portfolios` | لیست/ساخت پورتفولیو | List/Create portfolios |
+| GET/PUT/DELETE | `/api/portfolios/{id}` | مدیریت پورتفولیو | Manage portfolio |
+| GET/POST | `/api/portfolios/{id}/items` | آیتم‌های پورتفولیو | Portfolio items |
+| PUT/DELETE | `/api/portfolios/{id}/items/{itemId}` | مدیریت سهم | Manage stock item |
+| GET | `/api/dashboard` | داده‌های داشبورد | Dashboard data |
+| PUT | `/api/portfolios/{id}/fee-settings` | کارمزد اختصاصی | Portfolio fee settings |
+| PUT | `/api/portfolios/{id}/toggle-active` | فعال/غیرفعال | Toggle active |
+| POST | `/api/stocks/refresh` | بروزرسانی قیمت‌ها | Refresh prices |
+| GET | `/api/stocks/symbols?q=` | جستجوی نماد | Search symbols |
+| GET/POST | `/api/api-keys` | مدیریت کلید API | API keys |
+| PUT/DELETE | `/api/api-keys/{id}` | ویرایش/حذف کلید | Edit/Delete key |
+| POST | `/api/api-keys/{id}/default` | کلید پیش‌فرض | Set default key |
 
-## دریافت API Key از BRS
+---
+
+## دریافت API Key از BRS | Get API Key from BRS
+
+<div dir="rtl">
 
 برای استفاده از قابلیت بروزرسانی خودکار قیمت‌ها، باید API Key از سایت [brsapi.ir](https://brsapi.ir) دریافت کنید:
 
@@ -182,14 +328,27 @@ chmod +x install.sh
 ۵. در پورتا به مسیر **Settings → API Keys** بروید
 ۶. کلید را اضافه کنید و به عنوان پیش‌فرض فعال کنید
 
-## ساختار پروژه
+</div>
+
+To use auto price update, get an API Key from [brsapi.ir](https://brsapi.ir):
+
+1. Go to [brsapi.ir](https://brsapi.ir)
+2. Register an account
+3. Go to **User Panel**
+4. Copy your API Key
+5. In Porta, go to **Settings → API Keys**
+6. Add the key and set it as default
+
+---
+
+## ساختار پروژه | Project Structure
 
 ```
 porta/
-├── backend/                    # لاراول ۱۱
+├── backend/                    # لاراول ۱۱ | Laravel 11
 │   ├── app/
 │   │   ├── Http/Controllers/
-│   │   │   ├── Auth/           # کنترلر احراز هویت
+│   │   │   ├── Auth/           # کنترلر احراز هویت | Auth
 │   │   │   ├── PortfolioController.php
 │   │   │   ├── PortfolioItemController.php
 │   │   │   ├── StockController.php
@@ -200,9 +359,9 @@ porta/
 │   │       ├── PortfolioItem.php
 │   │       └── ApiKey.php
 │   ├── config/
-│   ├── database/migrations/    # فایل‌های مایگریشن
-│   ├── routes/api.php          # مسیرهای API
-│   └── public/                 # نقطه ورود + فرانت‌اند بیلد شده
+│   ├── database/migrations/    # مایگریشن‌ها | Migrations
+│   ├── routes/api.php          # مسیرهای API | API routes
+│   └── public/                 # نقطه ورود + فرانت‌اند | Entry point + frontend
 │
 ├── frontend/                   # React + Vite + Tailwind
 │   ├── src/
@@ -227,37 +386,51 @@ porta/
 │   │       ├── calculations.js
 │   │       └── symbolCache.js
 │   ├── public/favicon.svg
-│   └── dist/                   # خروجی بیلد فرانت‌اند
+│   └── dist/                   # خروجی بیلد | Build output
 │
-├── deploy.bat                  # اسکریپت استقرار برای ویندوز
-├── deploy.ps1                  # اسکریپت استقرار PowerShell
-├── database.sql                # فایل SQL دیتابیس
-├── install.sh                  # اسکریپت استقرار لینوکس
-├── porta-scr.jpg               # اسکرین‌شات
-├── porta-deploy.zip            # بسته آماده استقرار
-├── setup.bat                   # راه‌اندازی محیط توسعه
-└── .env.example                # نمونه فایل متغیرهای محیطی
+├── deploy.bat                  # اسکریپت استقرار ویندوز | Windows deploy
+├── deploy.ps1                  # اسکریپت PowerShell | PowerShell deploy
+├── database.sql                # فایل SQL دیتابیس | Database SQL
+├── install.sh                  # اسکریپت استقرار لینوکس | Linux deploy
+├── porta-scr.jpg               # اسکرین‌شات | Screenshot
+├── porta-deploy.zip            # بسته آماده استقرار | Deploy package
+├── setup.bat                   # راه‌اندازی محلی | Local setup
+└── .env.example                # نمونه متغیرهای محیطی | Env example
 ```
-
-## تکنولوژی‌ها
-
-| لایه | تکنولوژی | نسخه |
-|------|----------|------|
-| بک‌اند | Laravel | ۱۱ |
-| احراز هویت | Laravel Sanctum | ۴ |
-| فرانت‌اند | React | ۱۸ |
-| بیلد | Vite | ۶ |
-| CSS | Tailwind CSS | ۳ |
-| نمودار | Chart.js | ۴ |
-| آیکون | Lucide React | ۰.۴۶۰ |
-| فونت | وزیرمتن | ۵ |
-
-## لایسنس
-
-این پروژه تحت مجوز MIT منتشر شده است.
 
 ---
 
-<p align="center">
+## تکنولوژی‌ها | Technologies
+
+| لایه | تکنولوژی | Version |
+|------|----------|---------|
+| بک‌اند / Backend | Laravel | 11 |
+| احراز هویت / Auth | Laravel Sanctum | 4 |
+| فرانت‌اند / Frontend | React | 18 |
+| بیلد / Build | Vite | 6 |
+| استایل / CSS | Tailwind CSS | 3 |
+| نمودار / Charts | Chart.js | 4 |
+| آیکون / Icons | Lucide React | 0.460 |
+| فونت / Font | وزیرمتن / Vazirmatn | 5 |
+
+---
+
+## لایسنس | License
+
+<div dir="rtl">
+
+این پروژه تحت مجوز MIT منتشر شده است.
+
+</div>
+
+This project is licensed under the MIT License.
+
+---
+
+<p align="center" dir="rtl">
   ساخته شده با ❤️ برای سرمایه‌گذاران بازار بورس ایران
+</p>
+
+<p align="center">
+  <em>Made with ❤️ for Iran stock market investors</em>
 </p>
