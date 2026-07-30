@@ -34,8 +34,9 @@ const [showItemForm, setShowItemForm] = useState(null);
     const [showPLAmount, setShowPLAmount] = useState(false);
     const [activeChart, setActiveChart] = useState('allocation');
     const [chartsExpanded, setChartsExpanded] = useState(true);
-    const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
-    const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
+const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
+     const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
+     const [showPortfolios, setShowPortfolios] = useState(true);
 
     const commissionEnabled = user?.commission_enabled || false;
     const buyCommissionRate = (user?.buy_commission || 0.37) / 100;
@@ -255,173 +256,179 @@ const totals = useMemo(() => {
          })}
       </div>
 
-       <div className="relative bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-           <div>
-             <h3 className="pr-8 text-sm font-semibold text-slate-700 dark:text-slate-200 rtl-text flex items-center gap-1.5">
-               {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'price' ? <BarChart3 className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
-               {activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}
-             </h3>
-             <p className="text-[10px] text-slate-400 mt-1 rtl-text">
-               {activeChart === 'allocation' ? 'سهم هر نماد از ارزش فعلی پرتفوی' : activeChart === 'price' ? 'مقایسه قیمت خرید و فروش نمادها' : 'عملکرد معاملات فروخته‌شده'}
-             </p>
-           </div>
-           <div className="flex self-start items-center gap-2">
-             <button
-               type="button"
-               onClick={() => setChartsExpanded((current) => !current)}
-               aria-expanded={chartsExpanded}
-               aria-label={chartsExpanded ? 'بستن نمودارها' : 'باز کردن نمودارها'}
-               className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-brand-500/10 transition-colors"
-             >
-               {chartsExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-             </button>
-             {chartsExpanded && <div role="tablist" aria-label="نمودارهای داشبورد" className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-             {[
-               { id: 'allocation', label: 'ترکیب' },
-               { id: 'price', label: 'قیمت' },
-               { id: 'profitLoss', label: 'سود و زیان' },
-             ].map((chart) => (
-               <button
-                 key={chart.id}
-                 type="button"
-                 role="tab"
-                 aria-selected={activeChart === chart.id}
-                 onClick={() => setActiveChart(chart.id)}
-                 className={`px-2.5 py-1.5 text-[10px] font-medium rounded-md transition-colors rtl-text ${activeChart === chart.id ? 'bg-white dark:bg-slate-700 text-brand-500 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-               >
-                 {chart.label}
-               </button>
-             ))}
-             </div>}
-           </div>
-         </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setChartsExpanded((current) => !current)}
+                aria-expanded={chartsExpanded}
+                aria-label={chartsExpanded ? 'بستن نمودارها' : 'باز کردن نمودارها'}
+                className="p-1 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-brand-500/10 transition-colors"
+              >
+                {chartsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
+              {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'price' ? <BarChart3 className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
+              {activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}
+            </h2>
+            <div className="flex items-center gap-2">
+              {chartsExpanded && <div role="tablist" aria-label="نمودارهای داشبورد" className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+              {[
+                { id: 'allocation', label: 'ترکیب' },
+                { id: 'price', label: 'قیمت' },
+                { id: 'profitLoss', label: 'سود و زیان' },
+              ].map((chart) => (
+                <button
+                  key={chart.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeChart === chart.id}
+                  onClick={() => setActiveChart(chart.id)}
+                  className={`px-2.5 py-1.5 text-[10px] font-medium rounded-md transition-colors rtl-text ${activeChart === chart.id ? 'bg-white dark:bg-slate-700 text-brand-500 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                >
+                  {chart.label}
+                </button>
+              ))}
+              </div>}
+            </div>
+          </div>
 
-         {chartsExpanded && (
-            <div className="flex items-center gap-4 mb-2 flex-row-reverse">
-              {activeChart === 'profitLoss' && (
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+        <div className="relative bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+          {chartsExpanded && (
+             <div className="flex items-center gap-4 mb-2 flex-row-reverse">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400 rtl-text">پرتفوهای غیرفعال</span>
                   <button
                     type="button"
-                    onClick={() => setShowPLAmount(false)}
-                    className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${!showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    role="switch"
+                    aria-checked={showInactivePortfolios}
+                    onClick={() => {
+                      const next = !showInactivePortfolios;
+                      if (next) {
+                        const hasInactivePortfolio = portfolios.some((p) => p.active === false || p.active === 0);
+                        if (hasInactivePortfolio) {
+                          setShowInactivePortfolios(true);
+                          setShowInactiveChartItems(true);
+                        } else {
+                          const hasInactiveItems = portfolios.some((p) => (p.active !== false && p.active !== 0) && (p.items || []).some((i) => i.active === false));
+                          if (hasInactiveItems) {
+                            setShowInactiveChartItems(true);
+                          }
+                        }
+                      } else {
+                        setShowInactivePortfolios(false);
+                        setShowInactiveChartItems(false);
+                      }
+                    }}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${showInactivePortfolios ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
                   >
-                    درصد
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPLAmount(true)}
-                    className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                  >
-                    مبلغ
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactivePortfolios ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
-              )}
-               <div className="flex items-center gap-1.5">
-                 <span className="text-[10px] text-slate-400 rtl-text">پرتفوهای غیرفعال</span>
-                 <button
-                   type="button"
-                   role="switch"
-                   aria-checked={showInactivePortfolios}
-                   onClick={() => {
-                     const next = !showInactivePortfolios;
-                     if (next) {
-                       const hasInactivePortfolio = portfolios.some((p) => p.active === false || p.active === 0);
-                       if (hasInactivePortfolio) {
-                         setShowInactivePortfolios(true);
-                         setShowInactiveChartItems(true);
-                       } else {
-                         const hasInactiveItems = portfolios.some((p) => (p.active !== false && p.active !== 0) && (p.items || []).some((i) => i.active === false));
-                         if (hasInactiveItems) {
-                           setShowInactiveChartItems(true);
-                         }
-                       }
-                     } else {
-                       setShowInactivePortfolios(false);
-                       setShowInactiveChartItems(false);
-                     }
-                   }}
-                   className={`relative w-9 h-5 rounded-full transition-colors ${showInactivePortfolios ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                 >
-                   <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactivePortfolios ? 'translate-x-4' : 'translate-x-0'}`} />
-                 </button>
-               </div>
-               <div className="flex items-center gap-1.5">
-                 <span className="text-[10px] text-slate-400 rtl-text">سهم‌های غیرفعال</span>
-                 <button
-                   type="button"
-                   role="switch"
-                   aria-checked={showInactiveChartItems}
-                   onClick={() => {
-                     const next = !showInactiveChartItems;
-                     setShowInactiveChartItems(next);
-                     if (!next) {
-                       setShowInactivePortfolios(false);
-                     }
-                   }}
-                   className={`relative w-9 h-5 rounded-full transition-colors ${showInactiveChartItems ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                 >
-                   <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactiveChartItems ? 'translate-x-4' : 'translate-x-0'}`} />
-                 </button>
-               </div>
-            </div>
-          )}
-
-         {chartsExpanded && <div role="tabpanel" className={activeChart === 'allocation' ? 'h-72 pb-4' : 'h-64'}>
-           {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} />}
-            {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
-            {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
-         </div>}
-       </div>
-
-      {/* Portfolios Section */}
-      <div className="flex items-center justify-between">
-         <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
-           <FolderOpen className="w-4 h-4 text-brand-500" />
-           پرتفوها
-             <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">{toPersianNum(portfolios.length)}</span>
-         </h2>
-         <div className="flex items-center gap-2">
-           <div>
-             <button
-               onClick={() => setPortfolioSort((prev) => prev === 'default' ? 'profit' : prev === 'profit' ? 'percent' : 'default')}
-               className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-             >
-               <ArrowUpDown className="w-3 h-3" />
-               {portfolioSort === 'default' ? 'پیش‌فرض' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}
-             </button>
-           </div>
-           {!showPortfolioForm && !editingPortfolio && (
-             <button onClick={() => setShowPortfolioForm(true)} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1">
-               <PlusCircle className="w-3 h-3" /> افزودن پرتفو
-             </button>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400 rtl-text">سهم‌های غیرفعال</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showInactiveChartItems}
+                    onClick={() => {
+                      const next = !showInactiveChartItems;
+                      setShowInactiveChartItems(next);
+                      if (!next) {
+                        setShowInactivePortfolios(false);
+                      }
+                    }}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${showInactiveChartItems ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactiveChartItems ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+               {activeChart === 'profitLoss' && (
+                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                   <button
+                     type="button"
+                     onClick={() => setShowPLAmount(false)}
+                     className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${!showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                   >
+                     درصد
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => setShowPLAmount(true)}
+                     className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                   >
+                     مبلغ
+                   </button>
+                 </div>
+               )}
+             </div>
            )}
-         </div>
-      </div>
+ 
+          {chartsExpanded && <div role="tabpanel" className={activeChart === 'allocation' ? 'h-72 pb-4' : 'h-64'}>
+            {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} />}
+             {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
+             {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
+          </div>}
+        </div>
 
-        {showPortfolioForm && (
-          <InlinePortfolioForm onCancel={() => setShowPortfolioForm(false)} onSave={() => { setShowPortfolioForm(false); refreshDashboard(); }} />
+       {/* Portfolios Section */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPortfolios((current) => !current)}
+              aria-expanded={showPortfolios}
+              aria-label={showPortfolios ? 'مخفی کردن پرتفوها' : 'نمایش پرتفوها'}
+              className="p-1 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-brand-500/10 transition-colors"
+            >
+              {showPortfolios ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+            <FolderOpen className="w-4 h-4 text-brand-500" />
+            پرتفوها
+              <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">{toPersianNum(portfolios.length)}</span>
+          </h2>
+          <div className="flex items-center gap-2">
+            <div>
+              <button
+                onClick={() => setPortfolioSort((prev) => prev === 'default' ? 'profit' : prev === 'profit' ? 'percent' : 'default')}
+                className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <ArrowUpDown className="w-3 h-3" />
+                {portfolioSort === 'default' ? 'پیش‌فرض' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}
+              </button>
+            </div>
+            {!showPortfolioForm && !editingPortfolio && (
+              <button onClick={() => setShowPortfolioForm(true)} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1">
+                <PlusCircle className="w-3 h-3" /> افزودن پرتفو
+              </button>
+            )}
+          </div>
+        </div>
+
+         {showPortfolios && (
+         <>
+         {showPortfolioForm && (
+           <InlinePortfolioForm onCancel={() => setShowPortfolioForm(false)} onSave={() => { setShowPortfolioForm(false); refreshDashboard(); }} />
+         )}
+
+         {editingPortfolio && (
+           <InlinePortfolioForm
+             initialName={editingPortfolio.name}
+             portfolioId={editingPortfolio.id}
+             onCancel={() => setEditingPortfolio(null)}
+             onSave={() => { setEditingPortfolio(null); refreshDashboard(); }}
+           />
+         )}
+
+        {portfolios.length === 0 && !showPortfolioForm && !editingPortfolio && (
+          <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg p-8 text-center">
+            <p className="text-slate-400 text-xs rtl-text">هنوز پرتفو ندارید</p>
+            <button onClick={() => setShowPortfolioForm(true)} className="btn-primary text-xs py-1.5 px-4 mt-3">افزودن اولین پرتفو</button>
+          </div>
         )}
 
-        {editingPortfolio && (
-          <InlinePortfolioForm
-            initialName={editingPortfolio.name}
-            portfolioId={editingPortfolio.id}
-            onCancel={() => setEditingPortfolio(null)}
-            onSave={() => { setEditingPortfolio(null); refreshDashboard(); }}
-          />
-        )}
-
-       {portfolios.length === 0 && !showPortfolioForm && !editingPortfolio && (
-         <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg p-8 text-center">
-           <p className="text-slate-400 text-xs rtl-text">هنوز پرتفو ندارید</p>
-           <button onClick={() => setShowPortfolioForm(true)} className="btn-primary text-xs py-1.5 px-4 mt-3">افزودن اولین پرتفو</button>
-         </div>
-       )}
-
-      {/* Portfolio Cards */}
-      <div className="space-y-2">
-        {portfolios.map((portfolio) => {
+       {/* Portfolio Cards */}
+       <div className="space-y-2">
+         {portfolios.map((portfolio) => {
           const isExp = expanded[portfolio.id];
             const pi = [...(portfolio.items || [])].sort((a, b) => {
               if (sortConfig.key) {
@@ -663,8 +670,19 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
             </div>
           );
         })}
-       </div>
-       {confirm && (
+        </div>
+        </>
+        )}
+        {!showPortfolios && (
+          <button
+            type="button"
+            onClick={() => setShowPortfolios(true)}
+            className="text-xs text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
+          >
+            <ChevronRight className="w-3 h-3 rotate-180" /> نمایش پرتفوها
+          </button>
+        )}
+        {confirm && (
          <ConfirmModal
            message={confirm.message}
            onConfirm={confirm.onConfirm}
