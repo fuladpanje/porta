@@ -54,14 +54,19 @@ if (Test-Path $distPath) {
 
 if (Test-Path "database.sql") {
     Copy-Item -Path "database.sql" -Destination "$DEPLOY\database.sql"
+    (Get-Item "$DEPLOY\database.sql").CreationTime = Get-Date
 }
 
 Remove-Item -Path "$DEPLOY\backend\tests" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$DEPLOY\backend\debug-commission.php" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$DEPLOY\backend\test2.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\test_*.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\php_server*.log" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\.env" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\.env.*" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\.git" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$DEPLOY\backend\bootstrap\cache\routes-*.php" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$DEPLOY\backend\bootstrap\cache\config.php" -Force -ErrorAction SilentlyContinue
 
 $APP_KEY = ""
 Set-Location backend
@@ -81,7 +86,7 @@ $envLines = @(
     "APP_NAME=Porta",
     "APP_ENV=production",
     "APP_KEY=$APP_KEY",
-    "APP_DEBUG=false",
+    "APP_DEBUG=true",
     "APP_URL=https://$DOMAIN",
     "",
     "DB_CONNECTION=mysql",
@@ -125,14 +130,7 @@ $ht | Set-Content -Path "$DEPLOY\backend\public\.htaccess"
 Write-Host ""
 Write-Host "=== DONE ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "deploy\ folder is ready." -ForegroundColor Cyan
+Write-Host "deploy\folder is ready." -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Before uploading to cPanel:" -ForegroundColor Yellow
-Write-Host "  1. Edit deploy\backend\.env" -ForegroundColor White
-Write-Host "     Set DB_DATABASE, DB_USERNAME, DB_PASSWORD" -ForegroundColor White
-Write-Host "  2. Zip everything inside deploy\" -ForegroundColor White
-Write-Host "  3. Upload ZIP to cPanel File Manager -> public_html" -ForegroundColor White
-Write-Host "  4. Extract ZIP" -ForegroundColor White
-Write-Host "  5. Import database.sql in phpMyAdmin" -ForegroundColor White
-Write-Host "  6. Set Document Root to backend/public (e.g. public_html/porto.fuladpanjeh.ir/backend/public)" -ForegroundColor White
-Write-Host "  7. Set storage/ and bootstrap/cache/ to 755" -ForegroundColor White
+Write-Host "After uploading to host, run these commands via terminal:" -ForegroundColor Yellow
+Write-Host "  cd backend && php artisan migrate --force && php artisan route:clear && php artisan config:clear && php artisan cache:clear" -ForegroundColor White

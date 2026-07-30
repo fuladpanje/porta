@@ -52,7 +52,7 @@ export default function Register() {
           <div className="w-14 h-14 rounded-xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
             <User className="w-7 h-7 text-brand-600 dark:text-brand-400" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground rtl-text">ثبت‌نام</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white rtl-text">ثبت‌نام</h1>
           <p className="text-sm text-muted-foreground mt-2">یک حساب کاربری جدید بسازید</p>
         </div>
 

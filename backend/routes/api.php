@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PortfolioItemController;
 use App\Http\Controllers\StockController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -13,7 +14,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 Route::get('/user', [AuthController::class, 'user'])->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::put('portfolios/{portfolio}/commission', [PortfolioController::class, 'updateCommission']);
+    Route::put('portfolios/{portfolio}/fee-settings', [PortfolioController::class, 'updateCommission']);
     Route::put('portfolios/{portfolio}/toggle-active', [PortfolioController::class, 'toggleActive']);
     Route::apiResource('portfolios', PortfolioController::class);
     Route::get('/dashboard', [PortfolioController::class, 'dashboard']);
@@ -27,7 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/unit', [AuthController::class, 'updateUnit']);
     Route::put('/user/auto-switch', [AuthController::class, 'updateAutoSwitch']);
     Route::put('/user/schedule', [AuthController::class, 'updateSchedule']);
-    Route::put('/user/commission', [AuthController::class, 'updateCommission']);
+    Route::put('/user/fee-settings', [AuthController::class, 'updateCommission']);
 
     Route::get('/api-keys', [ApiKeyController::class, 'index']);
     Route::post('/api-keys', [ApiKeyController::class, 'store']);

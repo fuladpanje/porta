@@ -77,28 +77,46 @@ class PortfolioController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $validated = $request->validate([
-            'commission_enabled' => 'required|boolean',
-            'buy_commission' => 'nullable|numeric|min:0|max:100',
-            'sell_commission' => 'nullable|numeric|min:0|max:100',
-        ]);
+        try {
+            $validated = $request->validate([
+                'commission_enabled' => 'required|boolean',
+                'buy_commission' => 'nullable|numeric|min:0|max:10000',
+                'sell_commission' => 'nullable|numeric|min:0|max:10000',
+            ]);
 
-        $user = $request->user();
-        $updateData = ['commission_enabled' => $validated['commission_enabled']];
+            $user = $request->user();
+            $updateData = ['commission_enabled' => $validated['commission_enabled']];
 
-        if ($validated['commission_enabled']) {
-            $updateData['buy_commission'] = $validated['buy_commission'] ?? ($user->buy_commission ?? 0.37);
-            $updateData['sell_commission'] = $validated['sell_commission'] ?? ($user->sell_commission ?? 0.88);
-        } else {
-            $updateData['buy_commission'] = $user->buy_commission ?? 0.37;
-            $updateData['sell_commission'] = $user->sell_commission ?? 0.88;
+            if ($validated['commission_enabled']) {
+                $buyComm = $validated['buy_commission'] ?? ($user->buy_commission ?? 0.37);
+                $sellComm = $validated['sell_commission'] ?? ($user->sell_commission ?? 0.88);
+                if (is_numeric($buyComm) && $buyComm > 1) $buyComm /= 100;
+                if (is_numeric($sellComm) && $sellComm > 1) $sellComm /= 100;
+                $updateData['buy_commission'] = $buyComm;
+                $updateData['sell_commission'] = $sellComm;
+            } else {
+                $updateData['buy_commission'] = $user->buy_commission ?? 0.37;
+                $updateData['sell_commission'] = $user->sell_commission ?? 0.88;
+            }
+
+            $portfolio->update($updateData);
+
+            return response()->json([
+                'data' => $portfolio->fresh()->load('items'),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'message' => 'خطای اعتبارسنجی پورتفولیو: ' . implode(', ', array_merge(...array_values($ve->errors()))),
+                'errors' => $ve->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            @file_put_contents(storage_path('logs/portfolio-commission-error.log'), date('Y-m-d H:i:s') . " Error: " . $e->getMessage() . "\nTrace:\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+            return response()->json([
+                'message' => 'خطای سرور پورتفولیو: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
         }
-
-        $portfolio->update($updateData);
-
-        return response()->json([
-            'data' => $portfolio->fresh()->load('items'),
-        ]);
     }
 
     public function toggleActive(Portfolio $portfolio): JsonResponse

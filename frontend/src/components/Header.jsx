@@ -121,8 +121,9 @@ export function Header() {
         </div>
 
         {/* Left: Refresh + Settings */}
+        {user && (
         <div className="flex items-center gap-2">
-<button
+          <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="p-2 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-brand-500/10 transition-colors disabled:opacity-50 flex items-center gap-2"
@@ -222,6 +223,7 @@ export function Header() {
             )}
           </div>
         </div>
+        )}
       </div>
     </header>
   );

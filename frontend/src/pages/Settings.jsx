@@ -223,10 +223,10 @@ const handleToggleAutoSwitch = async () => {
     setError('');
     setSuccess('');
     try {
-      const res = await api.put('/user/commission', {
+      const res = await api.put('/user/fee-settings', {
         commission_enabled: newVal,
-        buy_commission: parseFloat(buyCommission) || 0.37,
-        sell_commission: parseFloat(sellCommission) || 0.88,
+        buy_commission: Math.round((parseFloat(buyCommission) || 0.37) * 100),
+        sell_commission: Math.round((parseFloat(sellCommission) || 0.88) * 100),
       });
       setCommissionEnabled(newVal);
       updateUserRef.current(res.data.user);
@@ -253,10 +253,10 @@ const handleToggleAutoSwitch = async () => {
     setError('');
     setSuccess('');
     try {
-      const userRes = await api.put('/user/commission', {
+        const userRes = await api.put('/user/fee-settings', {
         commission_enabled: commissionEnabled,
-        buy_commission: parseFloat(buyCommission) || 0,
-        sell_commission: parseFloat(sellCommission) || 0,
+        buy_commission: Math.round((parseFloat(buyCommission) || 0) * 100),
+        sell_commission: Math.round((parseFloat(sellCommission) || 0) * 100),
       });
       updateUserRef.current(userRes.data.user);
 
@@ -265,10 +265,12 @@ const handleToggleAutoSwitch = async () => {
         if (settings) {
           const payload = { commission_enabled: settings.commission_enabled };
           if (settings.commission_enabled) {
-            payload.buy_commission = settings.buy_commission === '' || settings.buy_commission == null ? 0 : parseFloat(settings.buy_commission);
-            payload.sell_commission = settings.sell_commission === '' || settings.sell_commission == null ? 0 : parseFloat(settings.sell_commission);
+            const b = settings.buy_commission === '' || settings.buy_commission == null ? 0 : Math.round(parseFloat(settings.buy_commission) * 100);
+            const s = settings.sell_commission === '' || settings.sell_commission == null ? 0 : Math.round(parseFloat(settings.sell_commission) * 100);
+            payload.buy_commission = b;
+            payload.sell_commission = s;
           }
-          await api.put(`/portfolios/${portfolio.id}/commission`, payload);
+          await api.put(`/portfolios/${portfolio.id}/fee-settings`, payload);
         }
       }
 

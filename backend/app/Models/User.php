@@ -33,6 +33,11 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'auto_switch' => 'boolean',
+        'schedule_enabled' => 'boolean',
+        'commission_enabled' => 'boolean',
+        'buy_commission' => 'float',
+        'sell_commission' => 'float',
     ];
 
     public function portfolios()

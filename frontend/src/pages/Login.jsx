@@ -34,7 +34,7 @@ export default function Login() {
           <div className="w-14 h-14 rounded-xl bg-brand-500 flex items-center justify-center mx-auto mb-4 shadow-sm shadow-brand-500/20">
             <Mail className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground rtl-text">خوش آمدید</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white rtl-text">خوش آمدید</h1>
           <p className="text-sm text-muted-foreground mt-2">وارد حساب خود شوید</p>
         </div>
 

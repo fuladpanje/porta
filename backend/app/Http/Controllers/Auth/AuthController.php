@@ -121,20 +121,44 @@ class AuthController extends Controller
 
     public function updateCommission(Request $request)
     {
-        $validated = $request->validate([
-            'commission_enabled' => 'required|boolean',
-            'buy_commission' => 'required|numeric|min:0|max:100',
-            'sell_commission' => 'required|numeric|min:0|max:100',
-        ]);
+        try {
+            $validated = $request->validate([
+                'commission_enabled' => 'required|boolean',
+                'buy_commission' => 'required|numeric|min:0|max:10000',
+                'sell_commission' => 'required|numeric|min:0|max:10000',
+            ]);
 
-        $request->user()->update([
-            'commission_enabled' => $validated['commission_enabled'],
-            'buy_commission' => $validated['buy_commission'],
-            'sell_commission' => $validated['sell_commission'],
-        ]);
+            $user = $request->user();
+            if (!$user) {
+                return response()->json(['message' => 'کاربر یافت نشد یا احراز هویت نشده است.'], 401);
+            }
 
-        return response()->json([
-            'user' => $request->user(),
-        ]);
+            $buyCommission = (float)$validated['buy_commission'];
+            $sellCommission = (float)$validated['sell_commission'];
+            if ($buyCommission > 1) $buyCommission /= 100;
+            if ($sellCommission > 1) $sellCommission /= 100;
+
+            $user->update([
+                'commission_enabled' => (bool)$validated['commission_enabled'],
+                'buy_commission' => $buyCommission,
+                'sell_commission' => $sellCommission,
+            ]);
+
+            return response()->json([
+                'user' => $user->fresh(),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'message' => 'خطای اعتبارسنجی: ' . implode(', ', array_merge(...array_values($ve->errors()))),
+                'errors' => $ve->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            @file_put_contents(storage_path('logs/commission-error.log'), date('Y-m-d H:i:s') . " Error: " . $e->getMessage() . "\nTrace:\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+            return response()->json([
+                'message' => 'خطای سرور: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
+        }
     }
 }

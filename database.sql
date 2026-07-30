@@ -1,3 +1,13 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS `migrations`;
+DROP TABLE IF EXISTS `personal_access_tokens`;
+DROP TABLE IF EXISTS `sessions`;
+DROP TABLE IF EXISTS `portfolio_items`;
+DROP TABLE IF EXISTS `portfolios`;
+DROP TABLE IF EXISTS `api_keys`;
+DROP TABLE IF EXISTS `users`;
+
 CREATE TABLE IF NOT EXISTS `users` (
     `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(255) NOT NULL,
@@ -77,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `personal_access_tokens` (
     `tokenable_type` VARCHAR(255) NOT NULL,
     `tokenable_id` BIGINT UNSIGNED NOT NULL,
     `name` TEXT NOT NULL,
-    `token` VARCHAR(64) NOT NULL UNIQUE,
+    `token` TEXT NOT NULL UNIQUE,
     `abilities` TEXT NULL,
     `last_used_at` TIMESTAMP NULL,
     `expires_at` TIMESTAMP NULL,
@@ -107,3 +117,5 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
 ('2026_07_29_000000_add_commission_to_portfolios_table', 1),
 ('2026_07_29_000000_add_commission_to_users_table', 1),
 ('2026_07_29_100000_add_active_to_portfolios_table', 1);
+
+SET FOREIGN_KEY_CHECKS = 1;
