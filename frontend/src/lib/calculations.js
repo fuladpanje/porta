@@ -1,3 +1,7 @@
+export function toPersianNum(n) {
+  return String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)]);
+}
+
 export function calculateProfitLoss(buyPrice, sellPrice) {
   if (!buyPrice || buyPrice === 0) return 0;
   if (!sellPrice || sellPrice === 0) return 0;

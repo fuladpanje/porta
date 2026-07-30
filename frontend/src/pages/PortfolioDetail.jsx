@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { ArrowLeft, PlusCircle, Edit2, Trash2, RefreshCw } from 'lucide-react';
-import { formatPrice, formatPercent, formatNumber } from '../lib/calculations';
+import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
 
 export default function PortfolioDetail() {
   const { id } = useParams();
@@ -80,7 +80,7 @@ export default function PortfolioDetail() {
         <div>
           <h1 className="text-2xl font-bold text-foreground rtl-text">{portfolio.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {portfolio.items.length.toLocaleString('fa-IR')} آیتم | ارزش کل: {typeof portfolio.total_value === 'number' ? portfolio.total_value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—'} ریال
+            {toPersianNum(portfolio.items.length)} آیتم | ارزش کل: {typeof portfolio.total_value === 'number' ? portfolio.total_value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—'} ریال
           </p>
         </div>
         <div className="flex gap-2 self-start">

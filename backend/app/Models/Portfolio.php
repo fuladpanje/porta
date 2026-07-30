@@ -73,6 +73,11 @@ class Portfolio extends Model
                 $sellComm = $commissionEnabled ? $sellTotal * $sellCommissionRate : 0;
                 return ($sellTotal - $sellComm) - ($item->buy_price * $item->quantity);
             }
+            if ($item->last_price && $item->last_price > 0) {
+                $lastTotal = $item->last_price * $item->quantity;
+                $lastComm = $commissionEnabled ? $lastTotal * $sellCommissionRate : 0;
+                return ($lastTotal - $lastComm) - ($item->buy_price * $item->quantity);
+            }
             return 0;
         });
     }
@@ -81,6 +86,9 @@ class Portfolio extends Model
     {
         $soldCost = $this->items->sum(function ($item) {
             if ($item->sell_price && $item->sell_price > 0) {
+                return $item->buy_price * $item->quantity;
+            }
+            if ($item->last_price && $item->last_price > 0) {
                 return $item->buy_price * $item->quantity;
             }
             return 0;

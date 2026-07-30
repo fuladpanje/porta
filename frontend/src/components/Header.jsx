@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUnit } from '../contexts/UnitContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List } from 'lucide-react';
+import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat } from 'lucide-react';
 import { stockApi } from '../lib/api';
 import { clearSymbolCache } from '../lib/symbolCache';
 
@@ -24,19 +24,14 @@ export function Header() {
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+  const [plBySell, setPlBySell] = useState(() => {
+    const stored = localStorage.getItem('profit_loss_by_sell');
+    return stored ? stored === 'true' : false;
+  });
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target)) setShowSettings(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    localStorage.setItem('profit_loss_by_sell', String(plBySell));
+  }, [plBySell]);
 
   useEffect(() => {
     handleRefreshRef.current = handleRefresh;
@@ -80,19 +75,6 @@ export function Header() {
       localStorage.setItem('last_schedule_refresh', lastRefresh.getTime().toString());
     }
   }, [lastRefresh]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target)) setShowSettings(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleRefresh = async () => {
     if (refreshing) return;
@@ -138,6 +120,17 @@ export function Header() {
                 <span className={`inline-block w-2 h-2 rounded-full bg-brand-400 ${user?.schedule_enabled ? 'animate-pulse' : ''}`} title="زمان‌بندی فعال" />
               </span>
             )}
+          </button>
+
+          {/* Profit/Loss Mode Toggle */}
+          <button
+            onClick={() => { setPlBySell((prev) => !prev); window.dispatchEvent(new Event('pl-by-sell-changed')); }}
+            className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plBySell ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            aria-label="تغییر حالت محاسبه سود و زیان"
+            title={plBySell ? 'محاسبه سود/ضرر بر اساس آخرین قیمت + قیمت فروش' : 'محاسبه سود/ضرر بر اساس قیمت فروش محقق شده'}
+          >
+            <Repeat className="w-3 h-3" />
+            {plBySell ? 'آخرین + فروش' : 'فروش'}
           </button>
 
           <button

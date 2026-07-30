@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { Settings as SettingsIcon, Plus, Trash2, Check, X, Key, Loader2, AlertCircle, Edit3, Clock, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Check, X, Key, Loader2, AlertCircle, Edit3, Clock, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 export default function Settings() {
@@ -34,6 +34,11 @@ export default function Settings() {
   const [portfolios, setPortfolios] = useState([]);
   const [expandedPortfolios, setExpandedPortfolios] = useState({});
   const [portfolioCommission, setPortfolioCommission] = useState({});
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const fetchApiKeys = useCallback(async () => {
     try {
@@ -294,6 +299,40 @@ const handleToggleAutoSwitch = async () => {
     setEditingId(null);
     setEditName('');
     setEditApiKey('');
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setSavingPassword(true);
+    setError('');
+    setSuccess('');
+    if (newPassword !== confirmPassword) {
+      setError('رمز جدید و تأیید آن یکسان نیستند.');
+      setSavingPassword(false);
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('رمز جدید باید حداقل ۸ کاراکتر باشد.');
+      setSavingPassword(false);
+      return;
+    }
+    try {
+      const res = await api.put('/user/password', {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordForm(false);
+      setSuccess(res.data.message || 'رمز با موفقیت تغییر یافت.');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'خطا در تغییر رمز.');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const handleEditSave = async () => {
@@ -711,8 +750,78 @@ const handleToggleAutoSwitch = async () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
+{/* Password Change Section */}
+       <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
+         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
+             <Lock className="w-4 h-4 text-brand-500" />
+             تغییر رمز
+           </h2>
+           {!showPasswordForm && (
+             <button
+               onClick={() => { setShowPasswordForm(true); setError(''); setSuccess(''); }}
+               className="btn-primary text-xs py-1.5 px-3"
+             >
+               تغییر رمز
+             </button>
+           )}
+         </div>
+
+         {showPasswordForm && (
+           <form onSubmit={handleChangePassword} className="px-4 py-3 space-y-3">
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">رمز فعلی</label>
+               <input
+                 type="password"
+                 value={currentPassword}
+                 onChange={(e) => setCurrentPassword(e.target.value)}
+                 className="input-field w-full text-xs py-2"
+                 placeholder="رمز فعلی خود را وارد کنید"
+                 required
+                 autoFocus
+               />
+             </div>
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">رمز جدید</label>
+               <input
+                 type="password"
+                 value={newPassword}
+                 onChange={(e) => setNewPassword(e.target.value)}
+                 className="input-field w-full text-xs py-2"
+                 placeholder="رمز جدید (حداقل ۸ کاراکتر)"
+                 required
+               />
+             </div>
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">تأیید رمز جدید</label>
+               <input
+                 type="password"
+                 value={confirmPassword}
+                 onChange={(e) => setConfirmPassword(e.target.value)}
+                 className="input-field w-full text-xs py-2"
+                 placeholder="رمز جدید را دوباره وارد کنید"
+                 required
+               />
+             </div>
+             <div className="flex gap-2">
+               <button type="submit" disabled={savingPassword} className="btn-primary text-xs py-1.5 px-4 flex items-center gap-1">
+                 {savingPassword && <Loader2 className="w-3 h-3 animate-spin" />}
+                 {savingPassword ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+               </button>
+               <button
+                 type="button"
+                 onClick={() => { setShowPasswordForm(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setError(''); }}
+                 className="btn-secondary text-xs py-1.5 px-4"
+               >
+                 انصراف
+               </button>
+             </div>
+           </form>
+         )}
+       </div>
+
+       {/* Delete Confirmation Modal */}
+       {showDeleteConfirm && (
         <ConfirmModal
           message="آیا از حذف این کلید API مطمئن هستید؟ این اقدام قابل بازگشت نیست."
           onConfirm={() => handleDelete(showDeleteConfirm)}

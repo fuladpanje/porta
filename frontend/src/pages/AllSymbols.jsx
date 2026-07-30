@@ -5,6 +5,7 @@ import { stockApi } from '../lib/api';
 import { searchSymbolsLocal, clearSymbolCache } from '../lib/symbolCache';
 import { formatPrice } from '../lib/calculations';
 import { Search, RefreshCw, Plus, X } from 'lucide-react';
+import { toPersianNum } from '../lib/calculations';
 
 function formatPE(pe) {
   if (pe === null || pe === undefined || isNaN(Number(pe)) || Number(pe) === 0) return '—';
@@ -357,7 +358,7 @@ export default function AllSymbols() {
       </div>
 
       <div className="text-[10px] text-slate-400 px-1">
-        {filtered.length} نماد
+        {toPersianNum(filtered.length)} نماد
       </div>
 
       <div className="overflow-x-auto">

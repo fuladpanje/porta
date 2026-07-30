@@ -141,6 +141,7 @@ class PortfolioController extends Controller
         $userCommissionEnabled = $user->commission_enabled ?? false;
         $userBuyCommissionRate = ($user->buy_commission ?? 0.37) / 100;
         $userSellCommissionRate = ($user->sell_commission ?? 0.88) / 100;
+        $plBySell = $request->query('pl_by_sell', false);
 
         $portfolios = $user->portfolios()->with('items')->get();
 
@@ -168,27 +169,36 @@ class PortfolioController extends Controller
             });
         });
 
-        $totalProfitLoss = $portfolios->sum(function ($p) use ($userCommissionEnabled, $userBuyCommissionRate, $userSellCommissionRate) {
+        $totalProfitLoss = $portfolios->sum(function ($p) use ($userCommissionEnabled, $userBuyCommissionRate, $userSellCommissionRate, $plBySell) {
             $usePortfolioCommission = !empty($p->commission_enabled);
             $commissionEnabled = $usePortfolioCommission ? true : $userCommissionEnabled;
             $sellCommissionRate = $usePortfolioCommission
                 ? ($p->sell_commission ?? 0.88) / 100
                 : $userSellCommissionRate;
 
-            return $p->items->sum(function ($item) use ($commissionEnabled, $sellCommissionRate) {
+            return $p->items->sum(function ($item) use ($commissionEnabled, $sellCommissionRate, $plBySell) {
                 if ($item->sell_price && $item->sell_price > 0) {
                     $buyTotal = $item->buy_price * $item->quantity;
                     $sellTotal = $item->sell_price * $item->quantity;
                     $sellComm = $commissionEnabled ? $sellTotal * $sellCommissionRate : 0;
                     return ($sellTotal - $sellComm) - $buyTotal;
                 }
+                if (!$plBySell && $item->last_price && $item->last_price > 0) {
+                    $buyTotal = $item->buy_price * $item->quantity;
+                    $lastTotal = $item->last_price * $item->quantity;
+                    $lastComm = $commissionEnabled ? $lastTotal * $sellCommissionRate : 0;
+                    return ($lastTotal - $lastComm) - $buyTotal;
+                }
                 return 0;
             });
         });
 
-        $soldCost = $portfolios->sum(function ($p) {
-            return $p->items->sum(function ($item) {
+        $soldCost = $portfolios->sum(function ($p) use ($plBySell) {
+            return $p->items->sum(function ($item) use ($plBySell) {
                 if ($item->sell_price && $item->sell_price > 0) {
+                    return $item->buy_price * $item->quantity;
+                }
+                if (!$plBySell && $item->last_price && $item->last_price > 0) {
                     return $item->buy_price * $item->quantity;
                 }
                 return 0;
@@ -201,8 +211,12 @@ class PortfolioController extends Controller
             return $p->items;
         });
 
-        $bestPerformer = $allItems->sortByDesc('sell_price')->first();
-        $worstPerformer = $allItems->sortBy('sell_price')->first();
+        $bestPerformer = $allItems->sortByDesc(function ($item) use ($plBySell) {
+            return $plBySell ? ($item->sell_price ?? 0) : ($item->last_price ?? $item->sell_price ?? 0);
+        })->first();
+        $worstPerformer = $allItems->sortBy(function ($item) use ($plBySell) {
+            return $plBySell ? ($item->sell_price ?? PHP_INT_MAX) : ($item->last_price ?? $item->sell_price ?? PHP_INT_MAX);
+        })->first();
 
         return response()->json([
             'data' => [

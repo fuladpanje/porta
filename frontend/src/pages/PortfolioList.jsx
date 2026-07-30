@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import { toPersianNum } from '../lib/calculations';
 import { PlusCircle, FolderOpen, Trash2, ArrowRight } from 'lucide-react';
 
 export default function PortfolioList() {
   const [portfolios, setPortfolios] = useState([]);
   const [loading, setLoading] = useState(true);
+  const plBySell = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') === 'true') : false;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,7 +51,7 @@ export default function PortfolioList() {
         <div>
           <h1 className="text-2xl font-bold text-foreground rtl-text">پرتفویی‌ها</h1>
           <p className="text-sm text-muted-foreground mt-1">
-             ارزش کل: {totalValue.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ریال
+             ارزش کل: {toPersianNum(totalValue.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} ریال
           </p>
         </div>
         <Link to="/portfolios/new" className="btn-primary flex items-center gap-2 self-start">
@@ -97,21 +99,21 @@ export default function PortfolioList() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">تعداد آیتم‌ها</span>
-                  <span className="font-medium text-foreground">{portfolio.items.length}</span>
+                  <span className="font-medium text-foreground">{toPersianNum(portfolio.items.length)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">ارزش کل</span>
                   <span className="font-medium text-foreground">
-                    {typeof portfolio.total_value === 'number'
-                      ? portfolio.total_value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                      : '—'}
+{typeof portfolio.total_value === 'number'
+                       ? toPersianNum(portfolio.total_value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))
+                       : '—'}
                   </span>
                 </div>
                 {portfolio.total_profit_loss_percent !== 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">سود/ضرر</span>
+                    <span className="text-muted-foreground">{plBySell ? 'سود محقق شده' : 'سود محقق نشده'}</span>
                     <span className={`font-medium ${portfolio.total_profit_loss_percent >= 0 ? 'text-success' : 'text-danger'}`}>
-                      {portfolio.total_profit_loss_percent.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} درصد
+                      {toPersianNum(portfolio.total_profit_loss_percent.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} درصد
                     </span>
                   </div>
                 )}

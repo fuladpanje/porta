@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/auto-switch', [AuthController::class, 'updateAutoSwitch']);
     Route::put('/user/schedule', [AuthController::class, 'updateSchedule']);
     Route::put('/user/fee-settings', [AuthController::class, 'updateCommission']);
+    Route::put('/user/password', [AuthController::class, 'changePassword']);
 
     Route::get('/api-keys', [ApiKeyController::class, 'index']);
     Route::post('/api-keys', [ApiKeyController::class, 'store']);

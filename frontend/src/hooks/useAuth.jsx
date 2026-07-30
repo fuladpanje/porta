@@ -47,12 +47,21 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const updateUser = (newUser) => {
-    setUser(newUser);
-  };
+   const updateUser = (newUser) => {
+     setUser(newUser);
+   };
 
-  return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading, updateUser }}>
+   const changePassword = async (currentPassword, newPassword, passwordConfirmation) => {
+     const res = await api.put('/user/password', {
+       current_password: currentPassword,
+       password: newPassword,
+       password_confirmation: passwordConfirmation,
+     });
+     return res.data;
+   };
+
+   return (
+    <AuthContext.Provider value={{ user, token, login, register, logout, loading, updateUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

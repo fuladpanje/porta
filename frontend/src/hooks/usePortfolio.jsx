@@ -12,7 +12,8 @@ export function usePortfolio() {
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/dashboard');
+      const plBySell = localStorage.getItem('profit_loss_by_sell') === 'true';
+      const res = await api.get('/dashboard', { params: { pl_by_sell: plBySell } });
       setDashboard(res.data.data);
       setPortfolios(res.data.data.portfolios || []);
       const allItems = res.data.data.portfolios?.flatMap((p) => p.items || []) || [];
@@ -27,7 +28,8 @@ export function usePortfolio() {
   const refreshDashboard = useCallback(async () => {
     try {
       setRefreshing(true);
-      const res = await api.get('/dashboard');
+      const plBySell = localStorage.getItem('profit_loss_by_sell') === 'true';
+      const res = await api.get('/dashboard', { params: { pl_by_sell: plBySell } });
       setDashboard(res.data.data);
       setPortfolios(res.data.data.portfolios || []);
       const allItems = res.data.data.portfolios?.flatMap((p) => p.items || []) || [];
