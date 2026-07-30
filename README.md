@@ -49,9 +49,9 @@
 
 ## دانلود
 
-۱. به صفحه [Release‌ها](https://github.com/fuladpanje/porta/releases) بروید
-۲. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
-۳. فایل ZIP را از حالت فشرده خارج کنید و محتوایش را به `public_html/` سایت خود آپلود کنید
+1. به صفحه [Release‌ها](https://github.com/fuladpanje/porta/releases) بروید
+2. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
+3. فایل ZIP را از حالت فشرده خارج کنید و محتوایش را به `public_html/` سایت خود آپلود کنید
 
 ## نصب روی هاست cPanel
 
@@ -67,11 +67,11 @@ public_html/
 └── database.sql  ← ایمپورت در phpMyAdmin
 ```
 
-۱. در cPanel یک دیتابیس بسازید و یک کاربر به آن اختصاص دهید
-۲. در phpMyAdmin، دیتابیس را انتخاب کرده و `database.sql` را ایمپورت کنید
-۳. Document Root را به `backend/public` تغییر دهید
-۴. سطح دسترسی `storage/` و `bootstrap/cache/` را `755` قرار دهید
-۵. فایل `.env` را ویرایش کنید:
+1. در cPanel یک دیتابیس بسازید و یک کاربر به آن اختصاص دهید
+2. در phpMyAdmin، دیتابیس را انتخاب کرده و `database.sql` را ایمپورت کنید
+3. Document Root را به `backend/public` تغییر دهید
+4. سطح دسترسی `storage/` و `bootstrap/cache/` را `755` قرار دهید
+5. فایل `.env` را ویرایش کنید:
 
 ```env
 DB_DATABASE=نام_دیتابیس
@@ -81,7 +81,7 @@ APP_URL=https://example.com
 SANCTUM_STATEFUL_DOMAINS=example.com
 ```
 
-۶. تست کنید 🎉
+6. تست کنید 🎉
 
 ## API
 
