@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { Chart } from 'chart.js';
 import { UnitProvider } from './contexts/UnitContext';
 import '@fontsource/vazirmatn/400.css';
@@ -17,10 +17,10 @@ Chart.defaults.font.family = "'Vazirmatn', system-ui, sans-serif";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <HashRouter>
       <UnitProvider>
         <App />
       </UnitProvider>
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>
 );

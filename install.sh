@@ -93,11 +93,16 @@ if [ -f database.sql ]; then
     cp database.sql "$DEPLOY_DIR/database.sql"
 fi
 
+if [ -f README.md ]; then
+    cp README.md "$DEPLOY_DIR/README.md"
+fi
+
 # Remove unnecessary files
 rm -rf "$DEPLOY_DIR/backend/tests"
 rm -rf "$DEPLOY_DIR/backend/.git"
 rm -rf "$DEPLOY_DIR/backend/test_*.php"
 rm -rf "$DEPLOY_DIR/backend/php_server*.log"
+rm -rf "$DEPLOY_DIR/backend/storage/logs/laravel.log"
 rm -f "$DEPLOY_DIR/backend/.env"
 rm -f "$DEPLOY_DIR/backend/.env.*"
 

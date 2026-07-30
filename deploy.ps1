@@ -57,11 +57,16 @@ if (Test-Path "database.sql") {
     (Get-Item "$DEPLOY\database.sql").CreationTime = Get-Date
 }
 
+if (Test-Path "README.md") {
+    Copy-Item -Path "README.md" -Destination "$DEPLOY\README.md"
+}
+
 Remove-Item -Path "$DEPLOY\backend\tests" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\debug-commission.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\test2.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\test_*.php" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\php_server*.log" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$DEPLOY\backend\storage\logs\laravel.log" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\.env" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\.env.*" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$DEPLOY\backend\.git" -Recurse -Force -ErrorAction SilentlyContinue

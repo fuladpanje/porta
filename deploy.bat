@@ -87,9 +87,14 @@ if exist database.sql (
     copy database.sql deploy\database.sql
 )
 
+if exist README.md (
+    copy README.md deploy\README.md
+)
+
 :: Remove test files and logs
 del /q deploy\backend\test_*.php 2>nul
 del /q deploy\backend\php_server*.log 2>nul
+del /q deploy\backend\storage\logs\laravel.log 2>nul
 rmdir /s /q deploy\backend\tests 2>nul
 
 :: Generate .env with APP_KEY

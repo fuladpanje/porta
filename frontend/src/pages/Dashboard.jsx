@@ -208,6 +208,10 @@ const totals = useMemo(() => {
     };
 
     const handleToggleItemActive = async (portfolioId, itemId, currentActive) => {
+      const portfolio = portfolios.find((p) => p.id === portfolioId);
+      if (portfolio && (portfolio.active === false || portfolio.active === 0)) {
+        return;
+      }
       try { await api.put(`/portfolios/${portfolioId}/items/${itemId}`, { active: !currentActive }); refreshDashboard(); } catch (err) { alert(err.response?.data?.message || 'خطا'); }
     };
 
@@ -332,6 +336,12 @@ const totals = useMemo(() => {
                     aria-checked={showInactiveChartItems}
                     onClick={() => {
                       const next = !showInactiveChartItems;
+                      if (next) {
+                        const hasInactivePortfolio = portfolios.some((p) => p.active === false || p.active === 0);
+                        if (hasInactivePortfolio) {
+                          setShowInactivePortfolios(true);
+                        }
+                      }
                       setShowInactiveChartItems(next);
                       if (!next) {
                         setShowInactivePortfolios(false);
@@ -342,33 +352,33 @@ const totals = useMemo(() => {
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactiveChartItems ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
-               {activeChart === 'profitLoss' && (
-                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
-                   <button
-                     type="button"
-                     onClick={() => setShowPLAmount(false)}
-                     className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${!showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                   >
-                     درصد
-                   </button>
-                   <button
-                     type="button"
-                     onClick={() => setShowPLAmount(true)}
-                     className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                   >
-                     مبلغ
-                   </button>
-                 </div>
-               )}
-             </div>
-           )}
- 
-          {chartsExpanded && <div role="tabpanel" className={activeChart === 'allocation' ? 'h-72 pb-4' : 'h-64'}>
-            {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} />}
-             {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
-             {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
-          </div>}
-        </div>
+                {activeChart === 'profitLoss' && (
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowPLAmount(false)}
+                      className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${!showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    >
+                      درصد
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPLAmount(true)}
+                      className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${showPLAmount ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    >
+                      مبلغ
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+  
+           {chartsExpanded && <div role="tabpanel" className={`h-80 pb-4 ${activeChart !== 'profitLoss' ? 'mt-5' : ''}`}>
+             {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} />}
+              {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
+              {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
+           </div>}
+         </div>
 
        {/* Portfolios Section */}
         <div className="flex items-center justify-between">
@@ -457,7 +467,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
           const pp = SafeNumber(portfolio._profitLossPct);
 
           return (
-            <div key={portfolio.id} className={`bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden transition-shadow hover:shadow-sm ${!portfolio.active && showItemForm !== portfolio.id ? 'opacity-50' : ''}`}>
+            <div key={portfolio.id} className={`bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden transition-shadow hover:shadow-sm ${!portfolio.active && showItemForm !== portfolio.id && !(editingItem && editingItem.portfolioId === portfolio.id) ? 'opacity-50' : ''}`}>
               {/* Portfolio Header */}
 <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors gap-2" onClick={() => togglePortfolio(portfolio.id)}>
                   <div className="flex items-center gap-2">
@@ -628,10 +638,10 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                                          </span>
                                        ) : <span className="text-slate-500 italic">—</span>}
                                    </td>
-                                   <td className="px-2 py-1.5 flex items-center gap-1">
-                                   <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} className="p-0.5 rounded hover:bg-brand/10 transition-colors" title={item.active ? 'غیرفعال کردن' : 'فعال کردن'}>
-                                       {item.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
-                                     </button>
+                                    <td className="px-2 py-1.5 flex items-center gap-1">
+                                    <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} disabled={portfolio.active === false || portfolio.active === 0} className={`p-0.5 rounded transition-colors ${portfolio.active === false || portfolio.active === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand/10'}`} title={portfolio.active === false || portfolio.active === 0 ? 'ابتدا پرتفو را فعال کنید' : (item.active ? 'غیرفعال کردن' : 'فعال کردن')}>
+                                        {item.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
+                                      </button>
                                      <button onClick={() => setEditingItem({ portfolioId: portfolio.id, itemId: item.id })} className="p-0.5 rounded hover:bg-brand/10 transition-colors">
                                        <Pencil className="w-3 h-3 text-brand-500" />
                                      </button>
@@ -871,7 +881,6 @@ function PortfolioAllocationChart({ items, unit }) {
     responsive: true,
     maintainAspectRatio: false,
     cutout: '70%',
-    layout: { padding: { bottom: 18 } },
     plugins: {
       legend: {
         position: 'right',

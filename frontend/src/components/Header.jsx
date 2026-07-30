@@ -99,7 +99,7 @@ export function Header() {
           <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center">
             <BarChart3 className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-bold text-slate-800 dark:text-white tracking-tight">Porta</span>
+          <span className="text-sm font-bold text-slate-800 dark:text-white tracking-tight">پورتا</span>
         </div>
 
         {/* Left: Refresh + Settings */}
