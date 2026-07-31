@@ -72,13 +72,14 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
       if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
       else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
       const heldItems = allItems.filter((i) => !i.sell_price || i.sell_price <= 0);
-       const totalValue = heldItems.reduce((s, i) => {
-         const price = i.last_price || i.buy_price;
+      const valueItems = (sellFilter === 'all' && plMode === 'all') ? heldItems : items;
+       const totalValue = valueItems.reduce((s, i) => {
+         const price = i.sell_price && i.sell_price > 0 ? i.sell_price : (i.last_price || i.buy_price);
          const qty = SafeNumber(i.quantity);
          const sellComm = pCommissionEnabled ? SafeNumber(price) * qty * pSellCommissionRate : 0;
          return s + SafeNumber(price) * qty - sellComm;
        }, 0);
-      const totalCost = heldItems.reduce((s, i) => s + SafeNumber(i.buy_price) * SafeNumber(i.quantity), 0);
+      const totalCost = valueItems.reduce((s, i) => s + SafeNumber(i.buy_price) * SafeNumber(i.quantity), 0);
 const totalPL = allItems.reduce((s, i) => {
           const qty = SafeNumber(i.quantity);
           const buyTotal = SafeNumber(i.buy_price) * qty;
@@ -128,7 +129,7 @@ const soldCost = allItems.reduce((s, i) => {
            return s;
          }, 0);
        const totalPLPct = soldCost > 0 ? (totalPL / soldCost) * 100 : 0;
-      return { ...p, _totalValue: totalValue, _totalCost: totalCost, _profitLoss: totalPL, _profitLossPct: totalPLPct, _heldCount: heldItems.length };
+      return { ...p, _totalValue: totalValue, _totalCost: totalCost, _profitLoss: totalPL, _profitLossPct: totalPLPct, _heldCount: heldItems.length, _valueCount: valueItems.length };
     });
     if (portfolioSort === 'default') return list;
     return [...list].sort((a, b) => {
@@ -152,7 +153,7 @@ const allItems = useMemo(() => {
       }
       return items;
     }, [portfolios, showInactivePortfolios, showInactiveChartItems]);
-   const totalAllItems = portfolios.reduce((sum, p) => sum + SafeNumber(p._heldCount), 0);
+   const totalAllItems = portfolios.reduce((sum, p) => sum + SafeNumber(p._valueCount), 0);
 
 const totals = useMemo(() => {
       const totalValue = portfolios.reduce((s, p) => s + SafeNumber(p._totalValue), 0);
@@ -549,7 +550,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                   <div className="flex items-center gap-2">
                   {isExp ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
                   <span className="text-sm font-medium text-slate-800 dark:text-slate-200 rtl-text truncate">{portfolio.name}</span>
-                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{toPersianNum(SafeNumber(portfolio._heldCount))} سهم</span>
+                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{toPersianNum(SafeNumber(portfolio._valueCount))} سهم</span>
                 </div>
 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <div className="flex flex-col items-center gap-0.5">
