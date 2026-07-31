@@ -8,6 +8,8 @@ import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Tr
 import { Line, Bar, Doughnut, Chart } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
+
+Chart.register(TreemapController, TreemapElement);
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SymbolSearch } from '../components/SymbolSearch';
 
