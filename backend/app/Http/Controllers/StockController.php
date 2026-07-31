@@ -60,7 +60,8 @@ class StockController extends Controller
             if (!$apiKey) return;
 
             $now = now();
-            if (!$apiKey->last_reset_at || $apiKey->last_reset_at->diffInHours($now) >= 24) {
+            $today = $now->toDateString();
+            if (!$apiKey->last_reset_at || $apiKey->last_reset_at->toDateString() !== $today) {
                 $apiKey->update(['daily_requests' => 1, 'last_reset_at' => $now]);
             } else {
                 $apiKey->increment('daily_requests');

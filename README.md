@@ -174,6 +174,8 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 | `name` | string | — | نام کلید |
 | `api_key` | text | — | کلید API |
 | `is_default` | boolean | `false` | کلید پیش‌فرض |
+| `daily_requests` | integer | `0` | تعداد درخواست‌های روزانه |
+| `last_reset_at` | timestamp | `null` | آخرین زمان ریست شمارنده |
 | `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
 
 ### جدول `favorites`
@@ -364,6 +366,8 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 | `name` | string | — | Key name |
 | `api_key` | text | — | API key |
 | `is_default` | boolean | `false` | Default key |
+| `daily_requests` | integer | `0` | Daily request count |
+| `last_reset_at` | timestamp | `null` | Last counter reset time |
 | `created_at` / `updated_at` | timestamp | — | Timestamps |
 
 ### `favorites` Table
