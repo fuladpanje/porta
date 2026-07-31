@@ -1238,6 +1238,7 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             const pl = value - buyTotal;
             const plPct = match.plPct;
             if (!value) return '';
+            const amount = unit === 'toman' ? value / 10 : value;
             const plAmount = unit === 'toman' ? pl / 10 : pl;
             const sign = pl >= 0 ? '+' : '';
             const plPctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
