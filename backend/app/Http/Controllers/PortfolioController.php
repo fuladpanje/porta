@@ -141,7 +141,7 @@ class PortfolioController extends Controller
         $userCommissionEnabled = $user->commission_enabled ?? false;
         $userBuyCommissionRate = ($user->buy_commission ?? 0.37) / 100;
         $userSellCommissionRate = ($user->sell_commission ?? 0.88) / 100;
-        $plBySell = $request->query('pl_by_sell', false);
+        $plMode = $request->query('pl_mode', 'all');
 
         $portfolios = $user->portfolios()->with('items')->get();
 
@@ -169,21 +169,24 @@ class PortfolioController extends Controller
             });
         });
 
-        $totalProfitLoss = $portfolios->sum(function ($p) use ($userCommissionEnabled, $userBuyCommissionRate, $userSellCommissionRate, $plBySell) {
+        $totalProfitLoss = $portfolios->sum(function ($p) use ($userCommissionEnabled, $userBuyCommissionRate, $userSellCommissionRate, $plMode) {
             $usePortfolioCommission = !empty($p->commission_enabled);
             $commissionEnabled = $usePortfolioCommission ? true : $userCommissionEnabled;
             $sellCommissionRate = $usePortfolioCommission
                 ? ($p->sell_commission ?? 0.88) / 100
                 : $userSellCommissionRate;
 
-            return $p->items->sum(function ($item) use ($commissionEnabled, $sellCommissionRate, $plBySell) {
-                if ($item->sell_price && $item->sell_price > 0) {
+            return $p->items->sum(function ($item) use ($commissionEnabled, $sellCommissionRate, $plMode) {
+                $hasSell = $item->sell_price && $item->sell_price > 0;
+                $hasLast = $item->last_price && $item->last_price > 0;
+
+                if ($hasSell && in_array($plMode, ['all', 'realized'])) {
                     $buyTotal = $item->buy_price * $item->quantity;
                     $sellTotal = $item->sell_price * $item->quantity;
                     $sellComm = $commissionEnabled ? $sellTotal * $sellCommissionRate : 0;
                     return ($sellTotal - $sellComm) - $buyTotal;
                 }
-                if (!$plBySell && $item->last_price && $item->last_price > 0) {
+                if (!$hasSell && $hasLast && in_array($plMode, ['all', 'unrealized'])) {
                     $buyTotal = $item->buy_price * $item->quantity;
                     $lastTotal = $item->last_price * $item->quantity;
                     $lastComm = $commissionEnabled ? $lastTotal * $sellCommissionRate : 0;
@@ -193,12 +196,15 @@ class PortfolioController extends Controller
             });
         });
 
-        $soldCost = $portfolios->sum(function ($p) use ($plBySell) {
-            return $p->items->sum(function ($item) use ($plBySell) {
-                if ($item->sell_price && $item->sell_price > 0) {
+        $soldCost = $portfolios->sum(function ($p) use ($plMode) {
+            return $p->items->sum(function ($item) use ($plMode) {
+                $hasSell = $item->sell_price && $item->sell_price > 0;
+                $hasLast = $item->last_price && $item->last_price > 0;
+
+                if ($hasSell && in_array($plMode, ['all', 'realized'])) {
                     return $item->buy_price * $item->quantity;
                 }
-                if (!$plBySell && $item->last_price && $item->last_price > 0) {
+                if (!$hasSell && $hasLast && in_array($plMode, ['all', 'unrealized'])) {
                     return $item->buy_price * $item->quantity;
                 }
                 return 0;
@@ -211,11 +217,15 @@ class PortfolioController extends Controller
             return $p->items;
         });
 
-        $bestPerformer = $allItems->sortByDesc(function ($item) use ($plBySell) {
-            return $plBySell ? ($item->sell_price ?? 0) : ($item->last_price ?? $item->sell_price ?? 0);
+        $bestPerformer = $allItems->sortByDesc(function ($item) use ($plMode) {
+            if ($plMode === 'realized') return $item->sell_price ?? 0;
+            if ($plMode === 'unrealized') return (!$item->sell_price || $item->sell_price <= 0) ? ($item->last_price ?? 0) : 0;
+            return $item->last_price ?? $item->sell_price ?? 0;
         })->first();
-        $worstPerformer = $allItems->sortBy(function ($item) use ($plBySell) {
-            return $plBySell ? ($item->sell_price ?? PHP_INT_MAX) : ($item->last_price ?? $item->sell_price ?? PHP_INT_MAX);
+        $worstPerformer = $allItems->sortBy(function ($item) use ($plMode) {
+            if ($plMode === 'realized') return $item->sell_price ?? PHP_INT_MAX;
+            if ($plMode === 'unrealized') return (!$item->sell_price || $item->sell_price <= 0) ? ($item->last_price ?? PHP_INT_MAX) : PHP_INT_MAX;
+            return $item->last_price ?? $item->sell_price ?? PHP_INT_MAX;
         })->first();
 
         return response()->json([

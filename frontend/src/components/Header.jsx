@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUnit } from '../contexts/UnitContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat } from 'lucide-react';
 import { stockApi } from '../lib/api';
 import { clearSymbolCache } from '../lib/symbolCache';
@@ -10,6 +10,10 @@ export function Header() {
   const { user, logout } = useAuth();
   const { unit, toggleUnit } = useUnit();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isSymbolsPage = location.pathname === '/symbols';
+  const isSettingsPage = location.pathname === '/settings';
+  const hidePlBySell = isSymbolsPage || isSettingsPage;
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(() => {
     const stored = localStorage.getItem('last_schedule_refresh');
@@ -24,18 +28,39 @@ export function Header() {
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  const [plBySell, setPlBySell] = useState(() => {
+  const [plMode, setPlMode] = useState(() => {
     const stored = localStorage.getItem('profit_loss_by_sell');
-    return stored ? stored === 'true' : false;
+    if (stored === 'false') return 'realized';
+    if (stored === 'true') return 'all';
+    return stored || 'all';
   });
 
   useEffect(() => {
-    localStorage.setItem('profit_loss_by_sell', String(plBySell));
-  }, [plBySell]);
+    localStorage.setItem('profit_loss_by_sell', plMode);
+  }, [plMode]);
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   useEffect(() => {
     handleRefreshRef.current = handleRefresh;
   });
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
+        setShowSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (intervalRef.current) {
@@ -55,8 +80,6 @@ export function Header() {
           localStorage.setItem('last_schedule_refresh', Date.now().toString());
         };
 
-        handleRefreshRef.current();
-        localStorage.setItem('last_schedule_refresh', Date.now().toString());
         intervalRef.current = setInterval(scheduleNext, ms);
       }
     }
@@ -83,10 +106,10 @@ export function Header() {
       await stockApi.refreshPrices();
       clearSymbolCache();
       window.dispatchEvent(new Event('prices-refreshed'));
-      setLastRefresh(new Date());
     } catch (err) {
       // silent
     } finally {
+      setLastRefresh(new Date());
       setRefreshing(false);
     }
   };
@@ -122,16 +145,21 @@ export function Header() {
             )}
           </button>
 
-          {/* Profit/Loss Mode Toggle */}
+          {/* Profit/Loss Mode Toggle - hidden on AllSymbols and Settings pages */}
+          {!hidePlBySell && (
           <button
-            onClick={() => { setPlBySell((prev) => !prev); window.dispatchEvent(new Event('pl-by-sell-changed')); }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plBySell ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            onClick={() => {
+              setPlMode((prev) => prev === 'all' ? 'realized' : prev === 'realized' ? 'unrealized' : 'all');
+              window.dispatchEvent(new Event('pl-by-sell-changed'));
+            }}
+            className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plMode === 'all' ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : plMode === 'realized' ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             aria-label="تغییر حالت محاسبه سود و زیان"
-            title={plBySell ? 'محاسبه سود/ضرر بر اساس آخرین قیمت + قیمت فروش' : 'محاسبه سود/ضرر بر اساس قیمت فروش محقق شده'}
+            title={plMode === 'all' ? 'محاسبه سود/ضرر محقق شده + محقق نشده' : plMode === 'realized' ? 'محاسبه سود/ضرر فقط محقق شده' : 'محاسبه سود/ضرر فقط محقق نشده'}
           >
             <Repeat className="w-3 h-3" />
-            {plBySell ? 'آخرین + فروش' : 'فروش'}
+            {plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده'}
           </button>
+          )}
 
           <button
             onClick={() => navigate('/symbols')}

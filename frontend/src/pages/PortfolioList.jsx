@@ -7,7 +7,7 @@ import { PlusCircle, FolderOpen, Trash2, ArrowRight } from 'lucide-react';
 export default function PortfolioList() {
   const [portfolios, setPortfolios] = useState([]);
   const [loading, setLoading] = useState(true);
-  const plBySell = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') === 'true') : false;
+  const plMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') || 'all') : 'all';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,7 +111,7 @@ export default function PortfolioList() {
                 </div>
                 {portfolio.total_profit_loss_percent !== 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{plBySell ? 'سود محقق شده' : 'سود محقق نشده'}</span>
+                    <span className="text-muted-foreground">{plMode === 'all' ? 'سود محقق شده + نشده' : plMode === 'realized' ? 'سود محقق شده' : 'سود محقق نشده'}</span>
                     <span className={`font-medium ${portfolio.total_profit_loss_percent >= 0 ? 'text-success' : 'text-danger'}`}>
                       {toPersianNum(portfolio.total_profit_loss_percent.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} درصد
                     </span>

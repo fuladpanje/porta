@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PortfolioItemController;
 use App\Http\Controllers\StockController;
@@ -37,4 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/api-keys/{apiKey}', [ApiKeyController::class, 'update']);
     Route::delete('/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
     Route::post('/api-keys/{apiKey}/default', [ApiKeyController::class, 'setDefault']);
+
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
 });

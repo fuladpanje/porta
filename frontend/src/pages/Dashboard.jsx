@@ -41,7 +41,7 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
     const commissionEnabled = user?.commission_enabled || false;
     const buyCommissionRate = (user?.buy_commission || 0.37) / 100;
     const sellCommissionRate = (user?.sell_commission || 0.88) / 100;
-  const plBySell = localStorage.getItem('profit_loss_by_sell') === 'true';
+  const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
 
   useEffect(() => {
     const handler = () => refreshDashboard();
@@ -70,12 +70,14 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
 const totalPL = items.reduce((s, i) => {
           const qty = SafeNumber(i.quantity);
           const buyTotal = SafeNumber(i.buy_price) * qty;
-if (i.sell_price && i.sell_price > 0) {
+          const hasSell = i.sell_price && i.sell_price > 0;
+          const hasLast = i.last_price && i.last_price > 0;
+          if (hasSell && (plMode === 'all' || plMode === 'realized')) {
               const sellTotal = SafeNumber(i.sell_price) * qty;
               const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
               return s + (sellTotal - sellComm) - buyTotal;
             }
-            if (plBySell && i.last_price && i.last_price > 0) {
+            if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
               const lastTotal = SafeNumber(i.last_price) * qty;
               const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
               return s + (lastTotal - lastComm) - buyTotal;
@@ -83,10 +85,12 @@ if (i.sell_price && i.sell_price > 0) {
             return s;
         }, 0);
 const soldCost = items.reduce((s, i) => {
-           if (i.sell_price && i.sell_price > 0) {
+           const hasSell = i.sell_price && i.sell_price > 0;
+           const hasLast = i.last_price && i.last_price > 0;
+           if (hasSell && (plMode === 'all' || plMode === 'realized')) {
              return s + SafeNumber(i.buy_price) * SafeNumber(i.quantity);
            }
-           if (plBySell && i.last_price && i.last_price > 0) {
+           if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
              return s + SafeNumber(i.buy_price) * SafeNumber(i.quantity);
            }
            return s;
@@ -99,7 +103,7 @@ const soldCost = items.reduce((s, i) => {
       if (portfolioSort === 'percent') return b._profitLossPct - a._profitLossPct;
       return b.total_value - a.total_value;
     });
-  }, [dashboard, portfolioSort, commissionEnabled, buyCommissionRate, sellCommissionRate, plBySell]);
+  }, [dashboard, portfolioSort, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode]);
 const allItems = useMemo(() => {
      const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
      let items = activePortfolios.flatMap((p) => p.items || []);
@@ -127,12 +131,14 @@ const totals = useMemo(() => {
         (p.items || []).forEach((item) => {
           const qty = SafeNumber(item.quantity);
           const buyTotal = SafeNumber(item.buy_price) * qty;
-          if (item.sell_price && item.sell_price > 0) {
+          const hasSell = item.sell_price && item.sell_price > 0;
+          const hasLast = item.last_price && item.last_price > 0;
+          if (hasSell && (plMode === 'all' || plMode === 'realized')) {
             const sellTotal = SafeNumber(item.sell_price) * qty;
             const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
             totalPL += (sellTotal - sellComm) - buyTotal;
             totalSoldCost += buyTotal;
-          } else if (plBySell && item.last_price && item.last_price > 0) {
+          } else if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
             const lastTotal = SafeNumber(item.last_price) * qty;
             const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
             totalPL += (lastTotal - lastComm) - buyTotal;
@@ -142,7 +148,7 @@ const totals = useMemo(() => {
       });
       const totalPLPct = totalSoldCost > 0 ? (totalPL / totalSoldCost) * 100 : 0;
       return { totalValue, totalCost, totalPL, totalPLPct, count: portfolios.length, itemCount: allItems.length };
-   }, [portfolios, allItems, commissionEnabled, buyCommissionRate, sellCommissionRate, plBySell]);
+   }, [portfolios, allItems, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode]);
 
   if (loading) {
     return (
@@ -237,8 +243,8 @@ const totals = useMemo(() => {
              { id: 'stocks', label: 'سهم‌ها', value: totalAllItems, format: 'num', icon: Package },
               { id: 'buyValue', label: 'ارزش کل خرید', value: totals.totalCost, format: 'price', icon: Wallet },
               { id: 'portfolioValue', label: 'ارزش کل پرتو', value: totals.totalValue, format: 'price', icon: Wallet },
-{ id: 'totalPL', label: plBySell ? 'محقق شده + محقق نشده' : 'محقق شده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
-               { id: 'totalPLPct', label: plBySell ? 'محقق شده + محقق نشده' : 'محقق شده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
+{ id: 'totalPL', label: plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
+               { id: 'totalPLPct', label: plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
            ].map((s) => {
            const Icon = s.icon;
            return (
@@ -487,7 +493,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                         </div>
                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{plBySell ? 'محقق شده + محقق نشده (درصد)' : 'محقق شده (درصد)'}</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{plMode === 'all' ? 'محقق شده + نشده (درصد)' : plMode === 'realized' ? 'محقق شده (درصد)' : 'محقق نشده (درصد)'}</span>
                           <span className={`text-xs font-bold ${pp >= 0 ? 'text-success' : 'text-danger'}`}>{toPersianNum((unit === 'toman' ? SafeNumber(portfolio._profitLoss) / 10 : SafeNumber(portfolio._profitLoss)).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} {unit === 'toman' ? 'تومان' : 'ریال'} {pp !== 0 && `(${toPersianNum(pp.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }))} درصد)`}</span>
                         </div>
                         <div className="sm:hidden w-full border-t border-slate-200 dark:border-slate-700" />
@@ -655,14 +661,19 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                          </tbody>
                        </table>
                        </div>
-{!plBySell && pi.some((item) => !item.sell_price && item.last_price) && (
+{plMode === 'realized' && pi.some((item) => !item.sell_price && item.last_price) && (
                           <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-400 font-bold">●</span> سود محقق شده فقط بر اساس قیمت فروش در محاسبه کل لحاظ می‌شود
+                            <span className="text-brand-500 font-bold">●</span> فقط سهم‌های دارای قیمت فروش در محاسبه لحاظ می‌شوند
                           </div>
                         )}
- {plBySell && pi.some((item) => !item.sell_price && item.last_price) && (
+ {plMode === 'all' && pi.some((item) => !item.sell_price && item.last_price) && (
                            <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
-                             <span className="text-slate-400 font-bold">●</span> سود محقق نشده+محقق شده بر اساس آخرین قیمت و قیمت فروش در محاسبه کل لحاظ می‌شود
+                             <span className="text-brand-500 font-bold">●</span> <span className="text-slate-400 font-bold">●</span> سود محقق نشده+محقق شده بر اساس آخرین قیمت و قیمت فروش در محاسبه کل لحاظ می‌شود
+                           </div>
+                         )}
+ {plMode === 'unrealized' && pi.some((item) => !item.sell_price && item.last_price) && (
+                           <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
+                             <span className="text-slate-400 font-bold">●</span> فقط سهم‌های فروش نرفته (بر اساس آخرین قیمت) در محاسبه لحاظ می‌شوند
                            </div>
                          )}
                     </>
@@ -920,10 +931,18 @@ function PortfolioAllocationChart({ items, unit }) {
 }
 
 function PriceChart({ items, unit }) {
+    const plMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') || 'all') : 'all';
     const validItems = useMemo(() => {
       if (!items || items.length === 0) return [];
-      return items.filter((i) => i.buy_price != null && i.buy_price > 0 && i.symbol && ((i.sell_price && i.sell_price > 0) || (i.last_price && i.last_price > 0)));
-    }, [items]);
+      return items.filter((i) => {
+        if (i.buy_price == null || i.buy_price <= 0 || !i.symbol) return false;
+        const hasSell = i.sell_price && i.sell_price > 0;
+        const hasLast = i.last_price && i.last_price > 0;
+        if (plMode === 'realized') return hasSell;
+        if (plMode === 'unrealized') return !hasSell && hasLast;
+        return hasSell || hasLast;
+      });
+    }, [items, plMode]);
     const chartData = useMemo(() => {
       if (validItems.length === 0) return null;
       const labels = validItems.map((i) => i.symbol);
@@ -954,9 +973,16 @@ function PriceChart({ items, unit }) {
 }
 
 function PLChart({ items, showAmount, unit }) {
-   const plBySell = typeof localStorage !== 'undefined' ? localStorage.getItem('profit_loss_by_sell') === 'true' : false;
+   const plMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') || 'all') : 'all';
    const chartData = useMemo(() => {
-      const valid = items.filter((i) => i.buy_price && i.buy_price > 0 && i.symbol && ((i.sell_price && i.sell_price > 0) || (i.last_price && i.last_price > 0)));
+      const valid = items.filter((i) => {
+        if (!i.buy_price || i.buy_price <= 0 || !i.symbol) return false;
+        const hasSell = i.sell_price && i.sell_price > 0;
+        const hasLast = i.last_price && i.last_price > 0;
+        if (plMode === 'realized') return hasSell;
+        if (plMode === 'unrealized') return !hasSell && hasLast;
+        return hasSell || hasLast;
+      });
      if (valid.length === 0) return null;
 const percentages = valid.map((i) => {
         const sellPrice = (i.sell_price && i.sell_price > 0) ? i.sell_price : i.last_price;
@@ -975,7 +1001,7 @@ const percentages = valid.map((i) => {
     return {
       labels,
 datasets: [{
-         label: plBySell ? 'سود/ضرر (آخرین + فروش)' : 'سود/ضرر (فروش)',
+         label: plMode === 'all' ? 'سود/ضرر (محقق شده + نشده)' : plMode === 'realized' ? 'سود/ضرر (محقق شده)' : 'سود/ضرر (محقق نشده)',
         data,
         profitLossAmounts: amounts,
         profitLossPercentages: percentages,
@@ -988,7 +1014,7 @@ datasets: [{
         categoryPercentage: 0.72,
       }],
     };
-  }, [items, showAmount, unit, plBySell]);
+  }, [items, showAmount, unit, plMode]);
   const options = useMemo(() => ({
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false }, tooltip: { direction: 'rtl', bodyAlign: 'right', titleAlign: 'right', displayColors: false, padding: 10, cornerRadius: 8, bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" }, backgroundColor: '#0F172A', callbacks: { label: (ctx) => `درصد: ${(ctx.dataset.profitLossPercentages?.[ctx.dataIndex] ?? 0).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪`, afterLabel: (ctx) => `مبلغ: ${(ctx.dataset.profitLossAmounts?.[ctx.dataIndex] ?? 0).toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`, labelTextColor: (ctx) => (ctx.dataset.profitLossPercentages?.[ctx.dataIndex] ?? 0) >= 0 ? '#34D399' : '#F87171' } } },

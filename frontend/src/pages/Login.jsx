@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import api from '../lib/api';
+import { searchSymbolsLocal } from '../lib/symbolCache';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
@@ -19,6 +21,16 @@ export default function Login() {
 
     try {
       await login(email, password);
+      const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
+      api.get('/dashboard', { params: { pl_mode: plMode } }).then((res) => {
+        try {
+          localStorage.setItem(
+            'api_cache_dashboard',
+            JSON.stringify({ data: res.data.data, time: Date.now() })
+          );
+        } catch {}
+      }).catch(() => {});
+      searchSymbolsLocal('').catch(() => {});
       navigate('/dashboard');
     } catch (err) {
       setError('ایمیل یا رمز عبور اشتباه است');

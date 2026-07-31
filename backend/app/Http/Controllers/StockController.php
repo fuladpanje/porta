@@ -136,6 +136,9 @@ class StockController extends Controller
                     'fullName' => $symbol['l30'] ?? '',
                     'pl' => $symbol['pl'] ?? null,
                     'pe' => $symbol['pe'] ?? null,
+                    'plp' => $symbol['plp'] ?? null,
+                    'pcp' => $symbol['pcp'] ?? null,
+                    'cs' => $symbol['cs'] ?? null,
                     '_start' => $isStart ? 0 : 1,
                 ];
             }, array_values($symbols));
@@ -159,6 +162,9 @@ class StockController extends Controller
                     'fullName' => $symbol['l30'] ?? '',
                     'pl' => $symbol['pl'] ?? null,
                     'pe' => $symbol['pe'] ?? null,
+                    'plp' => $symbol['plp'] ?? null,
+                    'pcp' => $symbol['pcp'] ?? null,
+                    'cs' => $symbol['cs'] ?? null,
                 ];
             }, array_values($symbols));
 

@@ -39,4 +39,9 @@ export const stockApi = {
   refreshPrices: () => api.post('/stocks/refresh'),
 };
 
+export const favoritesApi = {
+  get: () => api.get('/favorites'),
+  toggle: (symbol) => api.post('/favorites/toggle', { symbol }),
+};
+
 export default api;

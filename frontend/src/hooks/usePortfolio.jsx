@@ -1,6 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 
+const DASHBOARD_CACHE_KEY = 'api_cache_dashboard';
+const DASHBOARD_CACHE_TTL = 60 * 60 * 1000;
+
+function getCachedDashboard() {
+  try {
+    const raw = localStorage.getItem(DASHBOARD_CACHE_KEY);
+    if (!raw) return null;
+    const { data, time } = JSON.parse(raw);
+    if (Date.now() - time > DASHBOARD_CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedDashboard(data) {
+  try {
+    localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ data, time: Date.now() }));
+  } catch {}
+}
+
 export function usePortfolio() {
   const [portfolios, setPortfolios] = useState([]);
   const [items, setItems] = useState([]);
@@ -9,15 +30,27 @@ export function usePortfolio() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (force = false) => {
     try {
       setLoading(true);
-      const plBySell = localStorage.getItem('profit_loss_by_sell') === 'true';
-      const res = await api.get('/dashboard', { params: { pl_by_sell: plBySell } });
+      if (!force) {
+        const cached = getCachedDashboard();
+        if (cached) {
+          setDashboard(cached);
+          setPortfolios(cached.portfolios || []);
+          const allItems = cached.portfolios?.flatMap((p) => p.items || []) || [];
+          setItems(allItems);
+          setLoading(false);
+          return;
+        }
+      }
+      const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
+      const res = await api.get('/dashboard', { params: { pl_mode: plMode } });
       setDashboard(res.data.data);
       setPortfolios(res.data.data.portfolios || []);
       const allItems = res.data.data.portfolios?.flatMap((p) => p.items || []) || [];
       setItems(allItems);
+      setCachedDashboard(res.data.data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -28,12 +61,13 @@ export function usePortfolio() {
   const refreshDashboard = useCallback(async () => {
     try {
       setRefreshing(true);
-      const plBySell = localStorage.getItem('profit_loss_by_sell') === 'true';
-      const res = await api.get('/dashboard', { params: { pl_by_sell: plBySell } });
+      const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
+      const res = await api.get('/dashboard', { params: { pl_mode: plMode } });
       setDashboard(res.data.data);
       setPortfolios(res.data.data.portfolios || []);
       const allItems = res.data.data.portfolios?.flatMap((p) => p.items || []) || [];
       setItems(allItems);
+      setCachedDashboard(res.data.data);
     } catch (err) {
       setError(err.message);
     } finally {
