@@ -340,10 +340,10 @@ const totals = useMemo(() => {
             <div className="flex items-center gap-2">
               {chartsExpanded && <div role="tablist" aria-label="نمودارهای داشبورد" className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
               {[
-                { id: 'allocation', label: 'ترکیب' },
-                { id: 'treemap', label: 'نقشه درختی' },
-                { id: 'price', label: 'قیمت' },
-                { id: 'profitLoss', label: 'سود و زیان' },
+                { id: 'allocation', label: 'ترکیب', icon: <Package className="w-3.5 h-3.5" /> },
+                { id: 'treemap', label: 'نقشه درختی', icon: <Package className="w-3.5 h-3.5" /> },
+                { id: 'price', label: 'قیمت', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+                { id: 'profitLoss', label: 'سود و زیان', icon: <TrendingUp className="w-3.5 h-3.5" /> },
               ].map((chart) => (
                 <button
                   key={chart.id}
@@ -351,9 +351,10 @@ const totals = useMemo(() => {
                   role="tab"
                   aria-selected={activeChart === chart.id}
                   onClick={() => setActiveChart(chart.id)}
-                  className={`px-2.5 py-1.5 text-[10px] font-medium rounded-md transition-colors rtl-text ${activeChart === chart.id ? 'bg-white dark:bg-slate-700 text-brand-500 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium rounded-md transition-colors rtl-text ${activeChart === chart.id ? 'bg-white dark:bg-slate-700 text-brand-500 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                 >
-                  {chart.label}
+                  {chart.icon}
+                  <span className="hidden sm:inline">{chart.label}</span>
                 </button>
               ))}
               </div>}
