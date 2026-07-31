@@ -580,6 +580,11 @@ const handleToggleAutoSwitch = async () => {
           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
             <Key className="w-4 h-4 text-brand-500" />
             API Keys
+            {apiKeys.length > 0 && (
+              <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                {toPersianNum(apiKeys.reduce((sum, k) => sum + (k.daily_requests || 0), 0))} درخواست روزانه
+              </span>
+            )}
           </h2>
           {!showAddForm && !editingId && (
             <div className="flex items-center gap-2">
