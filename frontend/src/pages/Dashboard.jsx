@@ -5,8 +5,9 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
 import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
-import { Line, Bar, Doughnut, Chart } from 'react-chartjs-2';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
+import { Chart } from 'chart.js';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
 
 Chart.register(TreemapController, TreemapElement);
