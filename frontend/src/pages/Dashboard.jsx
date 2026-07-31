@@ -1156,6 +1156,8 @@ function TreemapChart({ items, unit }) {
         bodyAlign: 'right',
         titleAlign: 'right',
         displayColors: false,
+        boxWidth: 0,
+        boxHeight: 0,
         padding: 10,
         cornerRadius: 8,
         backgroundColor: '#0F172A',
@@ -1192,6 +1194,7 @@ function TreemapChart({ items, unit }) {
         options={options}
         data={{
           datasets: [{
+            label: 'دارایی‌ها',
             tree: treemapData,
             key: 'value',
             groups: ['symbol'],
