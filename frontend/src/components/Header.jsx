@@ -149,7 +149,9 @@ export function Header() {
           {!hidePlBySell && (
           <button
             onClick={() => {
-              setPlMode((prev) => prev === 'all' ? 'realized' : prev === 'realized' ? 'unrealized' : 'all');
+              const next = plMode === 'all' ? 'realized' : plMode === 'realized' ? 'unrealized' : 'all';
+              setPlMode(next);
+              localStorage.setItem('profit_loss_by_sell', next);
               window.dispatchEvent(new Event('pl-by-sell-changed'));
             }}
             className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plMode === 'all' ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : plMode === 'realized' ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
