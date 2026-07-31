@@ -11,16 +11,8 @@ class StockController extends Controller
     private static ?array $symbolsCache = null;
     private static int $symbolsCacheTime = 0;
 
-    private function fetchAllSymbols(string $apiKey, ?int $keyId = null): array
+    private function fetchAllSymbols(string $apiKey): array
     {
-        if (self::$symbolsCache !== null && (time() - self::$symbolsCacheTime) < 3600) {
-            return self::$symbolsCache;
-        }
-
-        if ($keyId) {
-            $this->trackApiKeyUsage($keyId);
-        }
-
         $url = 'https://Api.BrsApi.ir/Tsetmc/AllSymbols.php?key=' . $apiKey;
 
         try {
@@ -117,7 +109,7 @@ class StockController extends Controller
     private function fetchAllSymbolsWithFallback(array $apiKeys): array
     {
         foreach ($apiKeys as $keyInfo) {
-            $symbols = $this->fetchAllSymbols($keyInfo['api_key'], $keyInfo['id'] ?? null);
+            $symbols = $this->fetchAllSymbols($keyInfo['api_key']);
             if (!empty($symbols)) {
                 return $symbols;
             }
@@ -135,6 +127,8 @@ class StockController extends Controller
                 'message' => 'کلید API تنظیم نشده است. لطفاً در صفحه تنظیمات یک کلید API اضافه کنید.',
             ], 400);
         }
+
+        $this->trackApiKeyUsage($apiKeys[0]['id'] ?? null);
 
         $query = $request->input('q', '');
 
@@ -222,6 +216,8 @@ class StockController extends Controller
                 'message' => 'No API keys configured. Please add an API key in settings.',
             ], 400);
         }
+
+        $this->trackApiKeyUsage($apiKeys[0]['id'] ?? null);
 
         $symbols = $this->fetchAllSymbolsWithFallback($apiKeys);
 
