@@ -1220,24 +1220,24 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
             const symbol = d?.symbol || raw?.g || '';
             const item = treemapData.find(i => i.symbol === symbol);
-            const value = d?.value ?? item?.value ?? raw?.v ?? 0;
+            const value = item?.value ?? d?.value ?? raw?.v ?? 0;
             if (!value) return '';
             const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
             const amount = unit === 'toman' ? value / 10 : value;
             if (colorMode === 'performance') {
-              const plVal = d?.pl ?? item?.pl ?? 0;
-              const plPctVal = d?.plPct ?? item?.plPct ?? 0;
+              const plVal = item?.pl ?? d?.pl ?? 0;
+              const plPctVal = item?.plPct ?? d?.plPct ?? 0;
               const plAmount = unit === 'toman' ? plVal / 10 : plVal;
               const sign = plVal >= 0 ? '+' : '';
               const plPctStr = plPctVal.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
               return [
-                `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-                `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctStr}٪)`
+                `ارزش: ${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+                `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctStr}٪)`
               ];
             }
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
             const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-            return `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
+            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
           },
         },
       },
@@ -1269,11 +1269,11 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
               const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
               const symbol = d?.symbol || raw?.g || '';
               const item = treemapData.find(i => i.symbol === symbol);
-              const value = d?.value ?? item?.value ?? raw?.v ?? 0;
+              const value = item?.value ?? d?.value ?? raw?.v ?? 0;
               const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
               if (!value || !totalVal) return '#6366F1';
               if (colorMode === 'performance') {
-                const plPct = d?.plPct ?? item?.plPct ?? 0;
+                const plPct = item?.plPct ?? d?.plPct ?? 0;
                 if (plPct >= 0) {
                   const intensity = Math.min(Math.abs(plPct) / 100, 1);
                   return `rgba(16, 185, 129, ${0.35 + intensity * 0.55})`;
@@ -1298,13 +1298,13 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                 const symbol = d?.symbol || raw?.g || '';
                 const item = treemapData.find(i => i.symbol === symbol);
                 if (colorMode === 'performance') {
-                  const plPct = d?.plPct ?? item?.plPct;
+                  const plPct = item?.plPct ?? d?.plPct;
                   if (plPct === undefined || plPct === null) return [symbol, ''];
                   const sign = plPct >= 0 ? '+' : '';
                   const pctStr = plPct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
                   return [symbol, `${sign}${pctStr}٪`];
                 }
-                const value = d?.value ?? item?.value ?? raw?.v ?? 0;
+                const value = item?.value ?? d?.value ?? raw?.v ?? 0;
                 const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
                 const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
                 const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
