@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUnit } from '../contexts/UnitContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat } from 'lucide-react';
+import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma } from 'lucide-react';
 import { stockApi } from '../lib/api';
 
 export function Header() {
@@ -135,6 +135,7 @@ export function Header() {
         {/* Left: Refresh + Settings */}
         {user && (
         <div className="flex items-center gap-2">
+          {!isSettingsPage && (
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -151,6 +152,7 @@ export function Header() {
               </span>
             )}
           </button>
+          )}
 
           {/* Profit/Loss Mode Toggle - hidden on AllSymbols and Settings pages */}
           {!hidePlBySell && (
@@ -161,12 +163,12 @@ export function Header() {
               localStorage.setItem('profit_loss_by_sell', next);
               window.dispatchEvent(new Event('pl-by-sell-changed'));
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plMode === 'all' ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : plMode === 'realized' ? 'bg-brand-500/20 text-brand-500 hover:bg-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plMode === 'all' ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700' : plMode === 'realized' ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30' : 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'}`}
             aria-label="تغییر حالت محاسبه سود و زیان"
             title={plMode === 'all' ? 'محاسبه سود/ضرر محقق شده + محقق نشده' : plMode === 'realized' ? 'محاسبه سود/ضرر فقط محقق شده' : 'محاسبه سود/ضرر فقط محقق نشده'}
           >
-            <Repeat className="w-3 h-3" />
-            {plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده'}
+            <span>{plMode === 'all' ? <Sigma className="w-3 h-3" /> : plMode === 'realized' ? <CircleCheckBig className="w-3 h-3" /> : <Clock className="w-3 h-3" />}</span>
+            <span className="hidden sm:inline">{plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده'}</span>
           </button>
           )}
 

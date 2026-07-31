@@ -4,7 +4,7 @@ import { useUnit } from '../contexts/UnitContext';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -457,8 +457,8 @@ const totals = useMemo(() => {
                 }}
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <Tag className="w-3 h-3" />
-                {sellFilter === 'all' ? 'همه' : sellFilter === 'sold' ? 'فروش رفته' : 'فروش نرفته'}
+                {sellFilter === 'all' ? <Sigma className="w-3 h-3" /> : sellFilter === 'sold' ? <CircleCheckBig className="w-3 h-3 text-emerald-500" /> : <Clock className="w-3 h-3 text-amber-500" />}
+                <span className={`hidden sm:inline ${sellFilter === 'sold' ? 'text-emerald-500' : sellFilter === 'unsold' ? 'text-amber-500' : ''}`}>{sellFilter === 'all' ? 'همه' : sellFilter === 'sold' ? 'فروش رفته' : 'فروش نرفته'}</span>
               </button>
             </div>
             <div>
@@ -466,13 +466,13 @@ const totals = useMemo(() => {
                 onClick={() => setPortfolioSort((prev) => prev === 'default' ? 'profit' : prev === 'profit' ? 'percent' : 'default')}
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <ArrowUpDown className="w-3 h-3" />
-                {portfolioSort === 'default' ? 'پیش‌فرض' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}
+                {portfolioSort === 'default' ? <ArrowUpDown className="w-3 h-3" /> : portfolioSort === 'profit' ? <Banknote className="w-3 h-3 text-emerald-500" /> : <Percent className="w-3 h-3 text-blue-500" />}
+                <span className={`hidden sm:inline ${portfolioSort === 'profit' ? 'text-emerald-500' : portfolioSort === 'percent' ? 'text-blue-500' : ''}`}>{portfolioSort === 'default' ? 'پیش‌فرض' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}</span>
               </button>
             </div>
             {!showPortfolioForm && !editingPortfolio && (
               <button onClick={() => setShowPortfolioForm(true)} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1">
-                <PlusCircle className="w-3 h-3" /> افزودن پرتفو
+                <PlusCircle className="w-3 h-3" /> <span className="hidden sm:inline">افزودن پرتفو</span>
               </button>
             )}
           </div>
@@ -664,48 +664,48 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                                const isInactive = !item.active && portfolio.active !== false && portfolio.active !== 0;
                                  return (
                                    <tr key={item.id} className={`border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${!item.active && portfolio.active !== false && portfolio.active !== 0 ? 'opacity-75' : ''}`}>
-                                   <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                                     <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-brand-500' : 'bg-slate-400'}`}></span>
-                                     {item.symbol}
-                                   </td>
-                                    <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
-                                      <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.pe, false)}>{item.pe ? formatPE(item.pe) : '—'}</td>
-                                    <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.buy_price)}>{formatPrice(item.buy_price, unit, 2)}</td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.quantity, false)}>{formatNumber(item.quantity)}</td>
-                                    <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.sell_price)}>{item.sell_price ? formatPrice(item.sell_price, unit, 2) : '—'}</td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, purchaseValue)}>{formatPrice(purchaseValue, unit)}</td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.resistance_1)}>
-                                       {item.resistance_1 ? <>
-                                         {formatPrice(item.resistance_1, unit, 2)}
-                                         {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_1) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                       </> : '—'}
-                                       {item.resistance_2 ? <>
-                                         {' - '}{formatPrice(item.resistance_2, unit, 2)}
-                                         {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_2) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                       </> : ''}
-                                     </td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer" onDoubleClick={(e) => handleCopy(e, item.support_1)}>
-                                       {item.support_1 ? <>
-                                         {formatPrice(item.support_1, unit, 2)}
-                                         {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_1)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                       </> : '—'}
-                                       {item.support_2 ? <>
-                                         {' - '}{formatPrice(item.support_2, unit, 2)}
-                                         {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_2)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                       </> : ''}
-                                      </td>
-                                <td className={`px-2 py-1.5 font-medium cursor-pointer ${plAmount !== null ? (isInactive ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (plAmount >= 0 ? 'text-success opacity-90' : 'text-danger opacity-90'))) : 'text-slate-500 italic'}`} onDoubleClick={(e) => handleCopy(e, plAmount)}>
-                                        {plAmount !== null ? formatPrice(plAmount, unit) : '—'}
+                                    <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                                       <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                      {item.symbol}
                                     </td>
-                                     <td className="px-2 py-1.5">
-                                       {pl != null ? (
-                                         <span className={`flex items-center gap-0.5 font-medium ${isInactive ? (pl >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (pl >= 0 ? 'text-success' : 'text-danger') : (pl >= 0 ? 'text-success opacity-90' : 'text-danger opacity-90'))}`}>
-                                            {formatPercent(pl)}
-                                         </span>
-                                       ) : <span className="text-slate-500 italic">—</span>}
-                                   </td>
-                                    <td className="px-2 py-1.5 flex items-center gap-1">
+                                     <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
+                                       <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.pe, false)}>{item.pe ? formatPE(item.pe) : '—'}</td>
+                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.buy_price)}>{formatPrice(item.buy_price, unit, 2)}</td>
+                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.quantity, false)}>{formatNumber(item.quantity)}</td>
+                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.sell_price)}>{item.sell_price ? formatPrice(item.sell_price, unit, 2) : '—'}</td>
+                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, purchaseValue)}>{formatPrice(purchaseValue, unit)}</td>
+                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
+                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.resistance_1)}>
+                                        {item.resistance_1 ? <>
+                                          {formatPrice(item.resistance_1, unit, 2)}
+                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_1) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                        </> : '—'}
+                                        {item.resistance_2 ? <>
+                                          {' - '}{formatPrice(item.resistance_2, unit, 2)}
+                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_2) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                        </> : ''}
+                                      </td>
+                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.support_1)}>
+                                        {item.support_1 ? <>
+                                          {formatPrice(item.support_1, unit, 2)}
+                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_1)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                        </> : '—'}
+                                        {item.support_2 ? <>
+                                          {' - '}{formatPrice(item.support_2, unit, 2)}
+                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_2)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                        </> : ''}
+                                       </td>
+                                 <td className={`px-2 py-1.5 font-medium cursor-pointer whitespace-nowrap ${plAmount !== null ? (isInactive ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (plAmount >= 0 ? 'text-success opacity-90' : 'text-danger opacity-90'))) : 'text-slate-500 italic'}`} onDoubleClick={(e) => handleCopy(e, plAmount)}>
+                                         {plAmount !== null ? formatPrice(plAmount, unit) : '—'}
+                                     </td>
+                                      <td className="px-2 py-1.5 whitespace-nowrap">
+                                        {pl != null ? (
+                                          <span className={`flex items-center gap-0.5 font-medium ${isInactive ? (pl >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (pl >= 0 ? 'text-success' : 'text-danger') : (pl >= 0 ? 'text-success opacity-90' : 'text-danger opacity-90'))}`}>
+                                             {formatPercent(pl)}
+                                          </span>
+                                        ) : <span className="text-slate-500 italic">—</span>}
+                                    </td>
+                                    <td className="px-2 py-1.5 flex items-center gap-1 whitespace-nowrap">
                                     <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} disabled={portfolio.active === false || portfolio.active === 0} className={`p-0.5 rounded transition-colors ${portfolio.active === false || portfolio.active === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand/10'}`} title={portfolio.active === false || portfolio.active === 0 ? 'ابتدا پرتفو را فعال کنید' : (item.active ? 'غیرفعال کردن' : 'فعال کردن')}>
                                         {item.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
                                       </button>
@@ -722,19 +722,19 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                          </tbody>
                        </table>
                        </div>
-{plMode === 'realized' && pi.some((item) => !item.sell_price && item.last_price) && (
+{plMode === 'realized' && (portfolio.items || []).some((item) => !item.sell_price && item.last_price) && (
                           <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
-                            <span className="text-brand-500 font-bold">●</span> فقط سهم‌های دارای قیمت فروش در محاسبه لحاظ می‌شوند
+                            <span className="text-emerald-500 font-bold">●</span> سهم‌های فروش رفته (بر اساس قیمت فروش) در محاسبه لحاظ می‌شوند
                           </div>
                         )}
- {plMode === 'all' && pi.some((item) => !item.sell_price && item.last_price) && (
+ {plMode === 'all' && (portfolio.items || []).some((item) => !item.sell_price && item.last_price) && (
                            <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
-                             <span className="text-brand-500 font-bold">●</span> <span className="text-slate-400 font-bold">●</span> سود محقق نشده+محقق شده بر اساس آخرین قیمت و قیمت فروش در محاسبه کل لحاظ می‌شود
+                             <span className="text-emerald-500 font-bold">●</span> <span className="text-amber-500 font-bold">●</span> سهم‌های فروش رفته + سهم‌های فروش نرفته بر اساس آخرین قیمت و قیمت فروش در محاسبه لحاظ می‌شود
                            </div>
                          )}
- {plMode === 'unrealized' && pi.some((item) => !item.sell_price && item.last_price) && (
+ {plMode === 'unrealized' && (portfolio.items || []).some((item) => !item.sell_price && item.last_price) && (
                            <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
-                             <span className="text-slate-400 font-bold">●</span> فقط سهم‌های فروش نرفته (بر اساس آخرین قیمت) در محاسبه لحاظ می‌شوند
+                             <span className="text-amber-500 font-bold">●</span> سهم‌های فروش نرفته (بر اساس آخرین قیمت) در محاسبه لحاظ می‌شوند
                            </div>
                          )}
                     </>
@@ -960,6 +960,9 @@ function PortfolioAllocationChart({ items, unit }) {
       },
       tooltip: {
         direction: 'rtl',
+        bodyAlign: 'right',
+        titleAlign: 'right',
+        displayColors: false,
         padding: 10,
         cornerRadius: 8,
         backgroundColor: '#0F172A',
