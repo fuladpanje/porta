@@ -4,7 +4,7 @@ import { useUnit } from '../contexts/UnitContext';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -37,6 +37,7 @@ const [showItemForm, setShowItemForm] = useState(null);
 const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
      const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
      const [showPortfolios, setShowPortfolios] = useState(true);
+     const [sellFilter, setSellFilter] = useState('all');
 
     const commissionEnabled = user?.commission_enabled || false;
     const buyCommissionRate = (user?.buy_commission || 0.37) / 100;
@@ -405,6 +406,15 @@ const totals = useMemo(() => {
           <div className="flex items-center gap-2">
             <div>
               <button
+                onClick={() => setSellFilter((prev) => prev === 'all' ? 'sold' : prev === 'sold' ? 'unsold' : 'all')}
+                className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Tag className="w-3 h-3" />
+                {sellFilter === 'all' ? 'همه' : sellFilter === 'sold' ? 'فروش رفته' : 'فروش نرفته'}
+              </button>
+            </div>
+            <div>
+              <button
                 onClick={() => setPortfolioSort((prev) => prev === 'default' ? 'profit' : prev === 'profit' ? 'percent' : 'default')}
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
@@ -446,7 +456,10 @@ const totals = useMemo(() => {
        <div className="space-y-2">
          {portfolios.map((portfolio) => {
           const isExp = expanded[portfolio.id];
-            const pi = [...(portfolio.items || [])].sort((a, b) => {
+            let pi = [...(portfolio.items || [])];
+            if (sellFilter === 'sold') pi = pi.filter((i) => i.sell_price && i.sell_price > 0);
+            else if (sellFilter === 'unsold') pi = pi.filter((i) => !i.sell_price || i.sell_price <= 0);
+            pi.sort((a, b) => {
               if (sortConfig.key) {
                 let aVal, bVal;
                 switch (sortConfig.key) {
@@ -528,7 +541,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                   {showItemForm === portfolio.id && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in">
                       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 max-w-lg w-full mx-4 shadow-xl animate-slide-up max-h-[90vh] overflow-y-auto">
-                        <InlineItemForm portfolioId={portfolio.id} onCancel={() => setShowItemForm(null)} onSave={() => { setShowItemForm(null); fetchDashboard(); }} unit={unit} />
+                        <InlineItemForm portfolioId={portfolio.id} onCancel={() => setShowItemForm(null)} onSave={() => { setShowItemForm(null); fetchDashboard(true); }} unit={unit} />
                       </div>
                     </div>
                   )}

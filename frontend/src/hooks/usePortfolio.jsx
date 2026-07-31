@@ -61,6 +61,7 @@ export function usePortfolio() {
   const refreshDashboard = useCallback(async () => {
     try {
       setRefreshing(true);
+      localStorage.removeItem(DASHBOARD_CACHE_KEY);
       const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
       const res = await api.get('/dashboard', { params: { pl_mode: plMode } });
       setDashboard(res.data.data);
