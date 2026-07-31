@@ -1165,17 +1165,22 @@ function TreemapChart({ items, unit }) {
         bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
         callbacks: {
           title: (items) => {
-            const d = items[0]?.raw?._data;
-            return d?.symbol || '';
+            const raw = items[0]?.raw;
+            return raw?.g || raw?._data?.symbol || items[0]?.label || '';
           },
           label: (ctx) => {
-            const d = ctx.raw?._data;
-            if (!d || d.value == null || d.plPct == null) return '';
+            const raw = ctx.raw;
+            const d = raw?._data;
+            const symbol = d?.symbol || raw?.g || '';
+            const item = treemapData.find(i => i.symbol === symbol);
+            const value = d?.value ?? item?.value ?? raw?.v ?? 0;
+            const plPct = d?.plPct ?? item?.plPct ?? 0;
+            if (!value) return '';
             const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
-            const amount = unit === 'toman' ? d.value / 10 : d.value;
-            const pct = totalVal > 0 ? ((d.value / totalVal) * 100) : 0;
-            const plSign = d.plPct >= 0 ? '+' : '';
-            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪) | ${plSign}${d.plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪ سود/زیان`;
+            const amount = unit === 'toman' ? value / 10 : value;
+            const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
+            const plSign = plPct >= 0 ? '+' : '';
+            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪) | ${plSign}${plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪ سود/زیان`;
           },
         },
       },
