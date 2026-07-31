@@ -1234,14 +1234,14 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             if (colorMode === 'performance') {
               const plAmount = unit === 'toman' ? pl / 10 : pl;
               const sign = pl >= 0 ? '+' : '';
-              const plPctStr = plPct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+              const plPctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
               return [
                 `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
                 `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
               ];
             }
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
-            const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            const pctStr = pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
             return `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
           },
         },
@@ -1306,13 +1306,13 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                 if (colorMode === 'performance') {
                   const plPct = match?.plPct;
                   if (plPct === undefined || plPct === null) return [symbol, ''];
-                  const pctStr = plPct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                  const pctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
                   return [symbol, `${pctStr}٪`];
                 }
                 const value = match?.value ?? 0;
                 const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
                 const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
-                const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const pctStr = pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
                 return [symbol, `${pctStr}٪`];
               },
             },
