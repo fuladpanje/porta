@@ -153,7 +153,7 @@ const allItems = useMemo(() => {
       }
       return items;
     }, [portfolios, showInactivePortfolios, showInactiveChartItems]);
-   const totalAllItems = portfolios.reduce((sum, p) => sum + SafeNumber(p._valueCount), 0);
+   const totalAllItems = (sellFilter === 'all' && plMode === 'all') ? null : portfolios.reduce((sum, p) => sum + SafeNumber(p._valueCount), 0);
 
 const totals = useMemo(() => {
       const totalValue = portfolios.reduce((s, p) => s + SafeNumber(p._totalValue), 0);
@@ -306,7 +306,7 @@ const totals = useMemo(() => {
                <Icon className="w-3 h-3" /> {s.label}
              </p>
              <p className={`text-sm font-bold mt-0.5 ${s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : s.format === 'pct' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : 'text-slate-800 dark:text-slate-200'}`}>
-                {s.format === 'num' ? toPersianNum(s.value) : s.format === 'price' && typeof s.value === 'number' && !isNaN(s.value)
+                 {s.value === null ? '—' : s.format === 'num' ? toPersianNum(s.value) : s.format === 'price' && typeof s.value === 'number' && !isNaN(s.value)
                    ? toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')
                    : s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value)
                    ? toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')
