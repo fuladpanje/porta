@@ -173,7 +173,7 @@ const totals = useMemo(() => {
         let items = p.items || [];
         if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
         else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
-        items.forEach((item) => {
+    filtered.forEach((item) => {
           const qty = SafeNumber(item.quantity);
           const buyTotal = SafeNumber(item.buy_price) * qty;
           const hasSell = item.sell_price && item.sell_price > 0;
@@ -438,8 +438,8 @@ const totals = useMemo(() => {
             )}
   
            {chartsExpanded && <div role="tabpanel" className={`h-80 pb-4 ${activeChart !== 'profitLoss' ? 'mt-5' : ''}`}>
-             {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} />}
-              {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} />}
+              {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} />}
+               {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} />}
               {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
               {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
            </div>}
@@ -928,8 +928,19 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
   );
 }
 
-function PortfolioAllocationChart({ items, unit }) {
+function PortfolioAllocationChart({ items, unit, sellFilter, plMode }) {
   const allocation = useMemo(() => {
+    let filtered = items;
+    if (sellFilter === 'sold') filtered = items.filter((i) => i.sell_price && i.sell_price > 0);
+    else if (sellFilter === 'unsold') filtered = items.filter((i) => !i.sell_price || i.sell_price <= 0);
+    else filtered = items.filter((i) => {
+      const hasSell = i.sell_price && i.sell_price > 0;
+      const hasLast = i.last_price && i.last_price > 0;
+      if (plMode === 'realized') return hasSell;
+      if (plMode === 'unrealized') return !hasSell && hasLast;
+      return true;
+    });
+
     const values = new Map();
 
     items.forEach((item) => {
@@ -950,7 +961,7 @@ function PortfolioAllocationChart({ items, unit }) {
     if (otherValue > 0) leading.push(['سایر', otherValue]);
 
     return leading;
-  }, [items]);
+  }, [filtered, sellFilter, plMode]);
 
   const totalValue = useMemo(() => allocation.reduce((sum, [, value]) => sum + value, 0), [allocation]);
 
@@ -1127,12 +1138,25 @@ datasets: [{
   return <div className="h-full"><Bar key="pl-chart" data={chartData} options={options} /></div>;
 }
 
-function TreemapChart({ items, unit }) {
+function TreemapChart({ items, unit, sellFilter, plMode }) {
   const chartRef = useRef(null);
 
-  const treemapData = useMemo(() => {
+  const filteredItems = useMemo(() => {
     if (!items || items.length === 0) return [];
-    return items
+    if (sellFilter === 'sold') return items.filter((i) => i.sell_price && i.sell_price > 0);
+    if (sellFilter === 'unsold') return items.filter((i) => !i.sell_price || i.sell_price <= 0);
+    return items.filter((i) => {
+      const hasSell = i.sell_price && i.sell_price > 0;
+      const hasLast = i.last_price && i.last_price > 0;
+      if (plMode === 'realized') return hasSell;
+      if (plMode === 'unrealized') return !hasSell && hasLast;
+      return hasSell || hasLast;
+    });
+  }, [items, sellFilter, plMode]);
+
+  const treemapData = useMemo(() => {
+    if (filteredItems.length === 0) return [];
+    return filteredItems
       .filter((i) => i.symbol && i.symbol.trim() !== '' && ((i.last_price && i.last_price > 0) || (i.sell_price && i.sell_price > 0)))
       .map((i) => {
         const price = (i.sell_price && i.sell_price > 0) ? i.sell_price : (i.last_price || i.buy_price);
@@ -1143,7 +1167,7 @@ function TreemapChart({ items, unit }) {
         const hasSell = i.sell_price && i.sell_price > 0;
         return { symbol: i.symbol, value, pl, plPct, hasSell };
       });
-  }, [items]);
+  }, [filteredItems]);
 
   const options = useMemo(() => ({
     responsive: true,
