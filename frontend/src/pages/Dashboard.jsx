@@ -1229,13 +1229,15 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
               const plPctVal = d?.plPct ?? item?.plPct ?? 0;
               const plAmount = unit === 'toman' ? plVal / 10 : plVal;
               const sign = plVal >= 0 ? '+' : '';
+              const plPctStr = plPctVal.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
               return [
-                `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-                `${sign}${plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctVal.toFixed(1)}٪)`
+                `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+                `${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctStr}٪)`
               ];
             }
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
-            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)`;
+            const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            return `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
           },
         },
       },
@@ -1299,12 +1301,14 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                   const plPct = d?.plPct ?? item?.plPct;
                   if (plPct === undefined || plPct === null) return [symbol, ''];
                   const sign = plPct >= 0 ? '+' : '';
-                  return [symbol, `${sign}${plPct.toFixed(1)}%`];
+                  const pctStr = plPct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                  return [symbol, `${sign}${pctStr}٪`];
                 }
                 const value = d?.value ?? item?.value ?? raw?.v ?? 0;
                 const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
                 const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
-                return [symbol, `${pct.toFixed(1)}٪`];
+                const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                return [symbol, `${pctStr}٪`];
               },
             },
             captions: { display: false },
