@@ -1231,8 +1231,8 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
               const sign = plVal >= 0 ? '+' : '';
               const plPctStr = plPctVal.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
               return [
-                `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-                `${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctStr}٪)`
+                `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+                `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctStr}٪)`
               ];
             }
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
