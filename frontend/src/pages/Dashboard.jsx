@@ -1232,14 +1232,15 @@ function TreemapChart({ items, unit, sellFilter, plMode }) {
             borderWidth: 1.5,
             borderColor: 'rgba(255,255,255,0.15)',
             backgroundColor: (ctx) => {
-              if (!ctx.raw?._data || ctx.raw._data.pl === undefined) return '#6366F1';
-              const pl = ctx.raw._data.pl;
-              if (pl >= 0) {
-                const intensity = Math.min(Math.abs(pl) / (ctx.raw._data.value || 1), 1);
-                return `rgba(16, 185, 129, ${0.35 + intensity * 0.45})`;
-              }
-              const intensity = Math.min(Math.abs(pl) / (ctx.raw._data.value || 1), 1);
-              return `rgba(239, 68, 68, ${0.35 + intensity * 0.45})`;
+              const d = ctx.raw?._data;
+              const symbol = d?.symbol || ctx.raw?.g || '';
+              const item = treemapData.find(i => i.symbol === symbol);
+              const value = d?.value ?? item?.value ?? ctx.raw?.v ?? 0;
+              const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
+              if (!value || !totalVal) return '#6366F1';
+              const ratio = value / totalVal;
+              const opacity = 0.25 + ratio * 0.75;
+              return `rgba(99, 102, 241, ${Math.min(opacity, 1)})`;
             },
             labels: {
               display: true,
