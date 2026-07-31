@@ -1150,6 +1150,7 @@ function TreemapChart({ items, unit }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
+      title: { display: false },
       tooltip: {
         direction: 'rtl',
         bodyAlign: 'right',
@@ -1160,7 +1161,12 @@ function TreemapChart({ items, unit }) {
         backgroundColor: '#0F172A',
         bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
         callbacks: {
-          title: (items) => items[0]?.raw?._data?.symbol || '',
+          title: () => '',
+          beforeLabel: (ctx) => {
+            const d = ctx.raw?._data;
+            if (!d?.symbol) return '';
+            return d.symbol;
+          },
           label: (ctx) => {
             const d = ctx.raw?._data;
             if (!d) return '';
