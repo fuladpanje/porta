@@ -318,12 +318,6 @@ export default function AllSymbols() {
     fetchFavorites();
   }, []);
 
-  useEffect(() => {
-    const handler = () => fetchSymbols(true);
-    window.addEventListener('prices-refreshed', handler);
-    return () => window.removeEventListener('prices-refreshed', handler);
-  }, []);
-
   const fetchSymbols = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
