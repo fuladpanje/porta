@@ -1170,7 +1170,7 @@ function TreemapChart({ items, unit }) {
           },
           label: (ctx) => {
             const d = ctx.raw?._data;
-            if (!d) return '';
+            if (!d || d.value == null || d.plPct == null) return '';
             const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
             const amount = unit === 'toman' ? d.value / 10 : d.value;
             const pct = totalVal > 0 ? ((d.value / totalVal) * 100) : 0;
