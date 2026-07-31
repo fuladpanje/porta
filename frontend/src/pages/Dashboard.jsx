@@ -39,9 +39,6 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
      const [showPortfolios, setShowPortfolios] = useState(true);
      const [sellFilter, setSellFilter] = useState('all');
 
-    const commissionEnabled = user?.commission_enabled || false;
-    const buyCommissionRate = (user?.buy_commission || 0.37) / 100;
-    const sellCommissionRate = (user?.sell_commission || 0.88) / 100;
   const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
 
   useEffect(() => {
@@ -65,13 +62,18 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
 
   const portfolios = useMemo(() => {
     const list = (dashboard?.portfolios || []).map((p) => {
+      const usePortfolioCommission = !!p.commission_enabled;
+      const pCommissionEnabled = usePortfolioCommission ? true : (user?.commission_enabled || false);
+      const pSellCommissionRate = usePortfolioCommission
+          ? (p.sell_commission || 0.88) / 100
+          : (user?.sell_commission || 0.88) / 100;
       let items = p.items || [];
       if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
       else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
        const totalValue = items.reduce((s, i) => {
          const price = i.sell_price && i.sell_price > 0 ? i.sell_price : (i.last_price || i.buy_price);
          const qty = SafeNumber(i.quantity);
-         const sellComm = commissionEnabled ? SafeNumber(price) * qty * sellCommissionRate : 0;
+         const sellComm = pCommissionEnabled ? SafeNumber(price) * qty * pSellCommissionRate : 0;
          return s + SafeNumber(price) * qty - sellComm;
        }, 0);
       const totalCost = items.reduce((s, i) => s + SafeNumber(i.buy_price) * SafeNumber(i.quantity), 0);
@@ -82,23 +84,23 @@ const totalPL = items.reduce((s, i) => {
           const hasLast = i.last_price && i.last_price > 0;
           if (sellFilter === 'sold' && hasSell) {
               const sellTotal = SafeNumber(i.sell_price) * qty;
-              const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
+              const sellComm = pCommissionEnabled ? sellTotal * pSellCommissionRate : 0;
               return s + (sellTotal - sellComm) - buyTotal;
             }
             if (sellFilter === 'unsold' && hasLast) {
               const lastTotal = SafeNumber(i.last_price) * qty;
-              const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
+              const lastComm = pCommissionEnabled ? lastTotal * pSellCommissionRate : 0;
               return s + (lastTotal - lastComm) - buyTotal;
             }
             if (sellFilter === 'all') {
               if (hasSell && (plMode === 'all' || plMode === 'realized')) {
                 const sellTotal = SafeNumber(i.sell_price) * qty;
-                const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
+                const sellComm = pCommissionEnabled ? sellTotal * pSellCommissionRate : 0;
                 return s + (sellTotal - sellComm) - buyTotal;
               }
               if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
                 const lastTotal = SafeNumber(i.last_price) * qty;
-                const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
+                const lastComm = pCommissionEnabled ? lastTotal * pSellCommissionRate : 0;
                 return s + (lastTotal - lastComm) - buyTotal;
               }
             }
@@ -131,7 +133,7 @@ const soldCost = items.reduce((s, i) => {
       if (portfolioSort === 'percent') return b._profitLossPct - a._profitLossPct;
       return b.total_value - a.total_value;
     });
-  }, [dashboard, portfolioSort, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode, sellFilter]);
+  }, [dashboard, portfolioSort, user, plMode, sellFilter]);
 const allItems = useMemo(() => {
      const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
      let items = activePortfolios.flatMap((p) => p.items || []);
@@ -156,6 +158,11 @@ const totals = useMemo(() => {
       let totalPL = 0;
       let totalSoldCost = 0;
       portfolios.forEach((p) => {
+        const usePortfolioCommission = !!p.commission_enabled;
+        const pCommissionEnabled = usePortfolioCommission ? true : (user?.commission_enabled || false);
+        const pSellCommissionRate = usePortfolioCommission
+            ? (p.sell_commission || 0.88) / 100
+            : (user?.sell_commission || 0.88) / 100;
         let items = p.items || [];
         if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
         else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
@@ -166,23 +173,23 @@ const totals = useMemo(() => {
           const hasLast = item.last_price && item.last_price > 0;
           if (sellFilter === 'sold' && hasSell) {
             const sellTotal = SafeNumber(item.sell_price) * qty;
-            const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
+            const sellComm = pCommissionEnabled ? sellTotal * pSellCommissionRate : 0;
             totalPL += (sellTotal - sellComm) - buyTotal;
             totalSoldCost += buyTotal;
           } else if (sellFilter === 'unsold' && hasLast) {
             const lastTotal = SafeNumber(item.last_price) * qty;
-            const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
+            const lastComm = pCommissionEnabled ? lastTotal * pSellCommissionRate : 0;
             totalPL += (lastTotal - lastComm) - buyTotal;
             totalSoldCost += buyTotal;
           } else if (sellFilter === 'all') {
             if (hasSell && (plMode === 'all' || plMode === 'realized')) {
               const sellTotal = SafeNumber(item.sell_price) * qty;
-              const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
+              const sellComm = pCommissionEnabled ? sellTotal * pSellCommissionRate : 0;
               totalPL += (sellTotal - sellComm) - buyTotal;
               totalSoldCost += buyTotal;
             } else if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
               const lastTotal = SafeNumber(item.last_price) * qty;
-              const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
+              const lastComm = pCommissionEnabled ? lastTotal * pSellCommissionRate : 0;
               totalPL += (lastTotal - lastComm) - buyTotal;
               totalSoldCost += buyTotal;
             }
@@ -191,7 +198,7 @@ const totals = useMemo(() => {
       });
       const totalPLPct = totalSoldCost > 0 ? (totalPL / totalSoldCost) * 100 : 0;
       return { totalValue, totalCost, totalPL, totalPLPct, count: portfolios.length, itemCount: allItems.length };
-   }, [portfolios, allItems, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode, sellFilter]);
+   }, [portfolios, allItems, user, plMode, sellFilter]);
 
   if (loading) {
     return (
@@ -650,14 +657,19 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                                   </tr>
                                );
                              }
-const buyN = SafeNumber(item.buy_price);
+ const buyN = SafeNumber(item.buy_price);
                                const sellN = item.sell_price ? SafeNumber(item.sell_price) : null;
                                const lastN = item.last_price ? SafeNumber(item.last_price) : null;
                                const qtyN = SafeNumber(item.quantity);
                                const isRealized = sellN !== null;
                                 const displayPrice = sellN || lastN;
                                const purchaseValue = buyN * qtyN;
-                               const sellComm = commissionEnabled && displayPrice != null ? displayPrice * qtyN * sellCommissionRate : 0;
+                               const _usePortfolioCommission = !!portfolio.commission_enabled;
+                               const _itemCommissionEnabled = _usePortfolioCommission ? true : (user?.commission_enabled || false);
+                               const _itemSellCommissionRate = _usePortfolioCommission
+                                   ? (portfolio.sell_commission || 0.88) / 100
+                                   : (user?.sell_commission || 0.88) / 100;
+                               const sellComm = _itemCommissionEnabled && displayPrice != null ? displayPrice * qtyN * _itemSellCommissionRate : 0;
                                const totalValue = displayPrice != null ? displayPrice * qtyN - sellComm : purchaseValue;
                                const plAmount = displayPrice != null ? totalValue - purchaseValue : null;
 const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) * 100 : null;
