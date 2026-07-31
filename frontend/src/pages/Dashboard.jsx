@@ -549,7 +549,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                   <div className="flex items-center gap-2">
                   {isExp ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
                   <span className="text-sm font-medium text-slate-800 dark:text-slate-200 rtl-text truncate">{portfolio.name}</span>
-                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{toPersianNum(pi.length)} سهم</span>
+                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{toPersianNum(SafeNumber(portfolio._heldCount))} سهم</span>
                 </div>
 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <div className="flex flex-col items-center gap-0.5">
