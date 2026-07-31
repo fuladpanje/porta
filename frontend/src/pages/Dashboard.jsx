@@ -1189,6 +1189,7 @@ function TreemapChart({ items, unit }) {
       <ChartComponent
         ref={chartRef}
         type="treemap"
+        options={options}
         data={{
           datasets: [{
             tree: treemapData,
@@ -1222,7 +1223,6 @@ function TreemapChart({ items, unit }) {
               },
             },
             captions: { display: false },
-            options,
           }],
         }}
       />
