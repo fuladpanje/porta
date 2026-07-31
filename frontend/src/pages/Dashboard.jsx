@@ -36,6 +36,7 @@ const [showItemForm, setShowItemForm] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
     const [portfolioSort, setPortfolioSort] = useState('default');
     const [showPLAmount, setShowPLAmount] = useState(false);
+    const [treemapColorMode, setTreemapColorMode] = useState('allocation');
     const [activeChart, setActiveChart] = useState('allocation');
     const [chartsExpanded, setChartsExpanded] = useState(true);
 const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
@@ -417,6 +418,24 @@ const totals = useMemo(() => {
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactiveChartItems ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
+                {activeChart === 'treemap' && (
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setTreemapColorMode('performance')}
+                      className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${treemapColorMode === 'performance' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    >
+                      عملکرد
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTreemapColorMode('allocation')}
+                      className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${treemapColorMode === 'allocation' ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    >
+                      درصد
+                    </button>
+                  </div>
+                )}
                 {activeChart === 'profitLoss' && (
                   <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
                     <button
@@ -440,7 +459,7 @@ const totals = useMemo(() => {
   
            {chartsExpanded && <div role="tabpanel" className={`h-80 pb-4 ${activeChart !== 'profitLoss' ? 'mt-5' : ''}`}>
               {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} />}
-               {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} />}
+               {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} colorMode={treemapColorMode} />}
               {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
               {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
            </div>}
@@ -1141,7 +1160,7 @@ datasets: [{
   return <div className="h-full"><Bar key="pl-chart" data={chartData} options={options} /></div>;
 }
 
-function TreemapChart({ items, unit, sellFilter, plMode }) {
+function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
   const chartRef = useRef(null);
 
   const filteredItems = useMemo(() => {
@@ -1219,6 +1238,7 @@ function TreemapChart({ items, unit, sellFilter, plMode }) {
   return (
     <div className="h-full">
       <ChartComponent
+        key={colorMode}
         ref={chartRef}
         type="treemap"
         options={options}
@@ -1238,6 +1258,15 @@ function TreemapChart({ items, unit, sellFilter, plMode }) {
               const value = d?.value ?? item?.value ?? ctx.raw?.v ?? 0;
               const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
               if (!value || !totalVal) return '#6366F1';
+              if (colorMode === 'performance') {
+                const plPct = d?.plPct ?? item?.plPct ?? 0;
+                if (plPct >= 0) {
+                  const intensity = Math.min(Math.abs(plPct) / 100, 1);
+                  return `rgba(16, 185, 129, ${0.35 + intensity * 0.55})`;
+                }
+                const intensity = Math.min(Math.abs(plPct) / 100, 1);
+                return `rgba(239, 68, 68, ${0.35 + intensity * 0.55})`;
+              }
               const ratio = value / totalVal;
               const opacity = 0.25 + ratio * 0.75;
               return `rgba(99, 102, 241, ${Math.min(opacity, 1)})`;
