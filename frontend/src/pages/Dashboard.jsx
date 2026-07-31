@@ -518,7 +518,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
               }
               return (a.active ? 0 : 1) - (b.active ? 0 : 1);
             });
-          const pv = SafeNumber(portfolio.total_value);
+          const pv = SafeNumber(portfolio._totalValue);
           const pc = SafeNumber(portfolio._totalCost);
           const pp = SafeNumber(portfolio._profitLossPct);
 
