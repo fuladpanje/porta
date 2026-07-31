@@ -108,6 +108,109 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 | PUT/DELETE | `/api/api-keys/{id}` | ویرایش/حذف کلید |
 | POST | `/api/api-keys/{id}/default` | کلید پیش‌فرض |
 
+## ساختار دیتابیس
+
+### جدول `users`
+
+| ستون | نوع | پیش‌فرض | توضیح |
+|------|------|---------|-------|
+| `id` | bigint (PK) | — | شناسه |
+| `name` | string | — | نام کاربر |
+| `email` | string (unique) | — | ایمیل |
+| `unit` | string(10) | `rial` | واحد پول (rial/toman) |
+| `auto_switch` | boolean | `true` | سوییچ خودکار قیمت |
+| `schedule_enabled` | boolean | `false` | فعال‌سازی زمان‌بندی |
+| `schedule_seconds` | integer | `0` | ثانیه زمان‌بندی |
+| `schedule_minutes` | integer | `0` | دقیقه زمان‌بندی |
+| `schedule_hours` | integer | `0` | ساعت زمان‌بندی |
+| `commission_enabled` | boolean | `false` | فعال‌سازی کارمزد |
+| `buy_commission` | decimal(5,2) | `0.37` | کارمزد خرید (%) |
+| `sell_commission` | decimal(5,2) | `0.88` | کارمزد فروش (%) |
+| `email_verified_at` | timestamp | `null` | زمان تأیید ایمیل |
+| `password` | string | — | رمز عور |
+| `remember_token` | string | — | توکن مرا به خاطر بسپار |
+| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
+
+### جدول `portfolios`
+
+| ستون | نوع | پیش‌فرض | توضیح |
+|------|------|---------|-------|
+| `id` | bigint (PK) | — | شناسه |
+| `user_id` | bigint (FK → users) | — | مالک پرتفو (حذفCascade) |
+| `name` | string | — | نام پرتفو |
+| `commission_enabled` | boolean | `false` | کارمزد اختصاصی |
+| `buy_commission` | decimal(5,2) | `0.37` | کارمزد خرید اختصاصی |
+| `sell_commission` | decimal(5,2) | `0.88` | کارمزد فروش اختصاصی |
+| `active` | boolean | `true` | فعال/غیرفعال |
+| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
+
+### جدول `portfolio_items`
+
+| ستون | نوع | پیش‌فرض | توضیح |
+|------|------|---------|-------|
+| `id` | bigint (PK) | — | شناسه |
+| `portfolio_id` | bigint (FK → portfolios) | — | مالک (حذف Cascade) |
+| `symbol` | string | — | نماد بورسی |
+| `last_price` | decimal(12,2) | `null` | آخرین قیمت |
+| `pe` | decimal(12,2) | `null` | نسبت P/E |
+| `buy_price` | decimal(12,2) | — | قیمت خرید |
+| `quantity` | decimal(12,4) | — | تعداد سهم |
+| `sell_price` | decimal(12,2) | `null` | قیمت فروش |
+| `resistance_1` | decimal(12,2) | `null` | مقاومت اول |
+| `resistance_2` | decimal(12,2) | `null` | مقاومت دوم |
+| `resistance_3` | decimal(12,2) | `null` | مقاومت سوم |
+| `support_1` | decimal(12,2) | `null` | حمایت اول |
+| `support_2` | decimal(12,2) | `null` | حمایت دوم |
+| `support_3` | decimal(12,2) | `null` | حمایت سوم |
+| `active` | boolean | `true` | فعال/غیرفعال |
+| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
+
+### جدول `api_keys`
+
+| ستون | نوع | پیش‌فرض | توضیح |
+|------|------|---------|-------|
+| `id` | bigint (PK) | — | شناسه |
+| `user_id` | bigint (FK → users) | — | مالک (حذف Cascade) |
+| `name` | string | — | نام کلید |
+| `api_key` | text | — | کلید API |
+| `is_default` | boolean | `false` | کلید پیش‌فرض |
+| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
+
+### جدول `favorites`
+
+| ستون | نوع | پیش‌فرض | توضیح |
+|------|------|---------|-------|
+| `id` | bigint (PK) | — | شناسه |
+| `user_id` | bigint (FK → users) | — | مالک (حذف Cascade) |
+| `symbol` | string | — | نماد مورد علاقه |
+| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
+
+> Unique: (`user_id`, `symbol`)
+
+### جدول `sessions` (Laravel)
+
+| ستون | نوع | توضیح |
+|------|------|-------|
+| `id` | string (PK) | شناسه نشست |
+| `user_id` | bigint (nullable) | کاربر |
+| `ip_address` | string(45) | آی‌پی |
+| `user_agent` | text | مرورگر |
+| `payload` | longText | داده نشست |
+| `last_activity` | integer | آخرین فعالیت |
+
+### جدول `personal_access_tokens` (Sanctum)
+
+| ستون | نوع | توضیح |
+|------|------|-------|
+| `id` | bigint (PK) | شناسه |
+| `tokenable_type` / `tokenable_id` | — | مدل مرتبط |
+| `name` | text | نام توکن |
+| `token` | string(64, unique) | توکن |
+| `abilities` | text | سطوح دسترسی |
+| `last_used_at` | timestamp | آخرین استفاده |
+| `expires_at` | timestamp | تاریخ انقضا |
+| `created_at` / `updated_at` | timestamp | زمان ایجاد/ویرایش |
+
 ---
 
 <a id="english-version"></a>
@@ -194,6 +297,109 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 | GET/POST | `/api/api-keys` | API keys |
 | PUT/DELETE | `/api/api-keys/{id}` | Edit/Delete key |
 | POST | `/api/api-keys/{id}/default` | Set default key |
+
+## Database Schema
+
+### `users` Table
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | bigint (PK) | — | ID |
+| `name` | string | — | User name |
+| `email` | string (unique) | — | Email |
+| `unit` | string(10) | `rial` | Currency (rial/toman) |
+| `auto_switch` | boolean | `true` | Auto switch price |
+| `schedule_enabled` | boolean | `false` | Schedule enabled |
+| `schedule_seconds` | integer | `0` | Schedule seconds |
+| `schedule_minutes` | integer | `0` | Schedule minutes |
+| `schedule_hours` | integer | `0` | Schedule hours |
+| `commission_enabled` | boolean | `false` | Commission enabled |
+| `buy_commission` | decimal(5,2) | `0.37` | Buy commission (%) |
+| `sell_commission` | decimal(5,2) | `0.88` | Sell commission (%) |
+| `email_verified_at` | timestamp | `null` | Email verified at |
+| `password` | string | — | Password |
+| `remember_token` | string | — | Remember token |
+| `created_at` / `updated_at` | timestamp | — | Timestamps |
+
+### `portfolios` Table
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | bigint (PK) | — | ID |
+| `user_id` | bigint (FK → users) | — | Owner (cascade delete) |
+| `name` | string | — | Portfolio name |
+| `commission_enabled` | boolean | `false` | Custom commission |
+| `buy_commission` | decimal(5,2) | `0.37` | Custom buy commission |
+| `sell_commission` | decimal(5,2) | `0.88` | Custom sell commission |
+| `active` | boolean | `true` | Active/inactive |
+| `created_at` / `updated_at` | timestamp | — | Timestamps |
+
+### `portfolio_items` Table
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | bigint (PK) | — | ID |
+| `portfolio_id` | bigint (FK → portfolios) | — | Owner (cascade delete) |
+| `symbol` | string | — | Stock symbol |
+| `last_price` | decimal(12,2) | `null` | Last price |
+| `pe` | decimal(12,2) | `null` | P/E ratio |
+| `buy_price` | decimal(12,2) | — | Buy price |
+| `quantity` | decimal(12,4) | — | Quantity |
+| `sell_price` | decimal(12,2) | `null` | Sell price |
+| `resistance_1` | decimal(12,2) | `null` | Resistance 1 |
+| `resistance_2` | decimal(12,2) | `null` | Resistance 2 |
+| `resistance_3` | decimal(12,2) | `null` | Resistance 3 |
+| `support_1` | decimal(12,2) | `null` | Support 1 |
+| `support_2` | decimal(12,2) | `null` | Support 2 |
+| `support_3` | decimal(12,2) | `null` | Support 3 |
+| `active` | boolean | `true` | Active/inactive |
+| `created_at` / `updated_at` | timestamp | — | Timestamps |
+
+### `api_keys` Table
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | bigint (PK) | — | ID |
+| `user_id` | bigint (FK → users) | — | Owner (cascade delete) |
+| `name` | string | — | Key name |
+| `api_key` | text | — | API key |
+| `is_default` | boolean | `false` | Default key |
+| `created_at` / `updated_at` | timestamp | — | Timestamps |
+
+### `favorites` Table
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | bigint (PK) | — | ID |
+| `user_id` | bigint (FK → users) | — | Owner (cascade delete) |
+| `symbol` | string | — | Favorite symbol |
+| `created_at` / `updated_at` | timestamp | — | Timestamps |
+
+> Unique: (`user_id`, `symbol`)
+
+### `sessions` (Laravel)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | Session ID |
+| `user_id` | bigint (nullable) | User |
+| `ip_address` | string(45) | IP address |
+| `user_agent` | text | Browser |
+| `payload` | longText | Session data |
+| `last_activity` | integer | Last activity |
+
+### `personal_access_tokens` (Sanctum)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | bigint (PK) | ID |
+| `tokenable_type` / `tokenable_id` | — | Related model |
+| `name` | text | Token name |
+| `token` | string(64, unique) | Token |
+| `abilities` | text | Access levels |
+| `last_used_at` | timestamp | Last used |
+| `expires_at` | timestamp | Expiration |
+| `created_at` / `updated_at` | timestamp | Timestamps |
 
 ---
 
