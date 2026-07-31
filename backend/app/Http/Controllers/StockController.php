@@ -111,6 +111,7 @@ class StockController extends Controller
         foreach ($apiKeys as $keyInfo) {
             $symbols = $this->fetchAllSymbols($keyInfo['api_key']);
             if (!empty($symbols)) {
+                $this->trackApiKeyUsage($keyInfo['id'] ?? null);
                 return $symbols;
             }
         }
@@ -127,8 +128,6 @@ class StockController extends Controller
                 'message' => 'کلید API تنظیم نشده است. لطفاً در صفحه تنظیمات یک کلید API اضافه کنید.',
             ], 400);
         }
-
-        $this->trackApiKeyUsage($apiKeys[0]['id'] ?? null);
 
         $query = $request->input('q', '');
 
@@ -216,8 +215,6 @@ class StockController extends Controller
                 'message' => 'No API keys configured. Please add an API key in settings.',
             ], 400);
         }
-
-        $this->trackApiKeyUsage($apiKeys[0]['id'] ?? null);
 
         $symbols = $this->fetchAllSymbolsWithFallback($apiKeys);
 
