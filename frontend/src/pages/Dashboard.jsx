@@ -1238,20 +1238,13 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             const pl = value - buyTotal;
             const plPct = match.plPct;
             if (!value) return '';
-            const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
-            const amount = unit === 'toman' ? value / 10 : value;
-            if (colorMode === 'performance') {
-              const plAmount = unit === 'toman' ? pl / 10 : pl;
-              const sign = pl >= 0 ? '+' : '';
-              const plPctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
-              return [
-                `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-                `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
-              ];
-            }
-            const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
-            const pctStr = pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
-            return `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
+            const plAmount = unit === 'toman' ? pl / 10 : pl;
+            const sign = pl >= 0 ? '+' : '';
+            const plPctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
+            return [
+              `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+              `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
+            ];
           },
         },
       },
