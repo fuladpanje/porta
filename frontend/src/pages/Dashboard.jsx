@@ -60,7 +60,9 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
 
   const portfolios = useMemo(() => {
     const list = (dashboard?.portfolios || []).map((p) => {
-      const items = p.items || [];
+      let items = p.items || [];
+      if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
+      else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
        const totalValue = items.reduce((s, i) => {
          const price = i.sell_price && i.sell_price > 0 ? i.sell_price : (i.last_price || i.buy_price);
          const qty = SafeNumber(i.quantity);
@@ -104,7 +106,7 @@ const soldCost = items.reduce((s, i) => {
       if (portfolioSort === 'percent') return b._profitLossPct - a._profitLossPct;
       return b.total_value - a.total_value;
     });
-  }, [dashboard, portfolioSort, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode]);
+  }, [dashboard, portfolioSort, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode, sellFilter]);
 const allItems = useMemo(() => {
      const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
      let items = activePortfolios.flatMap((p) => p.items || []);
@@ -129,7 +131,10 @@ const totals = useMemo(() => {
       let totalPL = 0;
       let totalSoldCost = 0;
       portfolios.forEach((p) => {
-        (p.items || []).forEach((item) => {
+        let items = p.items || [];
+        if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
+        else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
+        items.forEach((item) => {
           const qty = SafeNumber(item.quantity);
           const buyTotal = SafeNumber(item.buy_price) * qty;
           const hasSell = item.sell_price && item.sell_price > 0;
@@ -149,7 +154,7 @@ const totals = useMemo(() => {
       });
       const totalPLPct = totalSoldCost > 0 ? (totalPL / totalSoldCost) * 100 : 0;
       return { totalValue, totalCost, totalPL, totalPLPct, count: portfolios.length, itemCount: allItems.length };
-   }, [portfolios, allItems, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode]);
+   }, [portfolios, allItems, commissionEnabled, buyCommissionRate, sellCommissionRate, plMode, sellFilter]);
 
   if (loading) {
     return (
@@ -244,8 +249,8 @@ const totals = useMemo(() => {
              { id: 'stocks', label: 'سهم‌ها', value: totalAllItems, format: 'num', icon: Package },
               { id: 'buyValue', label: 'ارزش کل خرید', value: totals.totalCost, format: 'price', icon: Wallet },
               { id: 'portfolioValue', label: 'ارزش کل پرتو', value: totals.totalValue, format: 'price', icon: Wallet },
-{ id: 'totalPL', label: plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
-               { id: 'totalPLPct', label: plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
+{ id: 'totalPL', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
+               { id: 'totalPLPct', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
            ].map((s) => {
            const Icon = s.icon;
            return (
@@ -506,7 +511,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                         </div>
                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{plMode === 'all' ? 'محقق شده + نشده (درصد)' : plMode === 'realized' ? 'محقق شده (درصد)' : 'محقق نشده (درصد)'}</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{sellFilter === 'sold' ? 'محقق شده (درصد)' : sellFilter === 'unsold' ? 'محقق نشده (درصد)' : plMode === 'all' ? 'محقق شده + نشده (درصد)' : plMode === 'realized' ? 'محقق شده (درصد)' : 'محقق نشده (درصد)'}</span>
                           <span className={`text-xs font-bold ${pp >= 0 ? 'text-success' : 'text-danger'}`}>{toPersianNum((unit === 'toman' ? SafeNumber(portfolio._profitLoss) / 10 : SafeNumber(portfolio._profitLoss)).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} {unit === 'toman' ? 'تومان' : 'ریال'} {pp !== 0 && `(${toPersianNum(pp.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }))} درصد)`}</span>
                         </div>
                         <div className="sm:hidden w-full border-t border-slate-200 dark:border-slate-700" />
