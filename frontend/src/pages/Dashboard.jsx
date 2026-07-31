@@ -67,17 +67,19 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
       const pSellCommissionRate = usePortfolioCommission
           ? (p.sell_commission || 0.88) / 100
           : (user?.sell_commission || 0.88) / 100;
-      let items = p.items || [];
+      const allItems = p.items || [];
+      let items = allItems;
       if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
       else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
-       const totalValue = items.reduce((s, i) => {
-         const price = i.sell_price && i.sell_price > 0 ? i.sell_price : (i.last_price || i.buy_price);
+      const heldItems = allItems.filter((i) => !i.sell_price || i.sell_price <= 0);
+       const totalValue = heldItems.reduce((s, i) => {
+         const price = i.last_price || i.buy_price;
          const qty = SafeNumber(i.quantity);
          const sellComm = pCommissionEnabled ? SafeNumber(price) * qty * pSellCommissionRate : 0;
          return s + SafeNumber(price) * qty - sellComm;
        }, 0);
-      const totalCost = items.reduce((s, i) => s + SafeNumber(i.buy_price) * SafeNumber(i.quantity), 0);
-const totalPL = items.reduce((s, i) => {
+      const totalCost = heldItems.reduce((s, i) => s + SafeNumber(i.buy_price) * SafeNumber(i.quantity), 0);
+const totalPL = allItems.reduce((s, i) => {
           const qty = SafeNumber(i.quantity);
           const buyTotal = SafeNumber(i.buy_price) * qty;
           const hasSell = i.sell_price && i.sell_price > 0;
@@ -106,7 +108,7 @@ const totalPL = items.reduce((s, i) => {
             }
             return s;
         }, 0);
-const soldCost = items.reduce((s, i) => {
+const soldCost = allItems.reduce((s, i) => {
            const hasSell = i.sell_price && i.sell_price > 0;
            const hasLast = i.last_price && i.last_price > 0;
            if (sellFilter === 'sold' && hasSell) {
@@ -126,7 +128,7 @@ const soldCost = items.reduce((s, i) => {
            return s;
          }, 0);
        const totalPLPct = soldCost > 0 ? (totalPL / soldCost) * 100 : 0;
-      return { ...p, _totalValue: totalValue, _totalCost: totalCost, _profitLoss: totalPL, _profitLossPct: totalPLPct };
+      return { ...p, _totalValue: totalValue, _totalCost: totalCost, _profitLoss: totalPL, _profitLossPct: totalPLPct, _heldCount: heldItems.length };
     });
     if (portfolioSort === 'default') return list;
     return [...list].sort((a, b) => {
@@ -150,7 +152,7 @@ const allItems = useMemo(() => {
       }
       return items;
     }, [portfolios, showInactivePortfolios, showInactiveChartItems]);
-   const totalAllItems = portfolios.reduce((sum, p) => sum + (p.items || []).length, 0);
+   const totalAllItems = portfolios.reduce((sum, p) => sum + SafeNumber(p._heldCount), 0);
 
 const totals = useMemo(() => {
       const totalValue = portfolios.reduce((s, p) => s + SafeNumber(p._totalValue), 0);
