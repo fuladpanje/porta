@@ -929,21 +929,23 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
 }
 
 function PortfolioAllocationChart({ items, unit, sellFilter, plMode }) {
-  const allocation = useMemo(() => {
-    let filtered = items;
-    if (sellFilter === 'sold') filtered = items.filter((i) => i.sell_price && i.sell_price > 0);
-    else if (sellFilter === 'unsold') filtered = items.filter((i) => !i.sell_price || i.sell_price <= 0);
-    else filtered = items.filter((i) => {
+  const filtered = useMemo(() => {
+    if (!items) return [];
+    if (sellFilter === 'sold') return items.filter((i) => i.sell_price && i.sell_price > 0);
+    if (sellFilter === 'unsold') return items.filter((i) => !i.sell_price || i.sell_price <= 0);
+    return items.filter((i) => {
       const hasSell = i.sell_price && i.sell_price > 0;
       const hasLast = i.last_price && i.last_price > 0;
       if (plMode === 'realized') return hasSell;
       if (plMode === 'unrealized') return !hasSell && hasLast;
       return true;
     });
+  }, [items, sellFilter, plMode]);
 
+  const allocation = useMemo(() => {
     const values = new Map();
 
-    items.forEach((item) => {
+    filtered.forEach((item) => {
       const price = SafeNumber(item.sell_price) > 0
         ? SafeNumber(item.sell_price)
         : (SafeNumber(item.last_price) > 0 ? SafeNumber(item.last_price) : SafeNumber(item.buy_price));
@@ -961,7 +963,7 @@ function PortfolioAllocationChart({ items, unit, sellFilter, plMode }) {
     if (otherValue > 0) leading.push(['سایر', otherValue]);
 
     return leading;
-  }, [filtered, sellFilter, plMode]);
+  }, [filtered]);
 
   const totalValue = useMemo(() => allocation.reduce((sum, [, value]) => sum + value, 0), [allocation]);
 
