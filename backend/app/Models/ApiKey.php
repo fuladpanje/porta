@@ -12,10 +12,13 @@ class ApiKey extends Model
         'name',
         'api_key',
         'is_default',
+        'daily_requests',
+        'last_reset_at',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
+        'last_reset_at' => 'datetime',
     ];
 
     protected $hidden = [
