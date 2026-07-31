@@ -1174,13 +1174,11 @@ function TreemapChart({ items, unit }) {
             const symbol = d?.symbol || raw?.g || '';
             const item = treemapData.find(i => i.symbol === symbol);
             const value = d?.value ?? item?.value ?? raw?.v ?? 0;
-            const plPct = d?.plPct ?? item?.plPct ?? 0;
             if (!value) return '';
             const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
             const amount = unit === 'toman' ? value / 10 : value;
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
-            const plSign = plPct >= 0 ? '+' : '';
-            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪) | ${plSign}${plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪ سود/زیان`;
+            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)`;
           },
         },
       },
