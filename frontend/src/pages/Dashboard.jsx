@@ -1196,7 +1196,7 @@ function TreemapChart({ items, unit }) {
             borderWidth: 1.5,
             borderColor: 'rgba(255,255,255,0.15)',
             backgroundColor: (ctx) => {
-              if (!ctx.raw?._data) return '#6366F1';
+              if (!ctx.raw?._data || ctx.raw._data.pl === undefined) return '#6366F1';
               const pl = ctx.raw._data.pl;
               if (pl >= 0) {
                 const intensity = Math.min(Math.abs(pl) / (ctx.raw._data.value || 1), 1);
@@ -1214,7 +1214,7 @@ function TreemapChart({ items, unit }) {
               font: { size: 10, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
               formatter: (ctx) => {
                 const d = ctx.raw?._data;
-                if (!d) return '';
+                if (!d || d.plPct === undefined || d.plPct === null) return [d?.symbol || '', ''];
                 const pct = d.plPct >= 0 ? `+${d.plPct.toFixed(1)}%` : `${d.plPct.toFixed(1)}%`;
                 return [d.symbol, pct];
               },
