@@ -1236,13 +1236,13 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
               const sign = pl >= 0 ? '+' : '';
               const plPctStr = plPct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
               return [
-                `ارزش: ${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-                `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctStr}٪)`
+                `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+                `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
               ];
             }
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
             const pctStr = pct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
+            return `${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pctStr}٪)`;
           },
         },
       },
@@ -1306,9 +1306,8 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                 if (colorMode === 'performance') {
                   const plPct = match?.plPct;
                   if (plPct === undefined || plPct === null) return [symbol, ''];
-                  const sign = plPct >= 0 ? '+' : '';
                   const pctStr = plPct.toLocaleString('fa-IR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-                  return [symbol, `${sign}${pctStr}٪`];
+                  return [symbol, `${pctStr}٪`];
                 }
                 const value = match?.value ?? 0;
                 const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
