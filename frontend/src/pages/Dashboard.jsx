@@ -1212,17 +1212,28 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
         callbacks: {
           title: (items) => {
             const raw = items[0]?.raw;
-            return raw?.g || raw?._data?.symbol || items[0]?.label || '';
+            const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
+            return d?.symbol || raw?.g || items[0]?.label || '';
           },
           label: (ctx) => {
             const raw = ctx.raw;
-            const d = raw?._data;
+            const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
             const symbol = d?.symbol || raw?.g || '';
             const item = treemapData.find(i => i.symbol === symbol);
             const value = d?.value ?? item?.value ?? raw?.v ?? 0;
             if (!value) return '';
             const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
             const amount = unit === 'toman' ? value / 10 : value;
+            if (colorMode === 'performance') {
+              const plVal = d?.pl ?? item?.pl ?? 0;
+              const plPctVal = d?.plPct ?? item?.plPct ?? 0;
+              const plAmount = unit === 'toman' ? plVal / 10 : plVal;
+              const sign = plVal >= 0 ? '+' : '';
+              return [
+                `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+                `${sign}${plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${sign}${plPctVal.toFixed(1)}٪)`
+              ];
+            }
             const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
             return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)`;
           },
@@ -1252,10 +1263,11 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             borderWidth: 1.5,
             borderColor: 'rgba(255,255,255,0.15)',
             backgroundColor: (ctx) => {
-              const d = ctx.raw?._data;
-              const symbol = d?.symbol || ctx.raw?.g || '';
+              const raw = ctx.raw;
+              const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
+              const symbol = d?.symbol || raw?.g || '';
               const item = treemapData.find(i => i.symbol === symbol);
-              const value = d?.value ?? item?.value ?? ctx.raw?.v ?? 0;
+              const value = d?.value ?? item?.value ?? raw?.v ?? 0;
               const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
               if (!value || !totalVal) return '#6366F1';
               if (colorMode === 'performance') {
@@ -1279,10 +1291,20 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
               color: '#F8FAFC',
               font: { size: 10, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
               formatter: (ctx) => {
-                const d = ctx.raw?._data;
-                if (!d || d.plPct === undefined || d.plPct === null) return [d?.symbol || '', ''];
-                const pct = d.plPct >= 0 ? `+${d.plPct.toFixed(1)}%` : `${d.plPct.toFixed(1)}%`;
-                return [d.symbol, pct];
+                const raw = ctx.raw;
+                const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
+                const symbol = d?.symbol || raw?.g || '';
+                const item = treemapData.find(i => i.symbol === symbol);
+                if (colorMode === 'performance') {
+                  const plPct = d?.plPct ?? item?.plPct;
+                  if (plPct === undefined || plPct === null) return [symbol, ''];
+                  const sign = plPct >= 0 ? '+' : '';
+                  return [symbol, `${sign}${plPct.toFixed(1)}%`];
+                }
+                const value = d?.value ?? item?.value ?? raw?.v ?? 0;
+                const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
+                const pct = totalVal > 0 ? ((value / totalVal) * 100) : 0;
+                return [symbol, `${pct.toFixed(1)}٪`];
               },
             },
             captions: { display: false },
