@@ -132,10 +132,15 @@ $ht += '    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]'
 $ht += '</IfModule>'
 $ht | Set-Content -Path "$DEPLOY\backend\public\.htaccess"
 
+$ZIP_NAME = "deploy.zip"
+if (Test-Path $ZIP_NAME) { Remove-Item -Force $ZIP_NAME }
+Compress-Archive -Path "$DEPLOY\*" -DestinationPath $ZIP_NAME -Force
+
 Write-Host ""
 Write-Host "=== DONE ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "deploy\folder is ready." -ForegroundColor Cyan
+Write-Host "deploy\ folder is ready." -ForegroundColor Cyan
+Write-Host "deploy.zip created successfully." -ForegroundColor Green
 Write-Host ""
 Write-Host "After uploading to host, run these commands via terminal:" -ForegroundColor Yellow
 Write-Host "  cd backend && php artisan migrate --force && php artisan route:clear && php artisan config:clear && php artisan cache:clear" -ForegroundColor White
