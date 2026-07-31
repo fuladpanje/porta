@@ -7,10 +7,10 @@ import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/c
 import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
-import { Chart } from 'chart.js';
+import { Chart as ChartJS } from 'chart.js';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
 
-Chart.register(TreemapController, TreemapElement);
+ChartJS.register(TreemapController, TreemapElement);
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SymbolSearch } from '../components/SymbolSearch';
 
