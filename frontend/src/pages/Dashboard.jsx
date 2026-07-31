@@ -1159,30 +1159,26 @@ function TreemapChart({ items, unit }) {
         padding: 10,
         cornerRadius: 8,
         backgroundColor: '#0F172A',
+        titleFont: { size: 11, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
         bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
         callbacks: {
-          title: () => '',
-          beforeLabel: (ctx) => {
-            const d = ctx.raw?._data;
-            if (!d?.symbol) return '';
-            return d.symbol;
+          title: (items) => {
+            const d = items[0]?.raw?._data;
+            return d?.symbol || '';
           },
           label: (ctx) => {
             const d = ctx.raw?._data;
             if (!d) return '';
+            const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
             const amount = unit === 'toman' ? d.value / 10 : d.value;
-            const lines = [
-              `ارزش: ${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-              `سود/زیان: ${d.plPct >= 0 ? '+' : ''}${d.plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪`,
-            ];
-            if (d.hasSell) lines.push('محقق شده');
-            else lines.push('محقق نشده');
-            return lines;
+            const pct = totalVal > 0 ? ((d.value / totalVal) * 100) : 0;
+            const plSign = d.plPct >= 0 ? '+' : '';
+            return `${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${pct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪) | ${plSign}${d.plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪ سود/زیان`;
           },
         },
       },
     },
-  }), [unit]);
+  }), [unit, treemapData]);
 
   if (treemapData.length === 0) {
     return <div className="h-full flex items-center justify-center text-slate-400 text-xs rtl-text">داده‌ای برای نمایش نقشه درختی وجود ندارد.</div>;
