@@ -11,10 +11,14 @@ class StockController extends Controller
     private static ?array $symbolsCache = null;
     private static int $symbolsCacheTime = 0;
 
-    private function fetchAllSymbols(string $apiKey): array
+    private function fetchAllSymbols(string $apiKey, ?int $keyId = null): array
     {
         if (self::$symbolsCache !== null && (time() - self::$symbolsCacheTime) < 3600) {
             return self::$symbolsCache;
+        }
+
+        if ($keyId) {
+            $this->trackApiKeyUsage($keyId);
         }
 
         $url = 'https://Api.BrsApi.ir/Tsetmc/AllSymbols.php?key=' . $apiKey;
@@ -112,11 +116,8 @@ class StockController extends Controller
 
     private function fetchAllSymbolsWithFallback(array $apiKeys): array
     {
-        $lastError = null;
-
         foreach ($apiKeys as $keyInfo) {
-            $this->trackApiKeyUsage($keyInfo['id']);
-            $symbols = $this->fetchAllSymbols($keyInfo['api_key']);
+            $symbols = $this->fetchAllSymbols($keyInfo['api_key'], $keyInfo['id'] ?? null);
             if (!empty($symbols)) {
                 return $symbols;
             }
