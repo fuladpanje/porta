@@ -153,7 +153,7 @@ const allItems = useMemo(() => {
       }
       return items;
     }, [portfolios, showInactivePortfolios, showInactiveChartItems]);
-   const totalAllItems = (sellFilter === 'all' && plMode === 'all') ? null : portfolios.reduce((sum, p) => sum + SafeNumber(p._valueCount), 0);
+   const totalAllItems = portfolios.reduce((sum, p) => sum + (p.items || []).length, 0);
 
 const totals = useMemo(() => {
       const totalValue = portfolios.reduce((s, p) => s + SafeNumber(p._totalValue), 0);
@@ -306,7 +306,7 @@ const totals = useMemo(() => {
                <Icon className="w-3 h-3" /> {s.label}
              </p>
              <p className={`text-sm font-bold mt-0.5 ${s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : s.format === 'pct' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : 'text-slate-800 dark:text-slate-200'}`}>
-                 {s.value === null ? '—' : s.format === 'num' ? toPersianNum(s.value) : s.format === 'price' && typeof s.value === 'number' && !isNaN(s.value)
+                {s.format === 'num' ? toPersianNum(s.value) : s.format === 'price' && typeof s.value === 'number' && !isNaN(s.value)
                    ? toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')
                    : s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value)
                    ? toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')
@@ -551,7 +551,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                   <div className="flex items-center gap-2">
                   {isExp ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
                   <span className="text-sm font-medium text-slate-800 dark:text-slate-200 rtl-text truncate">{portfolio.name}</span>
-                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{hideValues ? '—' : toPersianNum(SafeNumber(portfolio._valueCount)) + ' سهم'}</span>
+                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{toPersianNum((p.items || []).length)} سهم</span>
                 </div>
 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <div className="flex flex-col items-center gap-0.5">
