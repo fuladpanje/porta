@@ -19,6 +19,7 @@ class ApiKeyController extends Controller
                     'name' => $key->name,
                     'api_key' => $key->getOriginal('api_key'),
                     'is_default' => $key->is_default,
+                    'daily_requests' => $key->daily_requests ?? 0,
                     'created_at' => $key->created_at->toIso8601String(),
                 ];
             }),

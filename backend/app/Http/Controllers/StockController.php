@@ -53,6 +53,23 @@ class StockController extends Controller
         return [];
     }
 
+    private function trackApiKeyUsage($keyId): void
+    {
+        try {
+            $apiKey = \App\Models\ApiKey::find($keyId);
+            if (!$apiKey) return;
+
+            $now = now();
+            if (!$apiKey->last_reset_at || $apiKey->last_reset_at->diffInHours($now) >= 24) {
+                $apiKey->update(['daily_requests' => 1, 'last_reset_at' => $now]);
+            } else {
+                $apiKey->increment('daily_requests');
+            }
+        } catch (\Exception $e) {
+            // silent
+        }
+    }
+
     private function getUserApiKeys(Request $request): array
     {
         $user = $request->user();
@@ -88,6 +105,7 @@ class StockController extends Controller
         $lastError = null;
 
         foreach ($apiKeys as $keyInfo) {
+            $this->trackApiKeyUsage($keyInfo['id']);
             $symbols = $this->fetchAllSymbols($keyInfo['api_key']);
             if (!empty($symbols)) {
                 return $symbols;

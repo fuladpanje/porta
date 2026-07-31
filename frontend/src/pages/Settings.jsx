@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { Settings as SettingsIcon, Plus, Trash2, Check, X, Key, Loader2, AlertCircle, Edit3, Clock, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Check, X, Key, Loader2, AlertCircle, Edit3, Clock, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Activity } from 'lucide-react';
+import { toPersianNum } from '../lib/calculations';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 export default function Settings() {
@@ -698,6 +699,10 @@ const handleToggleAutoSwitch = async () => {
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200 rtl-text">{key.name}</p>
                   <p className="text-[10px] text-slate-400">
                     {key.is_default ? 'کلید پیش‌فرض' : 'اضافه شده در ' + new Date(key.created_at).toLocaleDateString('fa-IR')}
+                  </p>
+                  <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Activity className="w-3 h-3" />
+                    {toPersianNum(key.daily_requests || 0)} درخواست (۲۴ ساعت اخیر)
                   </p>
                 </div>
               </div>
