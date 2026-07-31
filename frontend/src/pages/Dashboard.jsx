@@ -75,26 +75,46 @@ const totalPL = items.reduce((s, i) => {
           const buyTotal = SafeNumber(i.buy_price) * qty;
           const hasSell = i.sell_price && i.sell_price > 0;
           const hasLast = i.last_price && i.last_price > 0;
-          if (hasSell && (plMode === 'all' || plMode === 'realized')) {
+          if (sellFilter === 'sold' && hasSell) {
               const sellTotal = SafeNumber(i.sell_price) * qty;
               const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
               return s + (sellTotal - sellComm) - buyTotal;
             }
-            if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
+            if (sellFilter === 'unsold' && hasLast) {
               const lastTotal = SafeNumber(i.last_price) * qty;
               const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
               return s + (lastTotal - lastComm) - buyTotal;
+            }
+            if (sellFilter === 'all') {
+              if (hasSell && (plMode === 'all' || plMode === 'realized')) {
+                const sellTotal = SafeNumber(i.sell_price) * qty;
+                const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
+                return s + (sellTotal - sellComm) - buyTotal;
+              }
+              if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
+                const lastTotal = SafeNumber(i.last_price) * qty;
+                const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
+                return s + (lastTotal - lastComm) - buyTotal;
+              }
             }
             return s;
         }, 0);
 const soldCost = items.reduce((s, i) => {
            const hasSell = i.sell_price && i.sell_price > 0;
            const hasLast = i.last_price && i.last_price > 0;
-           if (hasSell && (plMode === 'all' || plMode === 'realized')) {
+           if (sellFilter === 'sold' && hasSell) {
              return s + SafeNumber(i.buy_price) * SafeNumber(i.quantity);
            }
-           if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
+           if (sellFilter === 'unsold' && hasLast) {
              return s + SafeNumber(i.buy_price) * SafeNumber(i.quantity);
+           }
+           if (sellFilter === 'all') {
+             if (hasSell && (plMode === 'all' || plMode === 'realized')) {
+               return s + SafeNumber(i.buy_price) * SafeNumber(i.quantity);
+             }
+             if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
+               return s + SafeNumber(i.buy_price) * SafeNumber(i.quantity);
+             }
            }
            return s;
          }, 0);
@@ -126,8 +146,8 @@ const allItems = useMemo(() => {
    const totalAllItems = portfolios.reduce((sum, p) => sum + (p.items || []).length, 0);
 
 const totals = useMemo(() => {
-      const totalValue = portfolios.reduce((s, p) => s + SafeNumber(p.total_value), 0);
-      const totalCost = portfolios.reduce((s, p) => s + SafeNumber(p.total_cost), 0);
+      const totalValue = portfolios.reduce((s, p) => s + SafeNumber(p._totalValue), 0);
+      const totalCost = portfolios.reduce((s, p) => s + SafeNumber(p._totalCost), 0);
       let totalPL = 0;
       let totalSoldCost = 0;
       portfolios.forEach((p) => {
@@ -139,16 +159,28 @@ const totals = useMemo(() => {
           const buyTotal = SafeNumber(item.buy_price) * qty;
           const hasSell = item.sell_price && item.sell_price > 0;
           const hasLast = item.last_price && item.last_price > 0;
-          if (hasSell && (plMode === 'all' || plMode === 'realized')) {
+          if (sellFilter === 'sold' && hasSell) {
             const sellTotal = SafeNumber(item.sell_price) * qty;
             const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
             totalPL += (sellTotal - sellComm) - buyTotal;
             totalSoldCost += buyTotal;
-          } else if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
+          } else if (sellFilter === 'unsold' && hasLast) {
             const lastTotal = SafeNumber(item.last_price) * qty;
             const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
             totalPL += (lastTotal - lastComm) - buyTotal;
             totalSoldCost += buyTotal;
+          } else if (sellFilter === 'all') {
+            if (hasSell && (plMode === 'all' || plMode === 'realized')) {
+              const sellTotal = SafeNumber(item.sell_price) * qty;
+              const sellComm = commissionEnabled ? sellTotal * sellCommissionRate : 0;
+              totalPL += (sellTotal - sellComm) - buyTotal;
+              totalSoldCost += buyTotal;
+            } else if (!hasSell && hasLast && (plMode === 'all' || plMode === 'unrealized')) {
+              const lastTotal = SafeNumber(item.last_price) * qty;
+              const lastComm = commissionEnabled ? lastTotal * sellCommissionRate : 0;
+              totalPL += (lastTotal - lastComm) - buyTotal;
+              totalSoldCost += buyTotal;
+            }
           }
         });
       });
