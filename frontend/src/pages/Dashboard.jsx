@@ -1209,18 +1209,6 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
         backgroundColor: '#0F172A',
         titleFont: { size: 11, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
         bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
-        labelTextColor: (ctx) => {
-          if (colorMode !== 'performance') return '#F8FAFC';
-          const raw = ctx.raw;
-          const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
-          const symbol = d?.symbol || raw?.g || '';
-          const match = treemapData.find(i => i.symbol === symbol);
-          const orig = match?.item;
-          if (!orig) return '#F8FAFC';
-          const price = (orig.sell_price && orig.sell_price > 0) ? SafeNumber(orig.sell_price) : (SafeNumber(orig.last_price) || SafeNumber(orig.buy_price));
-          const pl = (price - SafeNumber(orig.buy_price)) * SafeNumber(orig.quantity);
-          return pl >= 0 ? '#34D399' : '#F87171';
-        },
         callbacks: {
           title: (items) => {
             const raw = items[0]?.raw;
@@ -1232,14 +1220,15 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
             const symbol = d?.symbol || raw?.g || '';
             const match = treemapData.find(i => i.symbol === symbol);
-            const orig = match?.item;
+            if (!match) return '';
+            const orig = match.item;
             if (!orig) return '';
             const price = (orig.sell_price && orig.sell_price > 0) ? SafeNumber(orig.sell_price) : (SafeNumber(orig.last_price) || SafeNumber(orig.buy_price));
             const qty = SafeNumber(orig.quantity);
             const value = price * qty;
             const buyTotal = SafeNumber(orig.buy_price) * qty;
             const pl = value - buyTotal;
-            const plPct = buyTotal > 0 ? ((pl / buyTotal) * 100) : 0;
+            const plPct = match.plPct;
             if (!value) return '';
             const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
             const amount = unit === 'toman' ? value / 10 : value;
