@@ -7,6 +7,7 @@ import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/c
 import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
+import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SymbolSearch } from '../components/SymbolSearch';
 
@@ -330,13 +331,14 @@ const totals = useMemo(() => {
               >
                 {chartsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </button>
-              {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'price' ? <BarChart3 className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
-              {activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}
+              {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'treemap' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'price' ? <BarChart3 className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
+              {activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'treemap' ? 'نقشه درختی دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}
             </h2>
             <div className="flex items-center gap-2">
               {chartsExpanded && <div role="tablist" aria-label="نمودارهای داشبورد" className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
               {[
                 { id: 'allocation', label: 'ترکیب' },
+                { id: 'treemap', label: 'نقشه درختی' },
                 { id: 'price', label: 'قیمت' },
                 { id: 'profitLoss', label: 'سود و زیان' },
               ].map((chart) => (
@@ -434,6 +436,7 @@ const totals = useMemo(() => {
   
            {chartsExpanded && <div role="tabpanel" className={`h-80 pb-4 ${activeChart !== 'profitLoss' ? 'mt-5' : ''}`}>
              {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} />}
+              {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} />}
               {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
               {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
            </div>}
@@ -1119,4 +1122,105 @@ datasets: [{
   }), [showAmount, unit]);
   if (!chartData) return <div className="h-24 flex items-center justify-center text-slate-300 text-xs">بدون داده فروش</div>;
   return <div className="h-full"><Bar key="pl-chart" data={chartData} options={options} /></div>;
+}
+
+function TreemapChart({ items, unit }) {
+  const chartRef = useRef(null);
+
+  const treemapData = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    return items
+      .filter((i) => i.symbol && i.symbol.trim() !== '' && ((i.last_price && i.last_price > 0) || (i.sell_price && i.sell_price > 0)))
+      .map((i) => {
+        const price = (i.sell_price && i.sell_price > 0) ? i.sell_price : (i.last_price || i.buy_price);
+        const value = SafeNumber(price) * SafeNumber(i.quantity);
+        const buyTotal = SafeNumber(i.buy_price) * SafeNumber(i.quantity);
+        const pl = value - buyTotal;
+        const plPct = buyTotal > 0 ? ((pl / buyTotal) * 100) : 0;
+        const hasSell = i.sell_price && i.sell_price > 0;
+        return { symbol: i.symbol, value, pl, plPct, hasSell };
+      });
+  }, [items]);
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        direction: 'rtl',
+        bodyAlign: 'right',
+        titleAlign: 'right',
+        displayColors: false,
+        padding: 10,
+        cornerRadius: 8,
+        backgroundColor: '#0F172A',
+        bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
+        callbacks: {
+          title: (items) => items[0]?.raw?._data?.symbol || '',
+          label: (ctx) => {
+            const d = ctx.raw?._data;
+            if (!d) return '';
+            const amount = unit === 'toman' ? d.value / 10 : d.value;
+            const lines = [
+              `ارزش: ${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+              `سود/زیان: ${d.plPct >= 0 ? '+' : ''}${d.plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪`,
+            ];
+            if (d.hasSell) lines.push('محقق شده');
+            else lines.push('محقق نشده');
+            return lines;
+          },
+        },
+      },
+    },
+  }), [unit]);
+
+  if (treemapData.length === 0) {
+    return <div className="h-full flex items-center justify-center text-slate-400 text-xs rtl-text">داده‌ای برای نمایش نقشه درختی وجود ندارد.</div>;
+  }
+
+  return (
+    <div className="h-full">
+      <Chart
+        ref={chartRef}
+        type="treemap"
+        data={{
+          datasets: [{
+            tree: treemapData,
+            key: 'value',
+            groups: ['symbol'],
+            spacing: 1,
+            borderWidth: 1.5,
+            borderColor: 'rgba(255,255,255,0.15)',
+            backgroundColor: (ctx) => {
+              if (!ctx.raw?._data) return '#6366F1';
+              const pl = ctx.raw._data.pl;
+              if (pl >= 0) {
+                const intensity = Math.min(Math.abs(pl) / (ctx.raw._data.value || 1), 1);
+                return `rgba(16, 185, 129, ${0.35 + intensity * 0.45})`;
+              }
+              const intensity = Math.min(Math.abs(pl) / (ctx.raw._data.value || 1), 1);
+              return `rgba(239, 68, 68, ${0.35 + intensity * 0.45})`;
+            },
+            labels: {
+              display: true,
+              align: 'center',
+              position: 'middle',
+              overflow: 'fit',
+              color: '#F8FAFC',
+              font: { size: 10, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
+              formatter: (ctx) => {
+                const d = ctx.raw?._data;
+                if (!d) return '';
+                const pct = d.plPct >= 0 ? `+${d.plPct.toFixed(1)}%` : `${d.plPct.toFixed(1)}%`;
+                return [d.symbol, pct];
+              },
+            },
+            captions: { display: false },
+            options,
+          }],
+        }}
+      />
+    </div>
+  );
 }
