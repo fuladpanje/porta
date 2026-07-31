@@ -45,7 +45,12 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
   const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
 
   useEffect(() => {
-    const handler = () => refreshDashboard();
+    const handler = () => {
+      const mode = localStorage.getItem('profit_loss_by_sell') || 'all';
+      const filterMap = { all: 'all', realized: 'sold', unrealized: 'unsold' };
+      setSellFilter(filterMap[mode] || 'all');
+      refreshDashboard();
+    };
     window.addEventListener('pl-by-sell-changed', handler);
     return () => window.removeEventListener('pl-by-sell-changed', handler);
   }, [refreshDashboard]);
@@ -443,7 +448,13 @@ const totals = useMemo(() => {
           <div className="flex items-center gap-2">
             <div>
               <button
-                onClick={() => setSellFilter((prev) => prev === 'all' ? 'sold' : prev === 'sold' ? 'unsold' : 'all')}
+                onClick={() => {
+                  const next = sellFilter === 'all' ? 'sold' : sellFilter === 'sold' ? 'unsold' : 'all';
+                  setSellFilter(next);
+                  const plMap = { all: 'all', sold: 'realized', unsold: 'unrealized' };
+                  localStorage.setItem('profit_loss_by_sell', plMap[next]);
+                  window.dispatchEvent(new Event('pl-by-sell-changed'));
+                }}
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <Tag className="w-3 h-3" />
