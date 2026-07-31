@@ -53,6 +53,15 @@ export function Header() {
   });
 
   useEffect(() => {
+    const handler = () => {
+      const mode = localStorage.getItem('profit_loss_by_sell') || 'all';
+      setPlMode(mode);
+    };
+    window.addEventListener('pl-by-sell-changed', handler);
+    return () => window.removeEventListener('pl-by-sell-changed', handler);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (settingsRef.current && !settingsRef.current.contains(e.target)) {
         setShowSettings(false);
