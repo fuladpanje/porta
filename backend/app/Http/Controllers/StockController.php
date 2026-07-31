@@ -61,13 +61,22 @@ class StockController extends Controller
 
             $now = now();
             $today = $now->toDateString();
-            if (!$apiKey->last_reset_at || $apiKey->last_reset_at->toDateString() !== $today) {
+
+            $needsReset = !$apiKey->last_reset_at
+                || ($apiKey->last_reset_at instanceof \Carbon\Carbon
+                    ? $apiKey->last_reset_at->toDateString() !== $today
+                    : date('Y-m-d', strtotime($apiKey->last_reset_at)) !== $today);
+
+            if ($needsReset) {
                 $apiKey->update(['daily_requests' => 1, 'last_reset_at' => $now]);
             } else {
                 $apiKey->increment('daily_requests');
             }
         } catch (\Exception $e) {
-            // silent
+            \Illuminate\Support\Facades\Log::warning('trackApiKeyUsage failed', [
+                'key_id' => $keyId,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

@@ -702,7 +702,7 @@ const handleToggleAutoSwitch = async () => {
                   </p>
                   <p className="text-[10px] text-slate-400 flex items-center gap-1">
                     <Activity className="w-3 h-3" />
-                    {toPersianNum(key.daily_requests || 0)} درخواست (۲۴ ساعت اخیر)
+                    {toPersianNum(key.daily_requests || 0)} درخواست روزانه
                   </p>
                 </div>
               </div>
