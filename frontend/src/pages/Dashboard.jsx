@@ -80,7 +80,7 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
          return s + SafeNumber(price) * qty - sellComm;
        }, 0);
       const totalCost = valueItems.reduce((s, i) => s + SafeNumber(i.buy_price) * SafeNumber(i.quantity), 0);
-const totalPL = allItems.reduce((s, i) => {
+const totalPL = items.reduce((s, i) => {
           const qty = SafeNumber(i.quantity);
           const buyTotal = SafeNumber(i.buy_price) * qty;
           const hasSell = i.sell_price && i.sell_price > 0;
@@ -109,7 +109,7 @@ const totalPL = allItems.reduce((s, i) => {
             }
             return s;
         }, 0);
-const soldCost = allItems.reduce((s, i) => {
+const soldCost = items.reduce((s, i) => {
            const hasSell = i.sell_price && i.sell_price > 0;
            const hasLast = i.last_price && i.last_price > 0;
            if (sellFilter === 'sold' && hasSell) {
