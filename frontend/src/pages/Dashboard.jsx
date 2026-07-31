@@ -294,8 +294,8 @@ const totals = useMemo(() => {
 {[
              { id: 'portfolios', label: 'پرتفوها', value: totals.count, format: 'num', icon: FolderOpen },
              { id: 'stocks', label: 'سهم‌ها', value: totalAllItems, format: 'num', icon: Package },
-              { id: 'buyValue', label: 'ارزش کل خرید', value: totals.totalCost, format: 'price', icon: Wallet },
-              { id: 'portfolioValue', label: 'ارزش کل پرتو', value: totals.totalValue, format: 'price', icon: Wallet },
+              { id: 'buyValue', label: 'ارزش کل خرید', value: (sellFilter === 'all' && plMode === 'all') ? null : totals.totalCost, format: 'price', icon: Wallet },
+              { id: 'portfolioValue', label: 'ارزش کل پرتو', value: (sellFilter === 'all' && plMode === 'all') ? null : totals.totalValue, format: 'price', icon: Wallet },
 { id: 'totalPL', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
                { id: 'totalPLPct', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
            ].map((s) => {
@@ -542,6 +542,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
           const pv = SafeNumber(portfolio._totalValue);
           const pc = SafeNumber(portfolio._totalCost);
           const pp = SafeNumber(portfolio._profitLossPct);
+          const hideValues = sellFilter === 'all' && plMode === 'all';
 
           return (
             <div key={portfolio.id} className={`bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden transition-shadow hover:shadow-sm ${!portfolio.active && showItemForm !== portfolio.id && !(editingItem && editingItem.portfolioId === portfolio.id) ? 'opacity-50' : ''}`}>
@@ -550,17 +551,17 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                   <div className="flex items-center gap-2">
                   {isExp ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
                   <span className="text-sm font-medium text-slate-800 dark:text-slate-200 rtl-text truncate">{portfolio.name}</span>
-                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{toPersianNum(SafeNumber(portfolio._valueCount))} سهم</span>
+                   <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full shrink-0">{hideValues ? '—' : toPersianNum(SafeNumber(portfolio._valueCount)) + ' سهم'}</span>
                 </div>
 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-[10px] text-slate-400 dark:text-slate-500">ارزش خرید</span>
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{toPersianNum((unit === 'toman' ? pc / 10 : pc).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} {unit === 'toman' ? 'تومان' : 'ریال'}</span>
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{hideValues ? '—' : toPersianNum((unit === 'toman' ? pc / 10 : pc).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')}</span>
                         </div>
                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-[10px] text-slate-400 dark:text-slate-500">ارزش پرتفو</span>
-                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{toPersianNum((unit === 'toman' ? pv / 10 : pv).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} {unit === 'toman' ? 'تومان' : 'ریال'}</span>
+                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{hideValues ? '—' : toPersianNum((unit === 'toman' ? pv / 10 : pv).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')}</span>
                         </div>
                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
                         <div className="flex flex-col items-center gap-0.5">
