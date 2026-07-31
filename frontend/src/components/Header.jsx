@@ -4,7 +4,6 @@ import { useUnit } from '../contexts/UnitContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat } from 'lucide-react';
 import { stockApi } from '../lib/api';
-import { clearSymbolCache } from '../lib/symbolCache';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -113,7 +112,6 @@ export function Header() {
     setRefreshing(true);
     try {
       await stockApi.refreshPrices();
-      clearSymbolCache();
       window.dispatchEvent(new Event('prices-refreshed'));
     } catch (err) {
       // silent
