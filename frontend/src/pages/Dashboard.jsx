@@ -173,7 +173,7 @@ const totals = useMemo(() => {
         let items = p.items || [];
         if (sellFilter === 'sold') items = items.filter((i) => i.sell_price && i.sell_price > 0);
         else if (sellFilter === 'unsold') items = items.filter((i) => !i.sell_price || i.sell_price <= 0);
-    filtered.forEach((item) => {
+        items.forEach((item) => {
           const qty = SafeNumber(item.quantity);
           const buyTotal = SafeNumber(item.buy_price) * qty;
           const hasSell = item.sell_price && item.sell_price > 0;
