@@ -36,7 +36,7 @@ const [showItemForm, setShowItemForm] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
     const [portfolioSort, setPortfolioSort] = useState('default');
     const [showPLAmount, setShowPLAmount] = useState(false);
-    const [treemapColorMode, setTreemapColorMode] = useState('allocation');
+    const [treemapColorMode, setTreemapColorMode] = useState('performance');
     const [activeChart, setActiveChart] = useState('allocation');
     const [chartsExpanded, setChartsExpanded] = useState(true);
 const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
@@ -1307,10 +1307,12 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                 const symbol = d?.symbol || raw?.g || '';
                 const match = treemapData.find(i => i.symbol === symbol);
                 if (colorMode === 'performance') {
-                  const plPct = match?.plPct;
-                  if (plPct === undefined || plPct === null) return [symbol, ''];
-                  const pctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
-                  return [symbol, `${pctStr}٪`];
+                  const pl = match?.pl;
+                  if (pl === undefined || pl === null) return [symbol, ''];
+                  const plAmount = unit === 'toman' ? pl / 10 : pl;
+                  const sign = pl >= 0 ? '+' : '';
+                  const amountStr = plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 });
+                  return [symbol, `${sign}${amountStr}`];
                 }
                 const value = match?.value ?? 0;
                 const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
