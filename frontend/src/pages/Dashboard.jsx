@@ -1229,13 +1229,8 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             const symbol = d?.symbol || raw?.g || '';
             const match = treemapData.find(i => i.symbol === symbol);
             if (!match) return '';
-            const orig = match.item;
-            if (!orig) return '';
-            const price = (orig.sell_price && orig.sell_price > 0) ? SafeNumber(orig.sell_price) : (SafeNumber(orig.last_price) || SafeNumber(orig.buy_price));
-            const qty = SafeNumber(orig.quantity);
-            const value = price * qty;
-            const buyTotal = SafeNumber(orig.buy_price) * qty;
-            const pl = value - buyTotal;
+            const value = match.value;
+            const pl = match.pl;
             const plPct = match.plPct;
             if (!value) return '';
             const amount = unit === 'toman' ? value / 10 : value;
