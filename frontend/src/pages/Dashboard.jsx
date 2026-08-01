@@ -1207,14 +1207,21 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
         padding: 10,
         cornerRadius: 8,
         backgroundColor: '#0F172A',
-        titleFont: { size: 11, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
-        bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
-        labelTextColor: (ctx) => {
-          const raw = ctx.raw;
+        titleFont: (ctx) => {
+          const raw = ctx[0]?.raw;
           const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
           const symbol = d?.symbol || raw?.g || '';
           const match = treemapData.find(i => i.symbol === symbol);
-          return (match?.plPct ?? 0) >= 0 ? '#34D399' : '#F87171';
+          const color = (match?.plPct ?? 0) >= 0 ? '#34D399' : '#F87171';
+          return { size: 11, weight: '600', family: "'Vazirmatn', system-ui, sans-serif", color };
+        },
+        bodyFont: (ctx) => {
+          const raw = ctx[0]?.raw;
+          const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
+          const symbol = d?.symbol || raw?.g || '';
+          const match = treemapData.find(i => i.symbol === symbol);
+          const color = (match?.plPct ?? 0) >= 0 ? '#34D399' : '#F87171';
+          return { size: 11, family: "'Vazirmatn', system-ui, sans-serif", color };
         },
         callbacks: {
           title: (items) => {
