@@ -1210,7 +1210,6 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
         titleFont: { size: 11, weight: '600', family: "'Vazirmatn', system-ui, sans-serif" },
         bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" },
         labelTextColor: (ctx) => {
-          if (colorMode !== 'performance') return '#F8FAFC';
           const raw = ctx.raw;
           const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
           const symbol = d?.symbol || raw?.g || '';
