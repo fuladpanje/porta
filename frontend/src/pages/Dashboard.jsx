@@ -144,12 +144,17 @@ const soldCost = items.reduce((s, i) => {
   }, [dashboard, portfolioSort, user, plMode, sellFilter]);
 const allItems = useMemo(() => {
      const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
-     let items = activePortfolios.flatMap((p) => p.items || []);
+     let items = activePortfolios.flatMap((p) => {
+       const usePC = !!p.commission_enabled;
+       const commEnabled = usePC ? true : (user?.commission_enabled || false);
+       const commRate = usePC ? (p.sell_commission || 0.88) / 100 : (user?.sell_commission || 0.88) / 100;
+       return (p.items || []).map((item) => ({ ...item, _commEnabled: commEnabled, _commRate: commRate }));
+     });
      if (!showInactiveChartItems) {
        items = items.filter((i) => i.active !== false);
      }
      return items;
-   }, [portfolios, showInactivePortfolios, showInactiveChartItems]);
+   }, [portfolios, showInactivePortfolios, showInactiveChartItems, user?.commission_enabled, user?.sell_commission]);
     const allocationItems = useMemo(() => {
       const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
       let items = activePortfolios.flatMap((p) => p.items || []);
@@ -1182,8 +1187,11 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
       .filter((i) => i.symbol && i.symbol.trim() !== '' && ((i.last_price && i.last_price > 0) || (i.sell_price && i.sell_price > 0)))
       .map((i) => {
         const price = (i.sell_price && i.sell_price > 0) ? i.sell_price : (i.last_price || i.buy_price);
-        const value = SafeNumber(price) * SafeNumber(i.quantity);
-        const buyTotal = SafeNumber(i.buy_price) * SafeNumber(i.quantity);
+        const qty = SafeNumber(i.quantity);
+        const rawValue = SafeNumber(price) * qty;
+        const sellComm = i._commEnabled ? rawValue * i._commRate : 0;
+        const value = rawValue - sellComm;
+        const buyTotal = SafeNumber(i.buy_price) * qty;
         const pl = value - buyTotal;
         const plPct = buyTotal > 0 ? ((pl / buyTotal) * 100) : 0;
         const hasSell = i.sell_price && i.sell_price > 0;
@@ -1305,9 +1313,8 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                   const pl = match?.pl;
                   if (pl === undefined || pl === null) return [symbol, ''];
                   const plAmount = unit === 'toman' ? pl / 10 : pl;
-                  const sign = pl >= 0 ? '+' : '';
                   const amountStr = plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 });
-                  return [symbol, `${sign}${amountStr}`];
+                  return [symbol, amountStr];
                 }
                 const value = match?.value ?? 0;
                 const totalVal = treemapData.reduce((s, i) => s + (i.value || 0), 0);
