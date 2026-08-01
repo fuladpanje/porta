@@ -1187,9 +1187,10 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
         const pl = value - buyTotal;
         const plPct = buyTotal > 0 ? ((pl / buyTotal) * 100) : 0;
         const hasSell = i.sell_price && i.sell_price > 0;
-        return { symbol: i.symbol, value, pl, plPct, hasSell, item: i };
+        const size = colorMode === 'performance' ? Math.abs(pl) : value;
+        return { symbol: i.symbol, value, pl, plPct, hasSell, size, item: i };
       });
-  }, [filteredItems]);
+  }, [filteredItems, colorMode]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -1266,7 +1267,7 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
           datasets: [{
             label: 'دارایی‌ها',
             tree: treemapData,
-            key: 'value',
+            key: 'size',
             groups: ['symbol'],
             spacing: 1,
             borderWidth: 1.5,
