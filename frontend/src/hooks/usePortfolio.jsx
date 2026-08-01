@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 
-export function usePortfolio() {
+export function usePortfolio(plMode = 'all') {
   const [portfolios, setPortfolios] = useState([]);
   const [items, setItems] = useState([]);
   const [dashboard, setDashboard] = useState(null);
@@ -12,7 +12,6 @@ export function usePortfolio() {
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
       const res = await api.get('/dashboard', { params: { pl_mode: plMode } });
       setDashboard(res.data.data);
       setPortfolios(res.data.data.portfolios || []);
@@ -23,12 +22,11 @@ export function usePortfolio() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [plMode]);
 
   const refreshDashboard = useCallback(async () => {
     try {
       setRefreshing(true);
-      const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
       const res = await api.get('/dashboard', { params: { pl_mode: plMode } });
       setDashboard(res.data.data);
       setPortfolios(res.data.data.portfolios || []);
@@ -39,7 +37,7 @@ export function usePortfolio() {
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [plMode]);
 
   const fetchPortfolios = useCallback(async () => {
     try {

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { toPersianNum } from '../lib/calculations';
 import { PlusCircle, FolderOpen, Trash2, ArrowRight } from 'lucide-react';
 
 export default function PortfolioList() {
+  const { plMode } = useProfitLoss();
   const [portfolios, setPortfolios] = useState([]);
   const [loading, setLoading] = useState(true);
-  const plMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') || 'all') : 'all';
 
   useEffect(() => {
     const fetchData = async () => {

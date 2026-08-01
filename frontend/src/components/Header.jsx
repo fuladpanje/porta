@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUnit } from '../contexts/UnitContext';
+import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma } from 'lucide-react';
 import { stockApi } from '../lib/api';
@@ -8,6 +9,7 @@ import { stockApi } from '../lib/api';
 export function Header() {
   const { user, logout } = useAuth();
   const { unit, toggleUnit } = useUnit();
+  const { plMode, setPlMode } = useProfitLoss();
   const navigate = useNavigate();
   const location = useLocation();
   const isSymbolsPage = location.pathname === '/symbols';
@@ -27,16 +29,6 @@ export function Header() {
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  const [plMode, setPlMode] = useState(() => {
-    const stored = localStorage.getItem('profit_loss_by_sell');
-    if (stored === 'false') return 'realized';
-    if (stored === 'true') return 'all';
-    return stored || 'all';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('profit_loss_by_sell', plMode);
-  }, [plMode]);
 
   useEffect(() => {
     if (isDark) {
@@ -50,15 +42,6 @@ export function Header() {
   useEffect(() => {
     handleRefreshRef.current = handleRefresh;
   });
-
-  useEffect(() => {
-    const handler = () => {
-      const mode = localStorage.getItem('profit_loss_by_sell') || 'all';
-      setPlMode(mode);
-    };
-    window.addEventListener('pl-by-sell-changed', handler);
-    return () => window.removeEventListener('pl-by-sell-changed', handler);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -158,10 +141,7 @@ export function Header() {
           {!hidePlBySell && (
           <button
             onClick={() => {
-              const next = plMode === 'all' ? 'realized' : plMode === 'realized' ? 'unrealized' : 'all';
-              setPlMode(next);
-              localStorage.setItem('profit_loss_by_sell', next);
-              window.dispatchEvent(new Event('pl-by-sell-changed'));
+              setPlMode((prev) => prev === 'all' ? 'realized' : prev === 'realized' ? 'unrealized' : 'all');
             }}
             className={`px-2 py-1 rounded-lg text-[10px] font-medium rtl-text transition-colors flex items-center gap-1 ${plMode === 'all' ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700' : plMode === 'realized' ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30' : 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'}`}
             aria-label="تغییر حالت محاسبه سود و زیان"

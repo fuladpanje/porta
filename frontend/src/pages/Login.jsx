@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useProfitLoss } from '../contexts/ProfitLossContext';
 import api from '../lib/api';
 import { searchSymbolsLocal } from '../lib/symbolCache';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -12,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const { plMode } = useProfitLoss();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -21,7 +23,6 @@ export default function Login() {
 
     try {
       await login(email, password);
-      const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
       api.get('/dashboard', { params: { pl_mode: plMode } }).then((res) => {
         try {
           localStorage.setItem(

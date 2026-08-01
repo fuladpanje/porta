@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ProfitLossProvider } from './contexts/ProfitLossContext';
 import { Layout } from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -60,9 +61,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/*" element={<Layout><AppRoutes /></Layout>} />
-      </Routes>
+      <ProfitLossProvider>
+        <Routes>
+          <Route path="/*" element={<Layout><AppRoutes /></Layout>} />
+        </Routes>
+      </ProfitLossProvider>
     </AuthProvider>
   );
 }

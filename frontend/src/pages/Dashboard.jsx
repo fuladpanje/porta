@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useUnit } from '../contexts/UnitContext';
 import { useAuth } from '../hooks/useAuth';
+import { useProfitLoss } from '../contexts/ProfitLossContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
 import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
@@ -24,7 +25,8 @@ function SafeNumber(val) {
    return isNaN(n) ? 0 : n;
  }
 export default function Dashboard() {
-  const { dashboard, loading, refreshing, error, fetchDashboard, refreshDashboard } = usePortfolio();
+  const { plMode, setPlMode } = useProfitLoss();
+  const { dashboard, loading, refreshing, error, fetchDashboard, refreshDashboard } = usePortfolio(plMode);
   const { unit } = useUnit();
   const { user } = useAuth();
    const [showPortfolioForm, setShowPortfolioForm] = useState(false);
@@ -42,20 +44,8 @@ const [showItemForm, setShowItemForm] = useState(null);
 const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
      const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
      const [showPortfolios, setShowPortfolios] = useState(true);
-     const [sellFilter, setSellFilter] = useState('all');
 
-  const plMode = localStorage.getItem('profit_loss_by_sell') || 'all';
-
-  useEffect(() => {
-    const handler = () => {
-      const mode = localStorage.getItem('profit_loss_by_sell') || 'all';
-      const filterMap = { all: 'all', realized: 'sold', unrealized: 'unsold' };
-      setSellFilter(filterMap[mode] || 'all');
-      refreshDashboard();
-    };
-    window.addEventListener('pl-by-sell-changed', handler);
-    return () => window.removeEventListener('pl-by-sell-changed', handler);
-  }, [refreshDashboard]);
+  const sellFilter = { all: 'all', realized: 'sold', unrealized: 'unsold' }[plMode] || 'all';
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
@@ -240,7 +230,7 @@ const totals = useMemo(() => {
 
     const handleCopy = (e, value, isPrice = true) => {
     const num = Number(value);
-    const raw = isNaN(num) ? String(value) : String(Math.round(isPrice && unit === 'toman' ? num / 10 : num));
+    const raw = isNaN(num) ? String(value) : String(isPrice && unit === 'toman' ? num / 10 : num);
     navigator.clipboard.writeText(raw).catch(() => {});
     const td = e.currentTarget;
     td.classList.add('copy-flash');
@@ -465,8 +455,8 @@ const totals = useMemo(() => {
            {chartsExpanded && <div role="tabpanel" className={`h-80 pb-4 ${activeChart !== 'profitLoss' ? 'mt-5' : ''}`}>
               {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} />}
                {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} colorMode={treemapColorMode} />}
-              {activeChart === 'price' && <PriceChart items={allItems} unit={unit} />}
-              {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} />}
+        {activeChart === 'price' && <PriceChart items={allItems} unit={unit} plMode={plMode} />}
+        {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} plMode={plMode} />}
            </div>}
          </div>
 
@@ -491,10 +481,8 @@ const totals = useMemo(() => {
               <button
                 onClick={() => {
                   const next = sellFilter === 'all' ? 'sold' : sellFilter === 'sold' ? 'unsold' : 'all';
-                  setSellFilter(next);
                   const plMap = { all: 'all', sold: 'realized', unsold: 'unrealized' };
-                  localStorage.setItem('profit_loss_by_sell', plMap[next]);
-                  window.dispatchEvent(new Event('pl-by-sell-changed'));
+                  setPlMode(plMap[next]);
                 }}
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
@@ -1054,8 +1042,7 @@ function PortfolioAllocationChart({ items, unit, sellFilter, plMode }) {
   );
 }
 
-function PriceChart({ items, unit }) {
-    const plMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') || 'all') : 'all';
+function PriceChart({ items, unit, plMode }) {
     const validItems = useMemo(() => {
       if (!items || items.length === 0) return [];
       return items.filter((i) => {
@@ -1096,8 +1083,7 @@ function PriceChart({ items, unit }) {
   return <div className="h-full"><Line key="price-chart" data={chartData} options={options} /></div>;
 }
 
-function PLChart({ items, showAmount, unit }) {
-   const plMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('profit_loss_by_sell') || 'all') : 'all';
+function PLChart({ items, showAmount, unit, plMode }) {
    const chartData = useMemo(() => {
       const valid = items.filter((i) => {
         if (!i.buy_price || i.buy_price <= 0 || !i.symbol) return false;
@@ -1167,6 +1153,12 @@ datasets: [{
 
 function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
   const chartRef = useRef(null);
+  const prevColorModeRef = useRef(null);
+  const shouldAnimate = prevColorModeRef.current !== colorMode;
+
+  useEffect(() => {
+    prevColorModeRef.current = colorMode;
+  });
 
   const filteredItems = useMemo(() => {
     if (!items || items.length === 0) return [];
@@ -1203,6 +1195,7 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: shouldAnimate,
     plugins: {
       legend: { display: false },
       title: { display: false },
@@ -1243,17 +1236,16 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             if (!value) return '';
             const amount = unit === 'toman' ? value / 10 : value;
             const plAmount = unit === 'toman' ? pl / 10 : pl;
-            const sign = pl >= 0 ? '+' : '';
             const plPctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
             return [
               `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
-              `سود/زیان: ${sign}${plAmount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
+              `سود/زیان: ${plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
             ];
           },
         },
       },
     },
-  }), [unit, treemapData]);
+  }), [unit, treemapData, shouldAnimate]);
 
   if (treemapData.length === 0) {
     return <div className="h-full flex items-center justify-center text-slate-400 text-xs rtl-text">داده‌ای برای نمایش نقشه درختی وجود ندارد.</div>;
