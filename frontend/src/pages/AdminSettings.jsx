@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Key, Clock, Loader2, AlertCircle, Check, X, Plus, Trash2, RefreshCw, Settings } from 'lucide-react';
+import { Shield, Key, Clock, Loader2, AlertCircle, Check, X, Plus, Trash2, Settings } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 import { ConfirmModal } from '../components/ConfirmModal';
 
@@ -21,7 +21,6 @@ export default function AdminSettings() {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [refreshingSymbols, setRefreshingSymbols] = useState(false);
   const [deleteConfirmIndex, setDeleteConfirmIndex] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -125,20 +124,6 @@ export default function AdminSettings() {
       setError(err.response?.data?.message || 'خطا در ذخیره تنظیمات زمان‌بندی');
     } finally {
       setSavingSchedule(false);
-    }
-  };
-
-  const handleRefreshSymbols = async () => {
-    setRefreshingSymbols(true);
-    setError('');
-    try {
-      await api.post('/admin/refresh-symbols');
-      setSuccess('بروزرسانی نمادها با موفقیت انجام شد.');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'خطا در بروزرسانی نمادها');
-    } finally {
-      setRefreshingSymbols(false);
     }
   };
 
@@ -388,28 +373,6 @@ export default function AdminSettings() {
         )}
       </div>
 
-      {/* Manual Refresh Section */}
-      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 text-brand-500" />
-            بروزرسانی دستی نمادها
-          </h2>
-        </div>
-        <div className="px-4 py-3">
-          <p className="text-[10px] text-slate-400 rtl-text mb-3">
-            بروزرسانی دستی تمام نمادهای بازار از سرور BRS
-          </p>
-          <button
-            onClick={handleRefreshSymbols}
-            disabled={refreshingSymbols}
-            className="btn-primary text-xs py-1.5 px-4 flex items-center gap-1"
-          >
-            {refreshingSymbols && <Loader2 className="w-3 h-3 animate-spin" />}
-            {refreshingSymbols ? 'در حال بروزرسانی...' : 'بروزرسانی نمادها'}
-          </button>
-        </div>
-      </div>
     {deleteConfirmIndex !== null && (
         <ConfirmModal
           message="آیا از حذف این کلید API مطمئن هستید؟"

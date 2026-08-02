@@ -230,7 +230,7 @@ class StockController extends Controller
                 'pe' => $row->pe,
                 'plp' => $row->price_change_percent,
                 'pcp' => $row->price_change,
-                'sector' => $row->sector,
+                'cs' => $row->sector,
             ];
         })->toArray();
 

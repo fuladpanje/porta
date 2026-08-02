@@ -45,6 +45,8 @@ const COLUMNS = [
 ];
 
 const MOBILE_DEFAULT_COLUMNS = ['star', 'name', 'pl', 'plp', 'pcp', 'diff', 'pe'];
+const DESKTOP_DEFAULT_COLUMNS = COLUMNS.map((c) => c.key);
+const STORAGE_KEY = 'allsymbols_column_preferences';
 
 function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
   const { unit } = useUnit();
@@ -281,51 +283,46 @@ const [stale, setStaleData] = useState(false);
 const [addToModal, setAddToModal] = useState(null);
    const [hideNegativePE, setHideNegativePE] = useState(false);
 const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+          return [...new Set([...required, ...parsed])];
+        }
+      }
+    } catch {}
+    // هیچ تنظیمی ذخیره نشده — پیش‌فرض بر اساس اندازه صفحه + ذخیره برای دفعات بعد
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    return isMobile ? MOBILE_DEFAULT_COLUMNS : COLUMNS.map((c) => c.key);
+    const defaults = isMobile ? MOBILE_DEFAULT_COLUMNS : DESKTOP_DEFAULT_COLUMNS;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults)); } catch {}
+    return defaults;
   });
   const [showColumnFilter, setShowColumnFilter] = useState(false);
   const columnFilterRef = useRef(null);
+  const columnDropdownRef = useRef(null);
 
   const toggleColumn = (key) => {
     setVisibleColumns((prev) => {
       const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
       const result = COLUMNS.filter((c) => !c.hideable).every((c) => next.includes(c.key)) ? next : prev;
-      try { localStorage.setItem('allsymbols_column_preferences', JSON.stringify(result)); } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(result)); } catch {}
       return result;
     });
   };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (columnFilterRef.current && !columnFilterRef.current.contains(e.target)) {
+      const inButton = columnFilterRef.current && columnFilterRef.current.contains(e.target);
+      const inDropdown = columnDropdownRef.current && columnDropdownRef.current.contains(e.target);
+      if (!inButton && !inDropdown) {
         setShowColumnFilter(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-useEffect(() => {
-    const stored = localStorage.getItem('allsymbols_column_preferences');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
-          const merged = [...new Set([...required, ...parsed])];
-          setVisibleColumns(merged);
-          return;
-        }
-      } catch {}
-    }
-    const userPrefs = user?.column_preferences;
-    if (userPrefs && Array.isArray(userPrefs) && userPrefs.length > 0) {
-      const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
-      const merged = [...new Set([...required, ...userPrefs])];
-      setVisibleColumns(merged);
-    }
-  }, [user?.column_preferences]);
 
   const [peMode, setPeMode] = useState('single');
    const [peSign, setPeSign] = useState(null);
@@ -886,7 +883,27 @@ const filtered = useMemo(() => {
              <Filter className="w-3 h-3" />
            </button>
            {showColumnFilter && (
-             <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 min-w-[160px]">
+             <div ref={columnDropdownRef}
+               className="fixed z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl p-3 min-w-[170px]"
+               style={(() => {
+                 if (!columnFilterRef.current) return { top: 32, right: 16 };
+                 const rect = columnFilterRef.current.getBoundingClientRect();
+                 const dropdownWidth = 170;
+                 const dropdownHeight = 260;
+                 const viewW = window.innerWidth;
+                 const viewH = window.innerHeight;
+                 // محاسبه موقعیت بهینه
+                 let top = rect.bottom + 4;
+                 let left = rect.right - dropdownWidth;
+                 // اگر از چپ خارج می‌شه
+                 if (left < 8) left = 8;
+                 // اگر از راست خارج می‌شه
+                 if (left + dropdownWidth > viewW - 8) left = viewW - dropdownWidth - 8;
+                 // اگر از پایین خارج می‌شه، بالای دکمه باز کن
+                 if (top + dropdownHeight > viewH - 8) top = rect.top - dropdownHeight - 4;
+                 return { top, left };
+               })()}
+             >
                <p className="text-[10px] text-purple-400 mb-2 rtl-text">نمایش ستون ها</p>
                {COLUMNS.filter((c) => c.hideable).map((col) => (
                  <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer text-xs text-slate-600 dark:text-slate-300 rtl-text">
@@ -900,7 +917,11 @@ const filtered = useMemo(() => {
                  </label>
                ))}
                <button
-                 onClick={() => setVisibleColumns(COLUMNS.map((c) => c.key))}
+                 onClick={() => {
+                   const all = COLUMNS.map((c) => c.key);
+                   setVisibleColumns(all);
+                   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); } catch {}
+                 }}
                  className="mt-2 text-[10px] text-purple-500 hover:underline rtl-text"
                >
                  نمایش همه ستون‌ها
