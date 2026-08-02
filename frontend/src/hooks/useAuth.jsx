@@ -1,12 +1,17 @@
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useEffect, useRef, useContext, createContext } from 'react';
 import api from '../lib/api';
 
 const AuthContext = createContext(null);
+
+// Poll /user every 60s so schedule/time-range changes by admin
+// are reflected in all sessions without a page reload.
+const USER_POLL_MS = 60_000;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     if (token) {
@@ -20,6 +25,21 @@ export function AuthProvider({ children }) {
     } else {
       setLoading(false);
     }
+  }, [token]);
+
+  // Keep user object fresh: re-fetch every minute so admin schedule
+  // changes (interval, time range, enabled flag) apply to all users
+  // without requiring a page reload.
+  useEffect(() => {
+    if (!token) return;
+
+    pollRef.current = setInterval(() => {
+      api.get('/user')
+        .then((res) => setUser(res.data.user))
+        .catch(() => {}); // silently ignore — next tick will retry
+    }, USER_POLL_MS);
+
+    return () => clearInterval(pollRef.current);
   }, [token]);
 
   const login = async (email, password) => {

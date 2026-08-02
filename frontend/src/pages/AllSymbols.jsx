@@ -44,7 +44,7 @@ const COLUMNS = [
   { key: 'actions', label: 'عملیات', hideable: true },
 ];
 
-const MOBILE_DEFAULT_COLUMNS = ['star', 'name', 'pl', 'plp', 'pcp', 'diff', 'pe'];
+const MOBILE_DEFAULT_COLUMNS = ['star', 'name', 'pl', 'plp', 'pcp', 'diff', 'pe', 'actions'];
 const DESKTOP_DEFAULT_COLUMNS = COLUMNS.map((c) => c.key);
 const STORAGE_KEY = 'allsymbols_column_preferences';
 
@@ -53,7 +53,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
   const toman = unit === 'toman';
   const [portfolios, setPortfolios] = useState([]);
   const [portfolioId, setPortfolioId] = useState('');
-  const [lastPriceValue, setLastPriceValue] = useState(lastPrice ? String(toman ? SafeNumber(lastPrice) / 10 : SafeNumber(lastPrice)) : '');
+  const [lastPriceValue, setLastPriceValue] = useState(lastPrice ? String(Math.round(toman ? SafeNumber(lastPrice) / 10 : SafeNumber(lastPrice))) : '');
   const [buyPrice, setBuyPrice] = useState('');
   const [quantity, setQuantity] = useState('');
   const [sellPrice, setSellPrice] = useState('');
@@ -877,7 +877,7 @@ const filtered = useMemo(() => {
          <div className="relative" ref={columnFilterRef}>
            <button
              onClick={() => setShowColumnFilter((v) => !v)}
-             className={`p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${visibleColumns.length === COLUMNS.length ? 'text-slate-400' : 'text-purple-500'}`}
+             className={`p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${visibleColumns.length === COLUMNS.length ? 'text-slate-400' : 'text-brand-500'}`}
              title="فیلتر ستون‌ها"
            >
              <Filter className="w-3 h-3" />
@@ -904,14 +904,14 @@ const filtered = useMemo(() => {
                  return { top, left };
                })()}
              >
-               <p className="text-[10px] text-purple-400 mb-2 rtl-text">نمایش ستون ها</p>
+               <p className="text-[10px] text-brand-500 mb-2 rtl-text">نمایش ستون ها</p>
                {COLUMNS.filter((c) => c.hideable).map((col) => (
                  <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer text-xs text-slate-600 dark:text-slate-300 rtl-text">
                    <input
                      type="checkbox"
                      checked={visibleColumns.includes(col.key)}
                      onChange={() => toggleColumn(col.key)}
-                     className="rounded border-slate-300 accent-purple-500 focus:ring-purple-500"
+                     className="rounded border-slate-300 accent-brand-500 focus:ring-brand-500"
                    />
                    {col.label}
                  </label>
@@ -922,7 +922,7 @@ const filtered = useMemo(() => {
                    setVisibleColumns(all);
                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); } catch {}
                  }}
-                 className="mt-2 text-[10px] text-purple-500 hover:underline rtl-text"
+                 className="mt-2 text-[10px] text-brand-500 hover:underline rtl-text"
                >
                  نمایش همه ستون‌ها
                </button>

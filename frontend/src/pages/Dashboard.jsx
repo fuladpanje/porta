@@ -41,7 +41,7 @@ const COLUMNS = [
   { key: 'actions', label: 'عملیات', hideable: true },
 ];
 
-const MOBILE_DEFAULT_COLUMNS = ['symbol', 'last_price', 'totalValue', 'pl', 'pct'];
+const MOBILE_DEFAULT_COLUMNS = ['symbol', 'last_price', 'totalValue', 'pl', 'pct', 'actions'];
 
 export default function Dashboard() {
   const { plMode, setPlMode } = useProfitLoss();
@@ -68,8 +68,21 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
       const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
       const [showPortfolios, setShowPortfolios] = useState(true);
   const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const stored = localStorage.getItem('dashboard_column_preferences');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+          return [...new Set([...required, ...parsed])];
+        }
+      }
+    } catch {}
+    // اولین بار — پیش‌فرض بر اساس اندازه صفحه و ذخیره در localStorage
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    return isMobile ? MOBILE_DEFAULT_COLUMNS : COLUMNS.map((c) => c.key);
+    const defaults = isMobile ? MOBILE_DEFAULT_COLUMNS : COLUMNS.map((c) => c.key);
+    try { localStorage.setItem('dashboard_column_preferences', JSON.stringify(defaults)); } catch {}
+    return defaults;
   });
   const [showColumnFilter, setShowColumnFilter] = useState(false);
   const columnFilterRef = useRef(null);
@@ -94,23 +107,15 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem('dashboard_column_preferences');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
-          const merged = [...new Set([...required, ...parsed])];
-          setVisibleColumns(merged);
-          return;
-        }
-      } catch {}
-    }
     const userPrefs = user?.column_preferences;
     if (userPrefs && Array.isArray(userPrefs) && userPrefs.length > 0) {
-      const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
-      const merged = [...new Set([...required, ...userPrefs])];
-      setVisibleColumns(merged);
+      // فقط اگه localStorage خالیه از تنظیمات کاربر استفاده کن
+      const stored = localStorage.getItem('dashboard_column_preferences');
+      if (!stored) {
+        const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+        const merged = [...new Set([...required, ...userPrefs])];
+        setVisibleColumns(merged);
+      }
     }
   }, [user?.column_preferences]);
 
@@ -202,7 +207,8 @@ const soldCost = items.reduce((s, i) => {
     });
   }, [dashboard, portfolioSort, user, plMode, sellFilter]);
 const allItems = useMemo(() => {
-     const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
+     const rawPortfolios = dashboard?.portfolios || [];
+     const activePortfolios = showInactivePortfolios ? rawPortfolios : rawPortfolios.filter((p) => p.active !== false && p.active !== 0);
      let items = activePortfolios.flatMap((p) => {
        const usePC = !!p.commission_enabled;
        const commEnabled = usePC ? true : (user?.commission_enabled || false);
@@ -213,15 +219,16 @@ const allItems = useMemo(() => {
        items = items.filter((i) => i.active !== false);
      }
      return items;
-   }, [portfolios, showInactivePortfolios, showInactiveChartItems, user?.commission_enabled, user?.sell_commission]);
+   }, [dashboard, showInactivePortfolios, showInactiveChartItems, user?.commission_enabled, user?.sell_commission]);
     const allocationItems = useMemo(() => {
-      const activePortfolios = showInactivePortfolios ? portfolios : portfolios.filter((p) => p.active !== false && p.active !== 0);
+      const rawPortfolios = dashboard?.portfolios || [];
+      const activePortfolios = showInactivePortfolios ? rawPortfolios : rawPortfolios.filter((p) => p.active !== false && p.active !== 0);
       let items = activePortfolios.flatMap((p) => p.items || []);
       if (!showInactiveChartItems) {
         items = items.filter((i) => i.active !== false);
       }
       return items;
-    }, [portfolios, showInactivePortfolios, showInactiveChartItems]);
+    }, [dashboard, showInactivePortfolios, showInactiveChartItems]);
    const totalAllItems = portfolios.reduce((sum, p) => sum + SafeNumber(p._count), 0);
 
 const totals = useMemo(() => {
@@ -566,7 +573,7 @@ const totals = useMemo(() => {
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 {portfolioSort === 'default' ? <ArrowUpDown className="w-3 h-3" /> : portfolioSort === 'profit' ? <Banknote className="w-3 h-3 text-emerald-500" /> : <Percent className="w-3 h-3 text-blue-500" />}
-                <span className={`hidden sm:inline ${portfolioSort === 'profit' ? 'text-emerald-500' : portfolioSort === 'percent' ? 'text-blue-500' : ''}`}>{portfolioSort === 'default' ? 'پیش‌فرض' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}</span>
+                <span className={`hidden sm:inline ${portfolioSort === 'profit' ? 'text-emerald-500' : portfolioSort === 'percent' ? 'text-blue-500' : ''}`}>{portfolioSort === 'default' ? 'ارزش' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}</span>
               </button>
             </div>
             <div className="relative" ref={columnFilterRef}>
@@ -579,21 +586,25 @@ const totals = useMemo(() => {
               </button>
               {showColumnFilter && (
                 <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 min-w-[160px]">
-<p className="text-[10px] text-purple-400 mb-2 rtl-text">نمایش ستون ها</p>
+<p className="text-[10px] text-brand-500 mb-2 rtl-text">نمایش ستون ها</p>
                    {COLUMNS.filter((c) => c.hideable).map((col) => (
                      <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer text-xs text-slate-600 dark:text-slate-300 rtl-text">
                        <input
                          type="checkbox"
                          checked={visibleColumns.includes(col.key)}
                          onChange={() => toggleColumn(col.key)}
-                         className="rounded border-slate-300 accent-purple-500 focus:ring-purple-500"
+                         className="rounded border-slate-300 accent-brand-500 focus:ring-brand-500"
                        />
                        {col.label}
                      </label>
                    ))}
                   <button
-                    onClick={() => setVisibleColumns(COLUMNS.map((c) => c.key))}
-                    className="mt-2 text-[10px] text-purple-500 hover:underline rtl-text"
+                    onClick={() => {
+                      const all = COLUMNS.map((c) => c.key);
+                      setVisibleColumns(all);
+                      try { localStorage.setItem('dashboard_column_preferences', JSON.stringify(all)); } catch {}
+                    }}
+                    className="mt-2 text-[10px] text-brand-500 hover:underline rtl-text"
                   >
                     نمایش همه ستون‌ها
                   </button>
@@ -638,6 +649,19 @@ const totals = useMemo(() => {
             if (sellFilter === 'sold') pi = pi.filter((i) => i.sell_price && i.sell_price > 0);
             else if (sellFilter === 'unsold') pi = pi.filter((i) => !i.sell_price || i.sell_price <= 0);
             pi.sort((a, b) => {
+              // اگر portfolioSort فعال باشه، آیتم‌ها هم بر اساس همون معیار sort میشن
+              if (!sortConfig.key && portfolioSort !== 'default') {
+                const calcPL = (i) => {
+                  const price = SafeNumber(i.sell_price) > 0 ? SafeNumber(i.sell_price) : SafeNumber(i.last_price);
+                  return price > 0 ? (price - SafeNumber(i.buy_price)) * SafeNumber(i.quantity) : 0;
+                };
+                const calcPct = (i) => {
+                  const price = SafeNumber(i.sell_price) > 0 ? SafeNumber(i.sell_price) : SafeNumber(i.last_price);
+                  return price > 0 && SafeNumber(i.buy_price) > 0 ? ((price - SafeNumber(i.buy_price)) / SafeNumber(i.buy_price)) * 100 : 0;
+                };
+                if (portfolioSort === 'profit') return calcPL(b) - calcPL(a);
+                if (portfolioSort === 'percent') return calcPct(b) - calcPct(a);
+              }
               if (sortConfig.key) {
                 let aVal, bVal;
                 switch (sortConfig.key) {
@@ -657,7 +681,25 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                 }
                 return sortConfig.dir === 'asc' ? aVal - bVal : bVal - aVal;
               }
-              return (a.active ? 0 : 1) - (b.active ? 0 : 1);
+              return (a.active ? 0 : 1) - (b.active ? 0 : 1) ||
+                (() => {
+                  const calcTotalValue = (i) => {
+                    const buyN = SafeNumber(i.buy_price);
+                    const sellN = i.sell_price ? SafeNumber(i.sell_price) : null;
+                    const lastN = i.last_price ? SafeNumber(i.last_price) : null;
+                    const qtyN = SafeNumber(i.quantity);
+                    const displayPrice = sellN || lastN;
+                    const purchaseValue = buyN * qtyN;
+                    const usePortfolioComm = !!portfolio.commission_enabled;
+                    const commEnabled = usePortfolioComm ? true : (user?.commission_enabled || false);
+                    const commRate = usePortfolioComm
+                      ? (portfolio.sell_commission || 0.88) / 100
+                      : (user?.sell_commission || 0.88) / 100;
+                    const sellComm = commEnabled && displayPrice != null ? displayPrice * qtyN * commRate : 0;
+                    return displayPrice != null ? displayPrice * qtyN - sellComm : purchaseValue;
+                  };
+                  return calcTotalValue(b) - calcTotalValue(a);
+                })();
             });
           const pv = SafeNumber(portfolio._totalValue);
           const pc = SafeNumber(portfolio._totalCost);
@@ -961,7 +1003,9 @@ function InlinePortfolioForm({ onCancel, onSave, initialName, portfolioId }) {
 function cleanNum(v) {
   if (v == null || v === '') return '';
   const n = Number(v);
-  return isNaN(n) ? '' : (Number.isInteger(n) ? String(n) : String(n));
+  if (isNaN(n)) return '';
+  const rounded = Math.round(n);
+  return String(rounded === n || Math.abs(rounded - n) < 0.0001 ? rounded : n);
 }
 
 function stripCommas(v) {
@@ -1005,7 +1049,7 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
           <SymbolSearch
             value={symbol}
             onChange={setSymbol}
-            onSelect={(s) => { setSymbol(s.name); if (s.pl) setLastPrice(String(toman ? s.pl / 10 : s.pl)); if (s.pe) setPe(String(s.pe)); }}
+            onSelect={(s) => { setSymbol(s.name); if (s.pl) setLastPrice(String(Math.round(toman ? s.pl / 10 : s.pl))); if (s.pe) setPe(String(s.pe)); }}
             autoFocus={!isEdit}
           />
         </div>
@@ -1212,19 +1256,24 @@ function PLChart({ items, showAmount, unit, plMode }) {
         return hasSell || hasLast;
       });
      if (valid.length === 0) return null;
-const percentages = valid.map((i) => {
+
+      // build combined array then sort
+      const combined = valid.map((i) => {
         const sellPrice = (i.sell_price && i.sell_price > 0) ? i.sell_price : i.last_price;
-        return SafeNumber(((sellPrice - i.buy_price) / i.buy_price * 100).toFixed(1));
+        const pct = SafeNumber(((sellPrice - i.buy_price) / i.buy_price * 100).toFixed(1));
+        const rawAmount = (SafeNumber(sellPrice) - SafeNumber(i.buy_price)) * SafeNumber(i.quantity);
+        const amount = unit === 'toman' ? rawAmount / 10 : rawAmount;
+        return { symbol: i.symbol, pct, amount };
       });
-      const amounts = valid.map((i) => {
-        const sellPrice = (i.sell_price && i.sell_price > 0) ? i.sell_price : i.last_price;
-        const amount = (SafeNumber(sellPrice) - SafeNumber(i.buy_price)) * SafeNumber(i.quantity);
-       return unit === 'toman' ? amount / 10 : amount;
-     });
-    const data = showAmount
-      ? amounts
-      : percentages;
-    const labels = valid.map((i) => i.symbol);
+
+      // when showing % → sort by pct desc; when showing amount → sort by amount desc
+      combined.sort((a, b) => showAmount ? b.amount - a.amount : b.pct - a.pct);
+
+      const labels = combined.map((c) => c.symbol);
+      const percentages = combined.map((c) => c.pct);
+      const amounts = combined.map((c) => c.amount);
+
+    const data = showAmount ? amounts : percentages;
     const bgColors = data.map((d) => d >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)');
     return {
       labels,
@@ -1370,7 +1419,7 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             const plAmount = unit === 'toman' ? pl / 10 : pl;
             const plPctStr = plPct.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
             return [
-              `ارزش: ${amount.toLocaleString('fa-IR')} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
+              `ارزش: ${amount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`,
               `سود/زیان: ${plAmount.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'} (${plPctStr}٪)`
             ];
           },

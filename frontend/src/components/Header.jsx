@@ -57,11 +57,16 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const rangeCheckRef = useRef(null);
+
   useEffect(() => {
     if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    if (rangeCheckRef.current) {
+      clearInterval(rangeCheckRef.current);
+      rangeCheckRef.current = null;
     }
 
     const checkRange = () => {
@@ -82,18 +87,26 @@ export function Header() {
       const m = Number(user.schedule_minutes) || 0;
       const h = Number(user.schedule_hours) || 0;
       const ms = s * 1000 + m * 60000 + h * 3600000;
+
       if (ms > 0) {
+        // Set initial range state immediately
         setIsInScheduleRange(checkRange());
 
-        const scheduleNext = () => {
+        // Refresh interval — only fires if currently in range
+        intervalRef.current = setInterval(() => {
           const inRange = checkRange();
           setIsInScheduleRange(inRange);
           if (inRange) {
             handleRefreshRef.current();
           }
-        };
+        }, ms);
 
-        intervalRef.current = setInterval(scheduleNext, ms);
+        // Separate 1-minute ticker just for range boundary detection.
+        // This makes the red icon appear/disappear within ~1 minute of
+        // the range boundary, regardless of how long the refresh interval is.
+        rangeCheckRef.current = setInterval(() => {
+          setIsInScheduleRange(checkRange());
+        }, 60_000);
       }
     } else if (!user?.schedule_enabled) {
       setIsInScheduleRange(true);
@@ -101,9 +114,12 @@ export function Header() {
 
     return () => {
       if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (rangeCheckRef.current) {
+        clearInterval(rangeCheckRef.current);
+        rangeCheckRef.current = null;
       }
     };
   }, [user?.schedule_enabled, user?.schedule_seconds, user?.schedule_minutes, user?.schedule_hours, user?.has_api_keys, user?.schedule_start_time, user?.schedule_end_time]);
