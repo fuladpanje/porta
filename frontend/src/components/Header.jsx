@@ -124,16 +124,20 @@ export function Header() {
      if (refreshing) return;
      setRefreshing(true);
      try {
-       await stockApi.refreshPrices();
+       if (user?.is_admin) {
+         // Admin: call BRS API to fetch fresh prices and update all portfolio items
+         await stockApi.refreshPrices();
+       }
+       // All users: notify dashboard to re-fetch (cron job already updated portfolio_items)
        setLastRefresh(new Date());
        window.dispatchEvent(new Event('prices-refreshed'));
-        setStale(false);
-        api.put('/user/stale', { is_stale: false });
-        updateUser({ ...user, is_stale: false });
+       setStale(false);
+       api.put('/user/stale', { is_stale: false });
+       updateUser({ ...user, is_stale: false });
      } catch (err) {
-        setStale(true);
-        api.put('/user/stale', { is_stale: true });
-        updateUser({ ...user, is_stale: true });
+       setStale(true);
+       api.put('/user/stale', { is_stale: true });
+       updateUser({ ...user, is_stale: true });
      } finally {
        setRefreshing(false);
      }

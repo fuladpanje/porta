@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import api from '../lib/api';
 
 export function usePortfolio(plMode = 'all') {

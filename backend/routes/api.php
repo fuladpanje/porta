@@ -42,6 +42,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/favorites', [FavoriteController::class, 'index']);
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
 
+    // Public system info (available to all authenticated users)
+    Route::get('/system/schedule', function () {
+        $schedule = \App\Models\SystemSetting::getSchedule();
+        return response()->json(['data' => ['schedule' => $schedule]]);
+    });
+
     // Admin routes
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::get('/settings', [AdminController::class, 'getSettings']);
