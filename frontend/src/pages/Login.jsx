@@ -4,10 +4,10 @@ import { useAuth } from '../hooks/useAuth';
 import { useProfitLoss } from '../contexts/ProfitLossContext';
 import api from '../lib/api';
 import { searchSymbolsLocal } from '../lib/symbolCache';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function Login() {
     setError('');
 
     try {
-      await login(email, password);
+      await login(identifier, password);
       api.get('/dashboard', { params: { pl_mode: plMode } }).then((res) => {
         try {
           localStorage.setItem(
@@ -34,7 +34,7 @@ export default function Login() {
       searchSymbolsLocal('').catch(() => {});
       navigate('/dashboard');
     } catch (err) {
-      setError('ایمیل یا رمز عبور اشتباه است');
+      setError('اطلاعات ورود اشتباه است');
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-brand-500 flex items-center justify-center mx-auto mb-4 shadow-sm shadow-brand-500/20">
-            <Mail className="w-7 h-7 text-white" />
+            <User className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white rtl-text">خوش آمدید</h1>
           <p className="text-sm text-muted-foreground mt-2">وارد حساب خود شوید</p>
@@ -60,18 +60,18 @@ export default function Login() {
             )}
 
             <div>
-              <label htmlFor="email" className="label">
-                ایمیل
+              <label htmlFor="identifier" className="label">
+                ایمیل یا نام کاربری
               </label>
               <div className="relative">
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="identifier"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="input-field pr-11"
-                  placeholder="email@example.com"
+                  placeholder="ایمیل یا نام کاربری"
                   required
                 />
               </div>

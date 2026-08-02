@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `remember_token` varchar(100) DEFAULT NULL,
+  `is_stale` tinyint(1) NOT NULL DEFAULT 1,
+  `is_admin` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -74,7 +76,43 @@ CREATE TABLE IF NOT EXISTS `portfolio_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Table: api_keys
+-- Table: system_settings
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `system_settings` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `setting_key` varchar(100) NOT NULL,
+  `setting_value` text NULL,
+  `description` varchar(255) NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `system_settings_setting_key_unique` (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table: symbols_cache
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `symbols_cache` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `isin` varchar(50) NOT NULL,
+  `symbol` varchar(255) NOT NULL,
+  `full_name` varchar(500) NOT NULL,
+  `last_price` decimal(12,2) DEFAULT NULL,
+  `pe` decimal(12,2) DEFAULT NULL,
+  `price_change_percent` decimal(8,2) DEFAULT NULL,
+  `price_change` decimal(12,2) DEFAULT NULL,
+  `close_price` decimal(12,2) DEFAULT NULL,
+  `last_updated_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `symbols_cache_isin_unique` (`isin`),
+  KEY `symbols_cache_symbol_index` (`symbol`),
+  KEY `symbols_cache_full_name_index` (`full_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table: api_keys (legacy - kept for backward compatibility)
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `api_keys` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,

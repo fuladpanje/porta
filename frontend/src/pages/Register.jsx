@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
 
 export default function Register() {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,7 +32,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(name, email, password, confirmPassword);
+      await register(username, email, password, confirmPassword);
       navigate('/dashboard');
     } catch (err) {
       if (err.response?.data?.errors) {
@@ -65,18 +65,18 @@ export default function Register() {
             )}
 
             <div>
-              <label htmlFor="name" className="label">
-                نام و نام‌خانوادگی
+              <label htmlFor="username" className="label">
+                نام کاربری
               </label>
               <div className="relative">
                 <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
-                  id="name"
+                  id="username"
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="input-field pr-11"
-                  placeholder="نام و نام‌خانوادگی"
+                  placeholder="نام کاربری"
                   required
                 />
               </div>

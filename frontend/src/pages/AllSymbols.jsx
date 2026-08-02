@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useUnit } from '../contexts/UnitContext';
+import { useStaleData } from '../contexts/StaleDataContext';
 import api, { favoritesApi } from '../lib/api';
 import { stockApi } from '../lib/api';
-import { searchSymbolsLocal, clearSymbolCache } from '../lib/symbolCache';
+import { searchSymbolsLocal } from '../lib/symbolCache';
 import { formatPrice, formatPercent } from '../lib/calculations';
 import { Search, Plus, X, Trash2, Star } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
@@ -251,23 +252,27 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
 }
 
 export default function AllSymbols() {
-  const { unit } = useUnit();
-  const [symbols, setSymbols] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [search, setSearch] = useState('');
+   const { unit } = useUnit();
+   const { stale: globalStale, setStale } = useStaleData();
+   const [symbols, setSymbols] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState(null);
+const [stale, setStaleData] = useState(false);
+   const isStale = stale || globalStale;
+   const [search, setSearch] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [addToModal, setAddToModal] = useState(null);
   const [hideNegativePE, setHideNegativePE] = useState(false);
-  const [peMode, setPeMode] = useState('single');
-  const [peSign, setPeSign] = useState(null);
-  const [peMin, setPeMin] = useState('');
-  const [peMax, setPeMax] = useState('');
-  const [peOp, setPeOp] = useState('lt');
-  const [peVal, setPeVal] = useState('');
-  const debouncedPeMin = useDebounce(peMin, 300);
-  const debouncedPeMax = useDebounce(peMax, 300);
-  const debouncedPeVal = useDebounce(peVal, 300);
+   const [peMode, setPeMode] = useState('single');
+   const [peSign, setPeSign] = useState(null);
+   const [peMin, setPeMin] = useState('');
+   const [peMax, setPeMax] = useState('');
+   const [peOp, setPeOp] = useState('lt');
+   const [peVal, setPeVal] = useState('');
+   const debouncedPeMin = useDebounce(peMin, 300);
+   const debouncedPeMax = useDebounce(peMax, 300);
+   const debouncedPeVal = useDebounce(peVal, 300);
+
   const [plMode, setPlMode] = useState('single');
   const [plSign, setPlSign] = useState(null);
   const [plMin, setPlMin] = useState('');
@@ -318,19 +323,28 @@ export default function AllSymbols() {
     fetchFavorites();
   }, []);
 
-  const fetchSymbols = async (forceRefresh = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (forceRefresh) clearSymbolCache();
-      const data = await searchSymbolsLocal('');
-      setSymbols(data);
-    } catch (err) {
-      setError('خطا در دریافت نمادها');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const handler = () => fetchSymbols(true);
+    window.addEventListener('prices-refreshed', handler);
+    return () => window.removeEventListener('prices-refreshed', handler);
+  }, []);
+
+   const fetchSymbols = async (forceRefresh = false) => {
+     setLoading(true);
+     setError(null);
+     try {
+        const data = await searchSymbolsLocal('', forceRefresh);
+        setSymbols(data);
+        setStaleData(false);
+} catch (err) {
+        if (symbols.length === 0) {
+          setError('خطا در دریافت نمادها');
+        }
+        setStaleData(true);
+     } finally {
+       setLoading(false);
+     }
+   };
 
   const fetchFavorites = async () => {
     try {
@@ -862,21 +876,21 @@ const filtered = useMemo(() => {
                 <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[200px] truncate">
                   {s.fullName}
                 </td>
-                <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
-                  {s.pl ? formatPrice(s.pl, unit, 2) : '—'}
-                </td>
-                <td className={`px-3 py-2 font-medium ${plpVal > 0 ? 'text-success' : plpVal < 0 ? 'text-danger' : 'text-slate-500'}`}>
-                  {s.plp != null && s.plp !== '' ? formatPercent(plpVal) : '—'}
-                </td>
-                <td className={`px-3 py-2 font-medium ${pcpVal > 0 ? 'text-success' : pcpVal < 0 ? 'text-danger' : 'text-slate-500'}`}>
-                  {s.pcp != null && s.pcp !== '' ? formatPercent(pcpVal) : '—'}
-                </td>
-                <td className={`px-3 py-2 font-medium ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-slate-500'}`}>
-                  {diff !== null ? formatPercent(diff) : '—'}
-                </td>
-                <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'}`}>
-                  {formatPE(s.pe)}
-                </td>
+                  <td className={`px-3 py-2 font-medium text-slate-800 dark:text-slate-200 ${isStale ? 'opacity-40' : ''}`}>
+                    {s.pl ? formatPrice(s.pl, unit, 2) : '—'}
+                  </td>
+                  <td className={`px-3 py-2 font-medium ${plpVal > 0 ? 'text-success' : plpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                    {s.plp != null && s.plp !== '' ? formatPercent(plpVal) : '—'}
+                  </td>
+                  <td className={`px-3 py-2 font-medium ${pcpVal > 0 ? 'text-success' : pcpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                    {s.pcp != null && s.pcp !== '' ? formatPercent(pcpVal) : '—'}
+                  </td>
+                  <td className={`px-3 py-2 font-medium ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                    {diff !== null ? formatPercent(diff) : '—'}
+                  </td>
+                  <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} ${isStale ? 'opacity-40' : ''}`}>
+                    {formatPE(s.pe)}
+                  </td>
                 <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[120px] truncate">
                   {s.cs || '—'}
                 </td>

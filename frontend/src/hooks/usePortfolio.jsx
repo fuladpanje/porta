@@ -8,6 +8,7 @@ export function usePortfolio(plMode = 'all') {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [stale, setStale] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -17,8 +18,10 @@ export function usePortfolio(plMode = 'all') {
       setPortfolios(res.data.data.portfolios || []);
       const allItems = res.data.data.portfolios?.flatMap((p) => p.items || []) || [];
       setItems(allItems);
+      setStale(false);
     } catch (err) {
       setError(err.message);
+      setStale(true);
     } finally {
       setLoading(false);
     }
@@ -32,8 +35,10 @@ export function usePortfolio(plMode = 'all') {
       setPortfolios(res.data.data.portfolios || []);
       const allItems = res.data.data.portfolios?.flatMap((p) => p.items || []) || [];
       setItems(allItems);
+      setStale(false);
     } catch (err) {
       setError(err.message);
+      setStale(true);
     } finally {
       setRefreshing(false);
     }
@@ -101,6 +106,7 @@ export function usePortfolio(plMode = 'all') {
     loading,
     refreshing,
     error,
+    stale,
     fetchDashboard,
     refreshDashboard,
     fetchPortfolios,

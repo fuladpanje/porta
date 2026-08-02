@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\FavoriteController;
@@ -24,21 +25,30 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('portfolios/{portfolio}/items/{item}', [PortfolioItemController::class, 'destroy']);
     Route::get('portfolios/{portfolio}/items', [PortfolioItemController::class, 'index']);
     Route::get('portfolios/{portfolio}/items/{item}', [PortfolioItemController::class, 'show']);
-    Route::post('stocks/refresh', [StockController::class, 'refreshPrices']);
+    Route::post('stocks/refresh', [StockController::class, 'refreshPrices'])
+        ->withoutMiddleware([
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Auth\Middleware\AuthenticateSession::class,
+        ]);
     Route::get('stocks/symbols', [StockController::class, 'symbols']);
     Route::put('/user/unit', [AuthController::class, 'updateUnit']);
     Route::put('/user/auto-switch', [AuthController::class, 'updateAutoSwitch']);
     Route::put('/user/schedule', [AuthController::class, 'updateSchedule']);
     Route::put('/user/fee-settings', [AuthController::class, 'updateCommission']);
     Route::put('/user/password', [AuthController::class, 'changePassword']);
-
-    Route::get('/api-keys', [ApiKeyController::class, 'index']);
-    Route::post('/api-keys', [ApiKeyController::class, 'store']);
-    Route::get('/api-keys/{apiKey}', [ApiKeyController::class, 'show']);
-    Route::put('/api-keys/{apiKey}', [ApiKeyController::class, 'update']);
-    Route::delete('/api-keys/{apiKey}', [ApiKeyController::class, 'destroy']);
-    Route::post('/api-keys/{apiKey}/default', [ApiKeyController::class, 'setDefault']);
+    Route::put('/user/stale', [AuthController::class, 'updateStale']);
 
     Route::get('/favorites', [FavoriteController::class, 'index']);
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
+
+    // Admin routes
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/settings', [AdminController::class, 'getSettings']);
+        Route::put('/api-keys', [AdminController::class, 'updateApiKeys']);
+        Route::post('/api-keys', [AdminController::class, 'addApiKey']);
+        Route::delete('/api-keys/{index}', [AdminController::class, 'deleteApiKey']);
+        Route::put('/schedule', [AdminController::class, 'updateSchedule']);
+        Route::post('/refresh-symbols', [AdminController::class, 'refreshSymbols']);
+    });
 });

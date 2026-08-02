@@ -3,24 +3,33 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { ArrowLeft, PlusCircle, Edit2, Trash2, RefreshCw } from 'lucide-react';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
+import { useStaleData } from '../contexts/StaleDataContext';
 
-export default function PortfolioDetail() {
-  const { id } = useParams();
-  const [portfolio, setPortfolio] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+ export default function PortfolioDetail() {
+   const { id } = useParams();
+   const [portfolio, setPortfolio] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [refreshing, setRefreshing] = useState(false);
+   const [stale, setStale] = useState(false);
+   const { setStale: setGlobalStale } = useStaleData();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get(`/portfolios/${id}`);
-      setPortfolio(res.data.data);
-    } catch (err) {
-      toast.error('خطا در بارگذاری اطلاعات');
-    } finally {
-      setLoading(false);
-    }
-  };
+   const fetchData = async () => {
+     try {
+       setLoading(true);
+       const res = await api.get(`/portfolios/${id}`);
+       setPortfolio(res.data.data);
+       setStale(false);
+     } catch (err) {
+       toast.error('خطا در بارگذاری اطلاعات');
+       setStale(true);
+     } finally {
+       setLoading(false);
+     }
+   };
+
+   useEffect(() => {
+     setGlobalStale(stale);
+   }, [stale, setGlobalStale]);
 
   useEffect(() => {
     fetchData();
@@ -32,17 +41,18 @@ export default function PortfolioDetail() {
     fetchData();
   };
 
-  const handleRefreshPrices = async () => {
-    try {
-      setRefreshing(true);
-      await api.post('/stocks/refresh');
-      fetchData();
-    } catch (err) {
-      toast.error('خطا در بروزرسانی قیمت‌ها');
-    } finally {
-      setRefreshing(false);
-    }
-  };
+   const handleRefreshPrices = async () => {
+     try {
+       setRefreshing(true);
+       await api.post('/stocks/refresh');
+       fetchData();
+     } catch (err) {
+       toast.error('خطا در بروزرسانی قیمت‌ها');
+       setStale(true);
+     } finally {
+       setRefreshing(false);
+     }
+   };
 
   if (loading) {
     return (
@@ -79,9 +89,9 @@ export default function PortfolioDetail() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground rtl-text">{portfolio.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {toPersianNum(portfolio.items.length)} آیتم | ارزش کل: {typeof portfolio.total_value === 'number' ? portfolio.total_value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—'} ریال
-          </p>
+           <p className={`text-sm text-muted-foreground mt-1 ${stale ? 'opacity-40' : ''}`}>
+             {toPersianNum(portfolio.items.length)} آیتم | ارزش کل: {typeof portfolio.total_value === 'number' ? portfolio.total_value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—'} ریال
+           </p>
         </div>
         <div className="flex gap-2 self-start">
           <button
@@ -116,11 +126,11 @@ export default function PortfolioDetail() {
                     <span className="text-muted-foreground">
                       خرید: {formatPrice(item.buy_price)} × {formatNumber(item.quantity)}
                     </span>
-                    {item.last_price && (
-                      <span className="text-sm text-brand-600 dark:text-brand-400 font-medium">
-                        آخرین قیمت: {formatPrice(item.last_price)}
-                      </span>
-                    )}
+                     {item.last_price && (
+                       <span className={`text-sm font-medium ${stale ? 'opacity-40' : 'text-brand-600 dark:text-brand-400'}`}>
+                         آخرین قیمت: {formatPrice(item.last_price)}
+                       </span>
+                     )}
                     {item.sell_price && (
                       <span className={Number(item.sell_price) >= Number(item.buy_price) ? 'text-success' : 'text-danger'}>
                         فروش: {formatPrice(item.sell_price)} ({formatPercent(item.profit_loss)})

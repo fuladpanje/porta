@@ -3,7 +3,7 @@
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => [env('APP_URL', 'http://localhost:5173'), 'http://localhost:5173'],
+    'allowed_origins' => [config('app.url'), 'http://localhost:5173'],
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],

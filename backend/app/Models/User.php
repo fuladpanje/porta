@@ -11,7 +11,7 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable;
 
     protected $fillable = [
-        'name',
+        'username',
         'email',
         'password',
         'unit',
@@ -20,9 +20,13 @@ class User extends Authenticatable
         'schedule_seconds',
         'schedule_minutes',
         'schedule_hours',
+        'schedule_start_time',
+        'schedule_end_time',
         'commission_enabled',
         'buy_commission',
         'sell_commission',
+        'is_stale',
+        'is_admin',
     ];
 
     protected $hidden = [
@@ -38,6 +42,8 @@ class User extends Authenticatable
         'commission_enabled' => 'boolean',
         'buy_commission' => 'float',
         'sell_commission' => 'float',
+        'is_stale' => 'boolean',
+        'is_admin' => 'boolean',
     ];
 
     public function portfolios()

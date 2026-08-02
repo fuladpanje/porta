@@ -1,55 +1,41 @@
 import { stockApi } from './api';
 
-const STORAGE_KEY = 'symbol_cache';
-const CACHE_TTL = 24 * 60 * 60 * 1000;
-
 let cachedSymbols = null;
 let lastError = null;
+let lastMetaData = null;
+let isFromDatabaseCache = false;
 
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (Date.now() - data.time > CACHE_TTL) return null;
-    return data.symbols;
-  } catch {
-    return null;
-  }
-}
-
-function saveToStorage(symbols) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ symbols, time: Date.now() }));
-  } catch {}
-}
-
-export async function searchSymbolsLocal(query) {
-  if (cachedSymbols === null) {
-    cachedSymbols = loadFromStorage();
+export async function searchSymbolsLocal(query, force = false) {
+  if (!force && cachedSymbols !== null) {
+    return filterAndSort(cachedSymbols, query);
   }
 
-  if (cachedSymbols === null) {
-    try {
-      const res = await stockApi.searchSymbols('');
-      cachedSymbols = res.data.data || [];
-      if (res.data.message && cachedSymbols.length === 0) {
-        lastError = res.data.message;
-      } else {
-        lastError = null;
-        saveToStorage(cachedSymbols);
-      }
-    } catch (err) {
-      lastError = err.response?.data?.message || 'خطا در دریافت نمادها. لطفاً کلید API را بررسی کنید.';
-      cachedSymbols = [];
-      throw err;
+  try {
+    const res = await stockApi.searchSymbols('', force);
+    cachedSymbols = res.data.data || [];
+    isFromDatabaseCache = res.data.from_cache ?? false;
+    lastMetaData = {
+      from_cache: res.data.from_cache ?? false,
+      last_updated: res.data.last_updated ?? null,
+    };
+    if (res.data.message && cachedSymbols.length === 0) {
+      lastError = res.data.message;
+    } else {
+      lastError = null;
     }
+  } catch (err) {
+    lastError = err.response?.data?.message || 'خطا در دریافت نمادها.';
+    throw err;
   }
 
+  return filterAndSort(cachedSymbols, query);
+}
+
+function filterAndSort(list, query) {
   const q = query.toLowerCase();
   const scored = [];
 
-  for (const s of cachedSymbols) {
+  for (const s of list) {
     const name = s.name.toLowerCase();
     const fullName = (s.fullName || '').toLowerCase();
     const isin = (s.isin || '').toLowerCase();
@@ -82,8 +68,17 @@ export function getSymbolSearchError() {
   return lastError;
 }
 
+export function getSymbolMetaData() {
+  return lastMetaData;
+}
+
+export function isDataFromCache() {
+  return isFromDatabaseCache;
+}
+
 export function clearSymbolCache() {
   cachedSymbols = null;
   lastError = null;
-  localStorage.removeItem(STORAGE_KEY);
+  lastMetaData = null;
+  isFromDatabaseCache = false;
 }

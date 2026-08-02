@@ -3,6 +3,7 @@ import { usePortfolio } from '../hooks/usePortfolio';
 import { useUnit } from '../contexts/UnitContext';
 import { useAuth } from '../hooks/useAuth';
 import { useProfitLoss } from '../contexts/ProfitLossContext';
+import { useStaleData } from '../contexts/StaleDataContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
 import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
@@ -26,9 +27,13 @@ function SafeNumber(val) {
  }
 export default function Dashboard() {
   const { plMode, setPlMode } = useProfitLoss();
-  const { dashboard, loading, refreshing, error, fetchDashboard, refreshDashboard } = usePortfolio(plMode);
-  const { unit } = useUnit();
-  const { user } = useAuth();
+   const { dashboard, loading, refreshing, error, stale, fetchDashboard, refreshDashboard } = usePortfolio(plMode);
+   const { stale: globalStale, setStale } = useStaleData();
+   const { unit } = useUnit();
+   const { user } = useAuth();
+
+   const isStale = stale || globalStale;
+
    const [showPortfolioForm, setShowPortfolioForm] = useState(false);
    const [editingPortfolio, setEditingPortfolio] = useState(null);
    const [expanded, setExpanded] = useState({});
@@ -289,35 +294,35 @@ const totals = useMemo(() => {
   return (
     <div className="space-y-4">
 
-      {/* Stats Row */}
-      <div className="flex gap-2 flex-wrap">
-{[
-             { id: 'portfolios', label: 'پرتفوها', value: totals.count, format: 'num', icon: FolderOpen },
-             { id: 'stocks', label: 'سهم‌ها', value: totalAllItems, format: 'num', icon: Package },
-              { id: 'buyValue', label: 'ارزش کل خرید', value: (sellFilter === 'all' && plMode === 'all') ? null : totals.totalCost, format: 'price', icon: Wallet },
-              { id: 'portfolioValue', label: 'ارزش کل پرتو', value: (sellFilter === 'all' && plMode === 'all') ? null : totals.totalValue, format: 'price', icon: Wallet },
-{ id: 'totalPL', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
-               { id: 'totalPLPct', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
-           ].map((s) => {
-           const Icon = s.icon;
-           return (
-            <div key={s.id} className="flex-1 min-w-[100px] bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 cursor-pointer" onDoubleClick={(e) => handleCopy(e, getStatCopyValue(s), false)}>
-             <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider rtl-text flex items-center gap-1">
-               <Icon className="w-3 h-3" /> {s.label}
-             </p>
-             <p className={`text-sm font-bold mt-0.5 ${s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : s.format === 'pct' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : 'text-slate-800 dark:text-slate-200'}`}>
-                {s.format === 'num' ? toPersianNum(s.value) : s.format === 'price' && typeof s.value === 'number' && !isNaN(s.value)
-                   ? toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')
-                   : s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value)
-                   ? toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')
-                  : s.format === 'pct' && typeof s.value === 'number' && !isNaN(s.value)
-                  ? toPersianNum(s.value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) + ' درصد'
-                  : '—'}
-             </p>
-           </div>
-           );
-         })}
-      </div>
+       {/* Stats Row */}
+       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+ {[
+              { id: 'portfolios', label: 'پرتفوها', value: totals.count, format: 'num', icon: FolderOpen },
+              { id: 'stocks', label: 'سهم‌ها', value: totalAllItems, format: 'num', icon: Package },
+               { id: 'buyValue', label: 'ارزش کل خرید', value: (sellFilter === 'all' && plMode === 'all') ? null : totals.totalCost, format: 'price', icon: Wallet },
+               { id: 'portfolioValue', label: 'ارزش کل پرتو', value: (sellFilter === 'all' && plMode === 'all') ? null : totals.totalValue, format: 'price', icon: Wallet },
+ { id: 'totalPL', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPL, format: 'pl', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
+                { id: 'totalPLPct', label: sellFilter === 'sold' ? 'محقق شده' : sellFilter === 'unsold' ? 'محقق نشده' : plMode === 'all' ? 'محقق شده + نشده' : plMode === 'realized' ? 'محقق شده' : 'محقق نشده', value: totals.totalPLPct, format: 'pct', positive: totals.totalPL >= 0, icon: totals.totalPL >= 0 ? TrendingUp : TrendingDown },
+            ].map((s) => {
+            const Icon = s.icon;
+            return (
+             <div key={s.id} className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 cursor-pointer" onDoubleClick={(e) => handleCopy(e, getStatCopyValue(s), false)}>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider rtl-text flex items-center gap-1">
+                <Icon className="w-3 h-3" /> {s.label}
+              </p>
+               <p className={`text-sm font-bold mt-0.5 ${s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : s.format === 'pct' && typeof s.value === 'number' && !isNaN(s.value) ? (s.value >= 0 ? 'text-success' : 'text-danger') : 'text-slate-800 dark:text-slate-200'} ${(s.id === 'portfolioValue' || s.id === 'totalPL' || s.id === 'totalPLPct') && isStale ? 'opacity-40' : ''}`}>
+                 {s.format === 'num' ? toPersianNum(s.value) : s.format === 'price' && typeof s.value === 'number' && !isNaN(s.value)
+                    ? <span className="flex flex-col leading-tight"><span className="whitespace-nowrap">{toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))}</span><span className="text-[10px] font-normal text-slate-400">{unit === 'toman' ? 'تومان' : 'ریال'}</span></span>
+                    : s.format === 'pl' && typeof s.value === 'number' && !isNaN(s.value)
+                    ? <span className="flex flex-col leading-tight"><span className="whitespace-nowrap">{toPersianNum((unit === 'toman' ? s.value / 10 : s.value).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))}</span><span className="text-[10px] font-normal text-slate-400">{unit === 'toman' ? 'تومان' : 'ریال'}</span></span>
+                   : s.format === 'pct' && typeof s.value === 'number' && !isNaN(s.value)
+                   ? <span className="flex flex-col leading-tight"><span className="whitespace-nowrap">{toPersianNum(s.value.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }))}</span><span className="text-[10px] font-normal text-slate-400">درصد</span></span>
+                   : '—'}
+              </p>
+            </div>
+            );
+          })}
+       </div>
 
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
@@ -331,7 +336,8 @@ const totals = useMemo(() => {
                 {chartsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </button>
               {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'treemap' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'price' ? <BarChart3 className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
-              {activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'treemap' ? 'نقشه درختی دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}
+              <span className="sm:hidden">{activeChart === 'allocation' ? 'ترکیب' : activeChart === 'treemap' ? 'نقشه درختی' : activeChart === 'price' ? 'قیمت' : 'سود و زیان'}</span>
+              <span className="hidden sm:inline">{activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'treemap' ? 'نقشه درختی دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}</span>
             </h2>
             <div className="flex items-center gap-2">
               {chartsExpanded && <div role="tablist" aria-label="نمودارهای داشبورد" className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
@@ -358,8 +364,8 @@ const totals = useMemo(() => {
           </div>
 
         <div className="relative bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-          {chartsExpanded && (
-             <div className="flex items-center gap-4 mb-2 flex-row-reverse">
+           {chartsExpanded && (
+              <div className="flex items-center gap-4 mb-2 flex-row-reverse flex-wrap">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-400 rtl-text">پرتفوهای غیرفعال</span>
                   <button
@@ -580,14 +586,15 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-[10px] text-slate-400 dark:text-slate-500">ارزش پرتفو</span>
-                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{hideValues ? '—' : toPersianNum((unit === 'toman' ? pv / 10 : pv).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')}</span>
+                          <span className={`text-xs font-medium ${isStale ? 'opacity-40' : 'text-slate-700 dark:text-slate-300'}`}>{hideValues ? '—' : toPersianNum((unit === 'toman' ? pv / 10 : pv).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })) + ' ' + (unit === 'toman' ? 'تومان' : 'ریال')}</span>
                         </div>
                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{sellFilter === 'sold' ? 'محقق شده (درصد)' : sellFilter === 'unsold' ? 'محقق نشده (درصد)' : plMode === 'all' ? 'محقق شده + نشده (درصد)' : plMode === 'realized' ? 'محقق شده (درصد)' : 'محقق نشده (درصد)'}</span>
-                          <span className={`text-xs font-bold ${pp >= 0 ? 'text-success' : 'text-danger'}`}>{toPersianNum((unit === 'toman' ? SafeNumber(portfolio._profitLoss) / 10 : SafeNumber(portfolio._profitLoss)).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} {unit === 'toman' ? 'تومان' : 'ریال'} {pp !== 0 && `(${toPersianNum(pp.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }))} درصد)`}</span>
-                        </div>
-                        <div className="sm:hidden w-full border-t border-slate-200 dark:border-slate-700" />
+                           <span className="text-[10px] text-slate-400 dark:text-slate-500">{sellFilter === 'sold' ? 'محقق شده (درصد)' : sellFilter === 'unsold' ? 'محقق نشده (درصد)' : plMode === 'all' ? 'محقق شده + نشده (درصد)' : plMode === 'realized' ? 'محقق شده (درصد)' : 'محقق نشده (درصد)'}</span>
+                            <span className={`text-xs font-bold ${isStale ? 'opacity-40' : ''} ${pp >= 0 ? 'text-success' : 'text-danger'}`}>{toPersianNum((unit === 'toman' ? SafeNumber(portfolio._profitLoss) / 10 : SafeNumber(portfolio._profitLoss)).toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))} {unit === 'toman' ? 'تومان' : 'ریال'} {pp !== 0 && `(${toPersianNum(pp.toLocaleString('fa-IR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }))} درصد)`}</span>
+                         </div>
+                         <div className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
+                         <div className="sm:hidden w-full border-t border-slate-200 dark:border-slate-700" />
                         <div className="sm:hidden flex items-center gap-1 w-full justify-center">
                           <button onClick={(e) => { e.stopPropagation(); handleTogglePortfolioActive(portfolio.id, portfolio.active); }} className="p-1 rounded hover:bg-brand/10 transition-colors shrink-0" title={portfolio.active ? 'غیرفعال کردن پرتفو' : 'فعال کردن پرتفو'}>
                             {portfolio.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
@@ -703,13 +710,13 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                                        <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                                       {item.symbol}
                                     </td>
-                                     <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
-                                       <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.pe, false)}>{item.pe ? formatPE(item.pe) : '—'}</td>
+                                      <td className={`px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
+                                        <td className={`px-2 py-1.5 font-medium ${item.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.pe, false)}>{item.pe ? formatPE(item.pe) : '—'}</td>
                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.buy_price)}>{formatPrice(item.buy_price, unit, 2)}</td>
                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.quantity, false)}>{formatNumber(item.quantity)}</td>
                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.sell_price)}>{item.sell_price ? formatPrice(item.sell_price, unit, 2) : '—'}</td>
                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, purchaseValue)}>{formatPrice(purchaseValue, unit)}</td>
-                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
+                                       <td className={`px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.resistance_1)}>
                                         {item.resistance_1 ? <>
                                           {formatPrice(item.resistance_1, unit, 2)}
@@ -730,15 +737,15 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                                           {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_2)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
                                         </> : ''}
                                        </td>
-                                 <td className={`px-2 py-1.5 font-medium cursor-pointer whitespace-nowrap ${plAmount !== null ? (isInactive ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (plAmount >= 0 ? 'text-success opacity-90' : 'text-danger opacity-90'))) : 'text-slate-500 italic'}`} onDoubleClick={(e) => handleCopy(e, plAmount)}>
-                                         {plAmount !== null ? formatPrice(plAmount, unit) : '—'}
+                                  <td className={`px-2 py-1.5 font-medium cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''} ${plAmount !== null ? (isInactive ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (plAmount >= 0 ? `text-success ${isStale ? '' : 'opacity-90'}` : `text-danger ${isStale ? '' : 'opacity-90'}`))) : 'text-slate-500 italic'}`} onDoubleClick={(e) => handleCopy(e, plAmount)}>
+                                          {plAmount !== null ? formatPrice(plAmount, unit) : '—'}
                                      </td>
-                                      <td className="px-2 py-1.5 whitespace-nowrap">
-                                        {pl != null ? (
-                                          <span className={`flex items-center gap-0.5 font-medium ${isInactive ? (pl >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (pl >= 0 ? 'text-success' : 'text-danger') : (pl >= 0 ? 'text-success opacity-90' : 'text-danger opacity-90'))}`}>
-                                             {formatPercent(pl)}
-                                          </span>
-                                        ) : <span className="text-slate-500 italic">—</span>}
+                                       <td className={`px-2 py-1.5 whitespace-nowrap ${isStale ? 'opacity-40' : ''}`}>
+                                         {pl != null ? (
+                                           <span className={`flex items-center gap-0.5 font-medium ${isInactive ? (pl >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (pl >= 0 ? 'text-success' : 'text-danger') : (pl >= 0 ? `text-success ${isStale ? '' : 'opacity-90'}` : `text-danger ${isStale ? '' : 'opacity-90'}`))}`}>
+                                              {formatPercent(pl)}
+                                           </span>
+                                         ) : <span className="text-slate-500 italic">—</span>}
                                     </td>
                                     <td className="px-2 py-1.5 flex items-center gap-1 whitespace-nowrap">
                                     <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} disabled={portfolio.active === false || portfolio.active === 0} className={`p-0.5 rounded transition-colors ${portfolio.active === false || portfolio.active === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand/10'}`} title={portfolio.active === false || portfolio.active === 0 ? 'ابتدا پرتفو را فعال کنید' : (item.active ? 'غیرفعال کردن' : 'فعال کردن')}>
@@ -764,7 +771,7 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                         )}
  {plMode === 'all' && (portfolio.items || []).some((item) => !item.sell_price && item.last_price) && (
                            <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
-                             <span className="text-emerald-500 font-bold">●</span> <span className="text-amber-500 font-bold">●</span> سهم‌های فروش رفته + سهم‌های فروش نرفته بر اساس آخرین قیمت و قیمت فروش در محاسبه لحاظ می‌شود
+                             <span className="text-emerald-500 font-bold">●</span> سهم‌های فروش رفته + <span className="text-amber-500 font-bold">●</span> سهم‌های فروش نرفته بر اساس آخرین قیمت و قیمت فروش در محاسبه لحاظ می‌شود
                            </div>
                          )}
  {plMode === 'unrealized' && (portfolio.items || []).some((item) => !item.sell_price && item.last_price) && (
@@ -1152,6 +1159,7 @@ datasets: [{
 }
 
 function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
+  const isDark = document.documentElement.classList.contains('dark');
   const chartRef = useRef(null);
   const prevColorModeRef = useRef(null);
   const shouldAnimate = prevColorModeRef.current !== colorMode;
@@ -1192,11 +1200,24 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
       });
   }, [filteredItems, colorMode]);
 
-  const options = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: shouldAnimate,
-    plugins: {
+   const options = useMemo(() => ({
+     responsive: true,
+     maintainAspectRatio: false,
+     animation: shouldAnimate,
+     onClick: (event, elements, chart) => {
+       const tooltip = chart.tooltip;
+       if (elements.length === 0) {
+         tooltip.setActiveElements([]);
+         chart.update('none');
+         return;
+       }
+       const activeEls = tooltip.getActiveElements();
+       if (activeEls.length > 0 && activeEls[0].datasetIndex === elements[0].datasetIndex && activeEls[0].index === elements[0].index) {
+         tooltip.setActiveElements([]);
+         chart.update('none');
+       }
+     },
+     plugins: {
       legend: { display: false },
       title: { display: false },
       tooltip: {
@@ -1266,7 +1287,7 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
             groups: ['symbol'],
             spacing: 1,
             borderWidth: 1.5,
-            borderColor: 'rgba(255,255,255,0.15)',
+            borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
             backgroundColor: (ctx) => {
               const raw = ctx.raw;
               const d = Array.isArray(raw?._data) ? raw._data[0] : raw?._data;
@@ -1280,14 +1301,16 @@ function TreemapChart({ items, unit, sellFilter, plMode, colorMode }) {
                 const plPct = match?.plPct ?? 0;
                 if (plPct >= 0) {
                   const intensity = Math.min(Math.abs(plPct) / 100, 1);
-                  return `rgba(16, 185, 129, ${0.35 + intensity * 0.55})`;
+                  const alpha = isDark ? (0.35 + intensity * 0.55) : (0.7 + intensity * 0.3);
+                  return `rgba(16, 185, 129, ${alpha})`;
                 }
                 const intensity = Math.min(Math.abs(plPct) / 100, 1);
-                return `rgba(239, 68, 68, ${0.35 + intensity * 0.55})`;
+                const alpha = isDark ? (0.35 + intensity * 0.55) : (0.7 + intensity * 0.3);
+                return `rgba(239, 68, 68, ${alpha})`;
               }
               const ratio = value / totalVal;
-              const opacity = 0.25 + ratio * 0.75;
-              return `rgba(99, 102, 241, ${Math.min(opacity, 1)})`;
+              const alpha = isDark ? (0.25 + ratio * 0.75) : (0.65 + ratio * 0.35);
+              return `rgba(99, 102, 241, ${Math.min(alpha, 1)})`;
             },
             labels: {
               display: true,

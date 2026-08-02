@@ -69,17 +69,19 @@ export function SymbolSearch({ value, onChange, onSelect, className = '', autoFo
 
   return (
     <div className="relative" ref={wrapperRef}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={handleInputChange}
-        onFocus={() => { if (query.trim().length > 0) setShowDropdown(true); }}
-        className={`input-field text-xs py-1.5 ${className}`}
-        placeholder="نام نماد را تایپ کنید..."
-        autoComplete="off"
-        autoFocus={autoFocus}
-      />
+      <div className="relative flex items-center">
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={handleInputChange}
+          onFocus={() => { if (query.trim().length > 0) setShowDropdown(true); }}
+          className={`input-field text-xs py-1.5 pr-8 ${className}`}
+          placeholder="نام نماد را تایپ کنید..."
+          autoComplete="off"
+          autoFocus={autoFocus}
+        />
+      </div>
       {showDropdown && (
         <ul className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl shadow-lg z-[9999] list-none p-0 m-0">
           {loading && (

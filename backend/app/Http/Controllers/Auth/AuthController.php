@@ -11,24 +11,43 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    private function enrichUser($user): array
+    {
+        $schedule = \App\Models\SystemSetting::getSchedule();
+        $userData = $user->toArray();
+        $userData['has_api_keys'] = !empty(\App\Models\SystemSetting::getApiKeys());
+        $userData['schedule_enabled'] = $schedule['enabled'];
+        $userData['schedule_seconds'] = $schedule['seconds'];
+        $userData['schedule_minutes'] = $schedule['minutes'];
+        $userData['schedule_hours'] = $schedule['hours'];
+        $userData['schedule_start_time'] = $schedule['start_time'];
+        $userData['schedule_end_time'] = $schedule['end_time'];
+        return $userData;
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
+        $adminEmail = env('ADMIN_EMAIL');
+        $isFirstUser = \App\Models\User::count() === 0;
+        $isAdmin = ($adminEmail && strtolower($validated['email']) === strtolower($adminEmail)) || $isFirstUser;
+
         $user = User::create([
-            'name' => $validated['name'],
+            'username' => $validated['username'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'is_admin' => $isAdmin,
         ]);
 
         $token = $user->createToken('porta')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => $this->enrichUser($user),
             'token' => $token,
         ], 201);
     }
@@ -36,11 +55,13 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|string|email',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = User::where('email', $validated['email'])
+            ->orWhere('username', $validated['email'])
+            ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -51,7 +72,7 @@ class AuthController extends Controller
         $token = $user->createToken('porta')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => $this->enrichUser($user),
             'token' => $token,
         ]);
     }
@@ -68,7 +89,7 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         return response()->json([
-            'user' => $request->user(),
+            'user' => $this->enrichUser($request->user()),
         ]);
     }
 
@@ -81,7 +102,7 @@ class AuthController extends Controller
         $request->user()->update(['unit' => $validated['unit']]);
 
         return response()->json([
-            'user' => $request->user(),
+            'user' => $this->enrichUser($request->user()->fresh()),
         ]);
     }
 
@@ -94,7 +115,7 @@ class AuthController extends Controller
         $request->user()->update(['auto_switch' => $validated['auto_switch']]);
 
         return response()->json([
-            'user' => $request->user(),
+            'user' => $this->enrichUser($request->user()->fresh()),
         ]);
     }
 
@@ -105,6 +126,8 @@ class AuthController extends Controller
             'schedule_seconds' => 'required|integer|min:0',
             'schedule_minutes' => 'required|integer|min:0',
             'schedule_hours' => 'required|integer|min:0',
+            'schedule_start_time' => 'nullable|string',
+            'schedule_end_time' => 'nullable|string',
         ]);
 
         $request->user()->update([
@@ -112,10 +135,12 @@ class AuthController extends Controller
             'schedule_seconds' => $validated['schedule_seconds'],
             'schedule_minutes' => $validated['schedule_minutes'],
             'schedule_hours' => $validated['schedule_hours'],
+            'schedule_start_time' => $validated['schedule_start_time'] ?? null,
+            'schedule_end_time' => $validated['schedule_end_time'] ?? null,
         ]);
 
         return response()->json([
-            'user' => $request->user(),
+            'user' => $this->enrichUser($request->user()->fresh()),
         ]);
     }
 
@@ -145,7 +170,7 @@ class AuthController extends Controller
             ]);
 
             return response()->json([
-                'user' => $user->fresh(),
+                'user' => $this->enrichUser($user->fresh()),
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
             return response()->json([
@@ -183,7 +208,22 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'رمز با موفقیت تغییر یافت.',
-            'user' => $user->fresh(),
+            'user' => $this->enrichUser($user->fresh()),
+        ]);
+    }
+
+    public function updateStale(Request $request)
+    {
+        $validated = $request->validate([
+            'is_stale' => 'required|boolean',
+        ]);
+
+        $request->user()->update([
+            'is_stale' => $validated['is_stale'],
+        ]);
+
+        return response()->json([
+            'user' => $this->enrichUser($request->user()->fresh()),
         ]);
     }
 }

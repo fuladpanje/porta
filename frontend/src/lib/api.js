@@ -35,7 +35,7 @@ api.interceptors.response.use(
 );
 
 export const stockApi = {
-  searchSymbols: (query) => api.get(`/stocks/symbols?q=${encodeURIComponent(query)}`),
+  searchSymbols: (query, force = false) => api.get(`/stocks/symbols?q=${encodeURIComponent(query)}${force ? '&force=1' : ''}`),
   refreshPrices: () => api.post('/stocks/refresh'),
 };
 
