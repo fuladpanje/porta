@@ -9,13 +9,13 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
+  `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `unit` varchar(10) NOT NULL DEFAULT 'rial',
   `auto_switch` tinyint(1) NOT NULL DEFAULT 1,
   `schedule_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `schedule_seconds` int NOT NULL DEFAULT 0,
-  `schedule_minutes` int NOT NULL DEFAULT 0,
+  `schedule_minutes` int NOT NULL DEFAULT 5,
   `schedule_hours` int NOT NULL DEFAULT 0,
   `commission_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `buy_commission` decimal(5,2) NOT NULL DEFAULT 0.37,
@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `users_username_unique` (`username`),
   UNIQUE KEY `users_email_unique` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -101,7 +102,7 @@ CREATE TABLE IF NOT EXISTS `symbols_cache` (
   `pe` decimal(12,2) DEFAULT NULL,
   `price_change_percent` decimal(8,2) DEFAULT NULL,
   `price_change` decimal(12,2) DEFAULT NULL,
-  `close_price` decimal(12,2) DEFAULT NULL,
+  `sector` varchar(255) DEFAULT NULL,
   `last_updated_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -112,7 +113,7 @@ CREATE TABLE IF NOT EXISTS `symbols_cache` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
--- Table: api_keys (legacy - kept for backward compatibility)
+-- Table: api_keys
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `api_keys` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -187,5 +188,18 @@ CREATE TABLE IF NOT EXISTS `migrations` (
   `batch` int NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Default system_settings data
+-- --------------------------------------------------------
+INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`, `created_at`, `updated_at`) VALUES
+('api_keys', '[]', 'کلیدهای API سیستم (JSON array)', NOW(), NOW()),
+('schedule_enabled', 'false', 'فعال/غیرفعال بودن زمان‌بندی', NOW(), NOW()),
+('schedule_seconds', '0', 'ثانیه‌های زمان‌بندی', NOW(), NOW()),
+('schedule_minutes', '5', 'دقیقه‌های زمان‌بندی', NOW(), NOW()),
+('schedule_hours', '0', 'ساعت‌های زمان‌بندی', NOW(), NOW()),
+('schedule_start_time', NULL, 'زمان شروع بازه اجرا', NOW(), NOW()),
+('schedule_end_time', NULL, 'زمان پایان بازه اجرا', NOW(), NOW()),
+('auto_switch', 'true', 'چرخش خودکار کلید API', NOW(), NOW());
 
 SET FOREIGN_KEY_CHECKS = 1;
