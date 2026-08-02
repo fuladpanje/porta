@@ -226,4 +226,5 @@ class AuthController extends Controller
             'user' => $this->enrichUser($request->user()->fresh()),
         ]);
     }
+
 }

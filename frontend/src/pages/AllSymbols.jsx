@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useUnit } from '../contexts/UnitContext';
 import { useStaleData } from '../contexts/StaleDataContext';
+import { useAuth } from '../hooks/useAuth';
 import api, { favoritesApi } from '../lib/api';
 import { stockApi } from '../lib/api';
 import { searchSymbolsLocal } from '../lib/symbolCache';
 import { formatPrice, formatPercent } from '../lib/calculations';
-import { Search, Plus, X, Trash2, Star } from 'lucide-react';
+import { Search, Plus, X, Trash2, Star, Filter } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 
 function useDebounce(value, delay) {
@@ -29,6 +30,21 @@ function SafeNumber(val) {
   const n = Number(val);
   return isNaN(n) ? 0 : n;
 }
+
+const COLUMNS = [
+  { key: 'star', label: '', hideable: false },
+  { key: 'name', label: 'نماد', hideable: false },
+  { key: 'fullName', label: 'نام کامل', hideable: true },
+  { key: 'pl', label: 'آخرین', hideable: false },
+  { key: 'plp', label: 'درصد تغییر آخرین', hideable: true },
+  { key: 'pcp', label: 'درصد تغییر پایانی', hideable: true },
+  { key: 'diff', label: 'اختلاف درصد', hideable: true },
+  { key: 'pe', label: 'P/E', hideable: true },
+  { key: 'cs', label: 'گروه صنعت', hideable: true },
+  { key: 'actions', label: 'عملیات', hideable: true },
+];
+
+const MOBILE_DEFAULT_COLUMNS = ['star', 'name', 'pl', 'plp', 'pcp', 'diff', 'pe'];
 
 function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
   const { unit } = useUnit();
@@ -252,8 +268,9 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
 }
 
 export default function AllSymbols() {
-   const { unit } = useUnit();
-   const { stale: globalStale, setStale } = useStaleData();
+    const { unit } = useUnit();
+    const { stale: globalStale, setStale } = useStaleData();
+    const { user } = useAuth();
    const [symbols, setSymbols] = useState([]);
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState(null);
@@ -261,9 +278,56 @@ const [stale, setStaleData] = useState(false);
    const isStale = stale || globalStale;
    const [search, setSearch] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [addToModal, setAddToModal] = useState(null);
-  const [hideNegativePE, setHideNegativePE] = useState(false);
-   const [peMode, setPeMode] = useState('single');
+const [addToModal, setAddToModal] = useState(null);
+   const [hideNegativePE, setHideNegativePE] = useState(false);
+const [visibleColumns, setVisibleColumns] = useState(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return isMobile ? MOBILE_DEFAULT_COLUMNS : COLUMNS.map((c) => c.key);
+  });
+  const [showColumnFilter, setShowColumnFilter] = useState(false);
+  const columnFilterRef = useRef(null);
+
+  const toggleColumn = (key) => {
+    setVisibleColumns((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      const result = COLUMNS.filter((c) => !c.hideable).every((c) => next.includes(c.key)) ? next : prev;
+      try { localStorage.setItem('allsymbols_column_preferences', JSON.stringify(result)); } catch {}
+      return result;
+    });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (columnFilterRef.current && !columnFilterRef.current.contains(e.target)) {
+        setShowColumnFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+useEffect(() => {
+    const stored = localStorage.getItem('allsymbols_column_preferences');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+          const merged = [...new Set([...required, ...parsed])];
+          setVisibleColumns(merged);
+          return;
+        }
+      } catch {}
+    }
+    const userPrefs = user?.column_preferences;
+    if (userPrefs && Array.isArray(userPrefs) && userPrefs.length > 0) {
+      const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+      const merged = [...new Set([...required, ...userPrefs])];
+      setVisibleColumns(merged);
+    }
+  }, [user?.column_preferences]);
+
+  const [peMode, setPeMode] = useState('single');
    const [peSign, setPeSign] = useState(null);
    const [peMin, setPeMin] = useState('');
    const [peMax, setPeMax] = useState('');
@@ -811,48 +875,58 @@ const filtered = useMemo(() => {
           </button>
         </div>
 
-        <div className="text-[10px] text-slate-400 px-1">
-        {toPersianNum(filtered.length)} نماد
-      </div>
+<div className="text-[10px] text-slate-400 px-1 flex items-center gap-2">
+         {toPersianNum(filtered.length)} نماد
+         <div className="relative" ref={columnFilterRef}>
+           <button
+             onClick={() => setShowColumnFilter((v) => !v)}
+             className={`p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${visibleColumns.length === COLUMNS.length ? 'text-slate-400' : 'text-purple-500'}`}
+             title="فیلتر ستون‌ها"
+           >
+             <Filter className="w-3 h-3" />
+           </button>
+           {showColumnFilter && (
+             <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 min-w-[160px]">
+               <p className="text-[10px] text-purple-400 mb-2 rtl-text">نمایش ستون ها</p>
+               {COLUMNS.filter((c) => c.hideable).map((col) => (
+                 <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer text-xs text-slate-600 dark:text-slate-300 rtl-text">
+                   <input
+                     type="checkbox"
+                     checked={visibleColumns.includes(col.key)}
+                     onChange={() => toggleColumn(col.key)}
+                     className="rounded border-slate-300 accent-purple-500 focus:ring-purple-500"
+                   />
+                   {col.label}
+                 </label>
+               ))}
+               <button
+                 onClick={() => setVisibleColumns(COLUMNS.map((c) => c.key))}
+                 className="mt-2 text-[10px] text-purple-500 hover:underline rtl-text"
+               >
+                 نمایش همه ستون‌ها
+               </button>
+             </div>
+           )}
+         </div>
+       </div>
 
-      <div className="overflow-x-auto">
+       <div className="overflow-x-auto">
         <table className="w-full text-[11px]">
-          <thead>
-            <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30">
-              <th className="px-3 py-2 w-8"></th>
-              <th onClick={() => toggleSort('name')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('name', 'نماد')}
-              </th>
-              <th onClick={() => toggleSort('fullName')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('fullName', 'نام کامل')}
-              </th>
-              <th onClick={() => toggleSort('pl')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('pl', `آخرین (${unit === 'toman' ? 'تومان' : 'ریال'})`)}
-              </th>
-              <th onClick={() => toggleSort('plp')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('plp', 'درصد تغییر آخرین')}
-              </th>
-              <th onClick={() => toggleSort('pcp')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('pcp', 'درصد تغییر پایانی')}
-              </th>
-              <th onClick={() => toggleSort('diff')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('diff', 'اختلاف درصد')}
-              </th>
-              <th onClick={() => toggleSort('pe')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('pe', 'P/E')}
-              </th>
-              <th onClick={() => toggleSort('cs')} className="px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">
-                {sortLabel('cs', 'گروه صنعت')}
-              </th>
-              <th className="px-3 py-2 text-right font-medium text-slate-400">عملیات</th>
-            </tr>
-          </thead>
+<thead>
+             <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30">
+               {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((c) => (
+                 <th key={c.key} onClick={c.key === 'actions' || c.key === 'star' ? undefined : (() => toggleSort(c.key))} className={`px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none ${c.key === 'star' ? 'w-8' : ''}`}>
+                   {c.key === 'star' ? '' : sortLabel(c.key, c.label)}
+                 </th>
+               ))}
+             </tr>
+           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-slate-400 text-xs">
-                  نمادی یافت نشد
-                </td>
+<td colSpan={visibleColumns.length} className="px-3 py-8 text-center text-slate-400 text-xs">
+                   نمادی یافت نشد
+                 </td>
               </tr>
             )}
             {filtered.map((s) => {
@@ -860,50 +934,70 @@ const filtered = useMemo(() => {
               const pcpVal = Number(s.pcp);
               const diff = (!isNaN(plpVal) && !isNaN(pcpVal)) ? plpVal - pcpVal : null;
               return (
-              <tr key={s.isin || s.name} className="border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                <td className="px-3 py-2">
-                  <button
-                    onClick={() => toggleFavorite(s.name)}
-                    className="p-0.5 rounded transition-colors"
-                    title={favorites.includes(s.name) ? 'حذف از نشان‌ها' : 'افزودن به نشان‌ها'}
-                  >
-                    <Star className={`w-3.5 h-3.5 ${favorites.includes(s.name) ? 'text-yellow-500' : 'text-slate-300 dark:text-slate-600 hover:text-yellow-400'}`} fill={favorites.includes(s.name) ? 'currentColor' : 'none'} />
-                  </button>
-                </td>
-                <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
-                  {s.name}
-                </td>
-                <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[200px] truncate">
-                  {s.fullName}
-                </td>
-                  <td className={`px-3 py-2 font-medium text-slate-800 dark:text-slate-200 ${isStale ? 'opacity-40' : ''}`}>
-                    {s.pl ? formatPrice(s.pl, unit, 2) : '—'}
-                  </td>
-                  <td className={`px-3 py-2 font-medium ${plpVal > 0 ? 'text-success' : plpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
-                    {s.plp != null && s.plp !== '' ? formatPercent(plpVal) : '—'}
-                  </td>
-                  <td className={`px-3 py-2 font-medium ${pcpVal > 0 ? 'text-success' : pcpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
-                    {s.pcp != null && s.pcp !== '' ? formatPercent(pcpVal) : '—'}
-                  </td>
-                  <td className={`px-3 py-2 font-medium ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
-                    {diff !== null ? formatPercent(diff) : '—'}
-                  </td>
-                  <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} ${isStale ? 'opacity-40' : ''}`}>
-                    {formatPE(s.pe)}
-                  </td>
-                <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[120px] truncate">
-                  {s.cs || '—'}
-                </td>
-                <td className="px-3 py-2">
-                  <button
-                    onClick={() => setAddToModal(s)}
-                    className="p-1 rounded-lg hover:bg-brand-500/10 transition-colors"
-                    title="افزودن به پرتفو"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-brand-500" />
-                  </button>
-                </td>
-              </tr>
+<tr key={s.isin || s.name} className="border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                 {visibleColumns.includes('star') && (
+                   <td className="px-3 py-2">
+                     <button
+                       onClick={() => toggleFavorite(s.name)}
+                       className="p-0.5 rounded transition-colors"
+                       title={favorites.includes(s.name) ? 'حذف از نشان‌ها' : 'افزودن به نشان‌ها'}
+                     >
+                       <Star className={`w-3.5 h-3.5 ${favorites.includes(s.name) ? 'text-yellow-500' : 'text-slate-300 dark:text-slate-600 hover:text-yellow-400'}`} fill={favorites.includes(s.name) ? 'currentColor' : 'none'} />
+                     </button>
+                   </td>
+                 )}
+                 {visibleColumns.includes('name') && (
+                   <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                     {s.name}
+                   </td>
+                 )}
+                 {visibleColumns.includes('fullName') && (
+                   <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[200px] truncate">
+                     {s.fullName}
+                   </td>
+                 )}
+                 {visibleColumns.includes('pl') && (
+                   <td className={`px-3 py-2 font-medium text-slate-800 dark:text-slate-200 ${isStale ? 'opacity-40' : ''}`}>
+                     {s.pl ? formatPrice(s.pl, unit, 2) : '—'}
+                   </td>
+                 )}
+                 {visibleColumns.includes('plp') && (
+                   <td className={`px-3 py-2 font-medium ${plpVal > 0 ? 'text-success' : plpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                     {s.plp != null && s.plp !== '' ? formatPercent(plpVal) : '—'}
+                   </td>
+                 )}
+                 {visibleColumns.includes('pcp') && (
+                   <td className={`px-3 py-2 font-medium ${pcpVal > 0 ? 'text-success' : pcpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                     {s.pcp != null && s.pcp !== '' ? formatPercent(pcpVal) : '—'}
+                   </td>
+                 )}
+                 {visibleColumns.includes('diff') && (
+                   <td className={`px-3 py-2 font-medium ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                     {diff !== null ? formatPercent(diff) : '—'}
+                   </td>
+                 )}
+                 {visibleColumns.includes('pe') && (
+                   <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} ${isStale ? 'opacity-40' : ''}`}>
+                     {formatPE(s.pe)}
+                   </td>
+                 )}
+                 {visibleColumns.includes('cs') && (
+                   <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[120px] truncate">
+                     {s.cs || '—'}
+                   </td>
+                 )}
+                 {visibleColumns.includes('actions') && (
+                   <td className="px-3 py-2">
+                     <button
+                       onClick={() => setAddToModal(s)}
+                       className="p-1 rounded-lg hover:bg-brand-500/10 transition-colors"
+                       title="افزودن به پرتفو"
+                     >
+                       <Plus className="w-3.5 h-3.5 text-brand-500" />
+                     </button>
+                   </td>
+                 )}
+               </tr>
             );
             })}
           </tbody>

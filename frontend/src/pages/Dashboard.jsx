@@ -6,7 +6,7 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter } from 'lucide-react';
 import { Chart as ChartComponent, Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { Chart as ChartJS } from 'chart.js';
@@ -25,6 +25,24 @@ function SafeNumber(val) {
    const n = Number(val);
    return isNaN(n) ? 0 : n;
  }
+const COLUMNS = [
+  { key: 'symbol', label: 'نماد', hideable: false },
+  { key: 'last_price', label: 'آخرین', hideable: false },
+  { key: 'pe', label: 'P/E', hideable: true },
+  { key: 'buy_price', label: 'قیمت خرید', hideable: true },
+  { key: 'quantity', label: 'تعداد', hideable: true },
+  { key: 'sell_price', label: 'فروش', hideable: true },
+  { key: 'purchase_value', label: 'ارزش خرید', hideable: true },
+  { key: 'totalValue', label: 'ارزش کل فعلی', hideable: true },
+  { key: 'resistance', label: 'مقاومت', hideable: true },
+  { key: 'support', label: 'حمایت', hideable: true },
+  { key: 'pl', label: 'سود/زیان', hideable: true },
+  { key: 'pct', label: 'درصد', hideable: true },
+  { key: 'actions', label: 'عملیات', hideable: true },
+];
+
+const MOBILE_DEFAULT_COLUMNS = ['symbol', 'last_price', 'totalValue', 'pl', 'pct'];
+
 export default function Dashboard() {
   const { plMode, setPlMode } = useProfitLoss();
    const { dashboard, loading, refreshing, error, stale, fetchDashboard, refreshDashboard } = usePortfolio(plMode);
@@ -47,8 +65,54 @@ const [showItemForm, setShowItemForm] = useState(null);
     const [activeChart, setActiveChart] = useState('allocation');
     const [chartsExpanded, setChartsExpanded] = useState(true);
 const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
-     const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
-     const [showPortfolios, setShowPortfolios] = useState(true);
+      const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
+      const [showPortfolios, setShowPortfolios] = useState(true);
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return isMobile ? MOBILE_DEFAULT_COLUMNS : COLUMNS.map((c) => c.key);
+  });
+  const [showColumnFilter, setShowColumnFilter] = useState(false);
+  const columnFilterRef = useRef(null);
+
+  const toggleColumn = (key) => {
+    setVisibleColumns((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      const result = COLUMNS.filter((c) => !c.hideable).every((c) => next.includes(c.key)) ? next : prev;
+      try { localStorage.setItem('dashboard_column_preferences', JSON.stringify(result)); } catch {}
+      return result;
+    });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (columnFilterRef.current && !columnFilterRef.current.contains(e.target)) {
+        setShowColumnFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('dashboard_column_preferences');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+          const merged = [...new Set([...required, ...parsed])];
+          setVisibleColumns(merged);
+          return;
+        }
+      } catch {}
+    }
+    const userPrefs = user?.column_preferences;
+    if (userPrefs && Array.isArray(userPrefs) && userPrefs.length > 0) {
+      const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
+      const merged = [...new Set([...required, ...userPrefs])];
+      setVisibleColumns(merged);
+    }
+  }, [user?.column_preferences]);
 
   const sellFilter = { all: 'all', realized: 'sold', unrealized: 'unsold' }[plMode] || 'all';
 
@@ -505,6 +569,37 @@ const totals = useMemo(() => {
                 <span className={`hidden sm:inline ${portfolioSort === 'profit' ? 'text-emerald-500' : portfolioSort === 'percent' ? 'text-blue-500' : ''}`}>{portfolioSort === 'default' ? 'پیش‌فرض' : portfolioSort === 'profit' ? 'مبلغ' : 'درصد'}</span>
               </button>
             </div>
+            <div className="relative" ref={columnFilterRef}>
+              <button
+                onClick={() => setShowColumnFilter((v) => !v)}
+                className={`text-[10px] hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${visibleColumns.length === COLUMNS.length ? 'text-slate-400' : 'text-brand-500'}`}
+                title="فیلتر ستون‌ها"
+              >
+                <Filter className="w-3 h-3" />
+              </button>
+              {showColumnFilter && (
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 min-w-[160px]">
+<p className="text-[10px] text-purple-400 mb-2 rtl-text">نمایش ستون ها</p>
+                   {COLUMNS.filter((c) => c.hideable).map((col) => (
+                     <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer text-xs text-slate-600 dark:text-slate-300 rtl-text">
+                       <input
+                         type="checkbox"
+                         checked={visibleColumns.includes(col.key)}
+                         onChange={() => toggleColumn(col.key)}
+                         className="rounded border-slate-300 accent-purple-500 focus:ring-purple-500"
+                       />
+                       {col.label}
+                     </label>
+                   ))}
+                  <button
+                    onClick={() => setVisibleColumns(COLUMNS.map((c) => c.key))}
+                    className="mt-2 text-[10px] text-purple-500 hover:underline rtl-text"
+                  >
+                    نمایش همه ستون‌ها
+                  </button>
+                </div>
+              )}
+            </div>
             {!showPortfolioForm && !editingPortfolio && (
               <button onClick={() => setShowPortfolioForm(true)} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1">
                 <PlusCircle className="w-3 h-3" /> <span className="hidden sm:inline">افزودن پرتفو</span>
@@ -640,29 +735,19 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                     <>
                     <div className="overflow-x-auto">
                       <table className="w-full text-[11px]">
-                         <thead>
-                            <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30">
-                              <th onClick={() => toggleSort('symbol')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('symbol', 'نماد')}</th>
-                               <th onClick={() => toggleSort('last_price')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('last_price', 'آخرین')}</th>
-                               <th onClick={() => toggleSort('pe')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('pe', 'P/E')}</th>
-                              <th onClick={() => toggleSort('buy_price')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('buy_price', 'قیمت خرید')}</th>
-                              <th onClick={() => toggleSort('quantity')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('quantity', 'تعداد')}</th>
-                              <th onClick={() => toggleSort('sell_price')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('sell_price', 'فروش')}</th>
-                              <th onClick={() => toggleSort('purchase_value')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('purchase_value', 'ارزش خرید')}</th>
-                               <th onClick={() => toggleSort('totalValue')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('totalValue', 'ارزش کل فعلی')}</th>
-                              <th onClick={() => toggleSort('resistance')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('resistance', 'مقاومت')}</th>
-                              <th onClick={() => toggleSort('support')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('support', 'حمایت')}</th>
-                              <th onClick={() => toggleSort('pl')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('pl', 'سود / زیان')}</th>
-                              <th onClick={() => toggleSort('pct')} className="px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none">{sortLabel('pct', 'درصد')}</th>
-                              <th className="px-2 py-1.5 text-right font-medium text-slate-400">عملیات</th>
-                            </tr>
-                         </thead>
+                          <thead>
+                             <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30">
+                               {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((c) => (
+                                 <th key={c.key} onClick={c.key === 'actions' ? undefined : (() => toggleSort(c.key))} className={`px-2 py-1.5 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none ${c.key === 'actions' ? '' : ''}`}>{sortLabel(c.key, c.label)}</th>
+                               ))}
+                             </tr>
+                          </thead>
                          <tbody>
                             {pi.map((item) => {
                               if (editingItem && editingItem.itemId === item.id && editingItem.portfolioId === portfolio.id) {
                                 return (
                                   <tr key={item.id}>
-                                    <td colSpan={13} className="p-0">
+                                    <td colSpan={visibleColumns.length} className="p-0">
                                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in">
                                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 max-w-lg w-full mx-4 shadow-xl animate-slide-up max-h-[90vh] overflow-y-auto">
                                           <InlineItemForm
@@ -705,60 +790,86 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
 const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) * 100 : null;
                                const isInactive = !item.active && portfolio.active !== false && portfolio.active !== 0;
                                  return (
-                                   <tr key={item.id} className={`border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${!item.active && portfolio.active !== false && portfolio.active !== 0 ? 'opacity-75' : ''}`}>
-                                    <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                                       <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                      {item.symbol}
-                                    </td>
-                                      <td className={`px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
-                                        <td className={`px-2 py-1.5 font-medium ${item.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.pe, false)}>{item.pe ? formatPE(item.pe) : '—'}</td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.buy_price)}>{formatPrice(item.buy_price, unit, 2)}</td>
-                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.quantity, false)}>{formatNumber(item.quantity)}</td>
-                                     <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.sell_price)}>{item.sell_price ? formatPrice(item.sell_price, unit, 2) : '—'}</td>
-                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, purchaseValue)}>{formatPrice(purchaseValue, unit)}</td>
-                                       <td className={`px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
-                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.resistance_1)}>
-                                        {item.resistance_1 ? <>
-                                          {formatPrice(item.resistance_1, unit, 2)}
-                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_1) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                        </> : '—'}
-                                        {item.resistance_2 ? <>
-                                          {' - '}{formatPrice(item.resistance_2, unit, 2)}
-                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_2) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                        </> : ''}
-                                      </td>
-                                      <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.support_1)}>
-                                        {item.support_1 ? <>
-                                          {formatPrice(item.support_1, unit, 2)}
-                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_1)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                        </> : '—'}
-                                        {item.support_2 ? <>
-                                          {' - '}{formatPrice(item.support_2, unit, 2)}
-                                          {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_2)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
-                                        </> : ''}
+<tr key={item.id} className={`border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${!item.active && portfolio.active !== false && portfolio.active !== 0 ? 'opacity-75' : ''}`}>
+                                     {visibleColumns.includes('symbol') && (
+                                       <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                                          <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                         {item.symbol}
                                        </td>
-                                  <td className={`px-2 py-1.5 font-medium cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''} ${plAmount !== null ? (isInactive ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (plAmount >= 0 ? `text-success ${isStale ? '' : 'opacity-90'}` : `text-danger ${isStale ? '' : 'opacity-90'}`))) : 'text-slate-500 italic'}`} onDoubleClick={(e) => handleCopy(e, plAmount)}>
-                                          {plAmount !== null ? formatPrice(plAmount, unit) : '—'}
-                                     </td>
+                                     )}
+                                     {visibleColumns.includes('last_price') && (
+                                       <td className={`px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
+                                     )}
+                                     {visibleColumns.includes('pe') && (
+                                       <td className={`px-2 py-1.5 font-medium ${item.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.pe, false)}>{item.pe ? formatPE(item.pe) : '—'}</td>
+                                     )}
+                                     {visibleColumns.includes('buy_price') && (
+                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.buy_price)}>{formatPrice(item.buy_price, unit, 2)}</td>
+                                     )}
+                                     {visibleColumns.includes('quantity') && (
+                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.quantity, false)}>{formatNumber(item.quantity)}</td>
+                                     )}
+                                     {visibleColumns.includes('sell_price') && (
+                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.sell_price)}>{item.sell_price ? formatPrice(item.sell_price, unit, 2) : '—'}</td>
+                                     )}
+                                     {visibleColumns.includes('purchase_value') && (
+                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, purchaseValue)}>{formatPrice(purchaseValue, unit)}</td>
+                                     )}
+                                     {visibleColumns.includes('totalValue') && (
+                                       <td className={`px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
+                                     )}
+                                     {visibleColumns.includes('resistance') && (
+                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.resistance_1)}>
+                                         {item.resistance_1 ? <>
+                                           {formatPrice(item.resistance_1, unit, 2)}
+                                           {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_1) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                         </> : '—'}
+                                         {item.resistance_2 ? <>
+                                           {' - '}{formatPrice(item.resistance_2, unit, 2)}
+                                           {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(item.resistance_2) - lastN) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                         </> : ''}
+                                       </td>
+                                     )}
+                                     {visibleColumns.includes('support') && (
+                                       <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.support_1)}>
+                                         {item.support_1 ? <>
+                                           {formatPrice(item.support_1, unit, 2)}
+                                           {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_1)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                         </> : '—'}
+                                         {item.support_2 ? <>
+                                           {' - '}{formatPrice(item.support_2, unit, 2)}
+                                           {lastN > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((lastN - SafeNumber(item.support_2)) / lastN * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                                         </> : ''}
+                                        </td>
+                                     )}
+                                     {visibleColumns.includes('pl') && (
+                                       <td className={`px-2 py-1.5 font-medium cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''} ${plAmount !== null ? (isInactive ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (plAmount >= 0 ? 'text-success' : 'text-danger') : (plAmount >= 0 ? `text-success ${isStale ? '' : 'opacity-90'}` : `text-danger ${isStale ? '' : 'opacity-90'}`))) : 'text-slate-500 italic'}`} onDoubleClick={(e) => handleCopy(e, plAmount)}>
+                                           {plAmount !== null ? formatPrice(plAmount, unit) : '—'}
+                                      </td>
+                                     )}
+                                     {visibleColumns.includes('pct') && (
                                        <td className={`px-2 py-1.5 whitespace-nowrap ${isStale ? 'opacity-40' : ''}`}>
                                          {pl != null ? (
                                            <span className={`flex items-center gap-0.5 font-medium ${isInactive ? (pl >= 0 ? 'text-success' : 'text-danger') : (isRealized ? (pl >= 0 ? 'text-success' : 'text-danger') : (pl >= 0 ? `text-success ${isStale ? '' : 'opacity-90'}` : `text-danger ${isStale ? '' : 'opacity-90'}`))}`}>
                                               {formatPercent(pl)}
                                            </span>
                                          ) : <span className="text-slate-500 italic">—</span>}
-                                    </td>
-                                    <td className="px-2 py-1.5 flex items-center gap-1 whitespace-nowrap">
-                                    <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} disabled={portfolio.active === false || portfolio.active === 0} className={`p-0.5 rounded transition-colors ${portfolio.active === false || portfolio.active === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand/10'}`} title={portfolio.active === false || portfolio.active === 0 ? 'ابتدا پرتفو را فعال کنید' : (item.active ? 'غیرفعال کردن' : 'فعال کردن')}>
-                                        {item.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
-                                      </button>
-                                     <button onClick={() => setEditingItem({ portfolioId: portfolio.id, itemId: item.id })} className="p-0.5 rounded hover:bg-brand/10 transition-colors">
-                                       <Pencil className="w-3 h-3 text-brand-500" />
-                                     </button>
-                                     <button onClick={() => handleDeleteItem(portfolio.id, item.id)} className="p-0.5 rounded hover:bg-danger/10 transition-colors">
-                                       <Trash2 className="w-3 h-3 text-danger" />
-                                     </button>
-                                  </td>
-                               </tr>
+                                     </td>
+                                     )}
+                                     {visibleColumns.includes('actions') && (
+                                       <td className="px-2 py-1.5 flex items-center gap-1 whitespace-nowrap">
+                                       <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} disabled={portfolio.active === false || portfolio.active === 0} className={`p-0.5 rounded transition-colors ${portfolio.active === false || portfolio.active === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand/10'}`} title={portfolio.active === false || portfolio.active === 0 ? 'ابتدا پرتفو را فعال کنید' : (item.active ? 'غیرفعال کردن' : 'فعال کردن')}>
+                                           {item.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
+                                         </button>
+                                        <button onClick={() => setEditingItem({ portfolioId: portfolio.id, itemId: item.id })} className="p-0.5 rounded hover:bg-brand/10 transition-colors">
+                                          <Pencil className="w-3 h-3 text-brand-500" />
+                                        </button>
+                                        <button onClick={() => handleDeleteItem(portfolio.id, item.id)} className="p-0.5 rounded hover:bg-danger/10 transition-colors">
+                                          <Trash2 className="w-3 h-3 text-danger" />
+                                        </button>
+                                     </td>
+                                     )}
+                                    </tr>
                              );
                            })}
                          </tbody>
