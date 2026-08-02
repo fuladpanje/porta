@@ -1,4 +1,4 @@
--- Porta Database Schema
+﻿-- Porta Database Schema
 -- Generated from Laravel migrations
 
 SET NAMES utf8mb4;
@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `schedule_seconds` int NOT NULL DEFAULT 0,
   `schedule_minutes` int NOT NULL DEFAULT 5,
   `schedule_hours` int NOT NULL DEFAULT 0,
+  `schedule_start_time` time NULL DEFAULT NULL,
+  `schedule_end_time` time NULL DEFAULT NULL,
   `commission_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `buy_commission` decimal(5,2) NOT NULL DEFAULT 0.37,
   `sell_commission` decimal(5,2) NOT NULL DEFAULT 0.88,
