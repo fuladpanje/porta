@@ -257,20 +257,23 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 
 ### نمای کلی جریان داده
 
-```mermaid
-flowchart TD
-    A["درخواست کاربر<br/>جستجوی نماد / داشبورد"] --> B{"کش در حافظه<br/>TTL: ۵ دقیقه"}
-    B -- "تازه" --> C["پاسخ از حافظه"]
-    B -- "قدیمی" --> D{"کش دیتابیس symbols_cache<br/>TTL: ۱۰ دقیقه"}
-    D -- "تازه" --> E["پاسخ از دیتابیس<br/>from_cache = true"]
-    D -- "قدیمی" --> F["درخواست به BRS API"]
-    F --> G{"پاسخ موفق؟"}
-    G -- "بله" --> H["ذخیره در symbols_cache<br/>Upsert بر اساس ISIN"]
-    H --> I["بروزرسانی قیمت portfolio_items<br/>فقط در صورت تغییر مقدار"]
-    I --> J["ثبت last_refresh_at<br/>و علامت‌گذاری is_stale = false"]
-    J --> K["پاسخ با داده تازه<br/>from_cache = false"]
-    G -- "خیر" --> L["فال‌بک به کش دیتابیس<br/>حتی اگر قدیمی باشد"]
-    L --> M["پاسخ از کش قدیمی<br/>from_cache = true"]
+```text
+درخواست کاربر (جستجو / داشبورد)
+        │
+        ├─ تازه ──► پاسخ از کش در حافظه (TTL: ۵ دقیقه)
+        ▼
+   کش دیتابیس (symbols_cache، TTL: ۱۰ دقیقه)
+        │
+        ├─ تازه ──► پاسخ از دیتابیس (from_cache = true)
+        ▼
+   درخواست به BRS API
+        │
+        ├─ موفق ──► ذخیره در symbols_cache (Upsert بر اساس ISIN)
+        │              └─► بروزرسانی portfolio_items (فقط در صورت تغییر)
+        │              └─► ثبت last_refresh_at و is_stale = false
+        │              └─► پاسخ با داده تازه (from_cache = false)
+        └─ ناموفق ──► فال‌بک به کش دیتابیس (حتی اگر قدیمی باشد)
+                        └─► پاسخ از کش قدیمی (from_cache = true)
 ```
 
 ### منبع داده
@@ -570,20 +573,23 @@ Stock price data is fetched from the **BRS API** (Tehran Stock Exchange) and cac
 
 ### High-level data flow
 
-```mermaid
-flowchart TD
-    A["User request<br/>symbol search / dashboard"] --> B{"In-memory cache<br/>TTL: 5 min"}
-    B -- "fresh" --> C["Respond from memory"]
-    B -- "stale" --> D{"DB cache symbols_cache<br/>TTL: 10 min"}
-    D -- "fresh" --> E["Respond from DB<br/>from_cache = true"]
-    D -- "stale" --> F["Call BRS API"]
-    F --> G{"Successful?"}
-    G -- "yes" --> H["Save into symbols_cache<br/>upsert by ISIN"]
-    H --> I["Update portfolio_items prices<br/>only if value changed"]
-    I --> J["Set last_refresh_at<br/>and is_stale = false"]
-    J --> K["Respond with fresh data<br/>from_cache = false"]
-    G -- "no" --> L["Fall back to DB cache<br/>even if stale"]
-    L --> M["Respond from stale cache<br/>from_cache = true"]
+```text
+User request (search / dashboard)
+        │
+        ├─ fresh ──► respond from in-memory cache (TTL: 5 min)
+        ▼
+   DB cache (symbols_cache, TTL: 10 min)
+        │
+        ├─ fresh ──► respond from DB (from_cache = true)
+        ▼
+   Call BRS API
+        │
+        ├─ success ──► save into symbols_cache (upsert by ISIN)
+        │              └─► update portfolio_items prices (only if changed)
+        │              └─► set last_refresh_at and is_stale = false
+        │              └─► respond with fresh data (from_cache = false)
+        └─ failed ──► fall back to DB cache (even if stale)
+                        └─► respond from stale cache (from_cache = true)
 ```
 
 ### Data source
