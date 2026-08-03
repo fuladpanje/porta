@@ -48,6 +48,7 @@ const COLUMNS = [
 const MOBILE_DEFAULT_COLUMNS = ['star', 'name', 'pl', 'plp', 'pcp', 'diff', 'pe', 'actions'];
 const DESKTOP_DEFAULT_COLUMNS = COLUMNS.map((c) => c.key);
 const STORAGE_KEY = 'allsymbols_column_preferences';
+const BUYER_POWER_MIGRATED_KEY = 'allsymbols_buyer_power_migrated';
 
 function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
   const { unit } = useUnit();
@@ -143,6 +144,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   value={portfolioId}
                   onChange={(e) => setPortfolioId(e.target.value)}
                   className="input-field w-full text-xs py-2"
+                  dir="rtl"
                   required
                 >
                   <option value="">انتخاب پرتفو...</option>
@@ -290,7 +292,17 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
-          return [...new Set([...required, ...parsed])];
+          let result = [...new Set([...required, ...parsed])];
+          // یک‌بار برای کاربران قبلی — ستون قدرت خریدار پیش‌فرض نمایش داده شود
+          if (!localStorage.getItem(BUYER_POWER_MIGRATED_KEY)) {
+            const buyerPowerCol = COLUMNS.find((c) => c.key === 'buyer_power');
+            if (buyerPowerCol && !result.includes('buyer_power')) {
+              result.push('buyer_power');
+            }
+            try { localStorage.setItem(BUYER_POWER_MIGRATED_KEY, '1'); } catch {}
+          }
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(result)); } catch {}
+          return result;
         }
       }
     } catch {}

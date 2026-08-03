@@ -6,8 +6,8 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter } from 'lucide-react';
-import { Chart as ChartComponent, Line, Bar, Doughnut } from 'react-chartjs-2';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter } from 'lucide-react';
+import { Chart as ChartComponent, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { Chart as ChartJS } from 'chart.js';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
@@ -65,6 +65,7 @@ const [showItemForm, setShowItemForm] = useState(null);
     const [treemapColorMode, setTreemapColorMode] = useState('performance');
     const [activeChart, setActiveChart] = useState('allocation');
     const [chartsExpanded, setChartsExpanded] = useState(true);
+    const [chartPortfolioId, setChartPortfolioId] = useState(null);
 const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
       const [showInactivePortfolios, setShowInactivePortfolios] = useState(false);
       const [showPortfolios, setShowPortfolios] = useState(true);
@@ -75,7 +76,16 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const required = COLUMNS.filter((c) => !c.hideable).map((c) => c.key);
-          return [...new Set([...required, ...parsed])];
+          let result = [...new Set([...required, ...parsed])];
+          // یک‌بار برای کاربران قبلی — ستون قدرت خریدار پیش‌فرض نمایش داده شود
+          if (!localStorage.getItem('dashboard_buyer_power_migrated')) {
+            if (!result.includes('buyer_power')) {
+              result.push('buyer_power');
+            }
+            try { localStorage.setItem('dashboard_buyer_power_migrated', '1'); } catch {}
+          }
+          try { localStorage.setItem('dashboard_column_preferences', JSON.stringify(result)); } catch {}
+          return result;
         }
       }
     } catch {}
@@ -123,6 +133,13 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
   const sellFilter = { all: 'all', realized: 'sold', unrealized: 'unsold' }[plMode] || 'all';
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  // ریست فیلتر پرتفو اگه پرتفوی انتخاب‌شده دیگه در لیست نباشه
+  useEffect(() => {
+    if (chartPortfolioId == null) return;
+    const ids = (dashboard?.portfolios || []).map((p) => p.id);
+    if (!ids.includes(chartPortfolioId)) setChartPortfolioId(null);
+  }, [dashboard, chartPortfolioId]);
 
   useEffect(() => {
     const handler = () => refreshDashboard();
@@ -210,7 +227,8 @@ const soldCost = items.reduce((s, i) => {
 const allItems = useMemo(() => {
      const rawPortfolios = dashboard?.portfolios || [];
      const activePortfolios = showInactivePortfolios ? rawPortfolios : rawPortfolios.filter((p) => p.active !== false && p.active !== 0);
-     let items = activePortfolios.flatMap((p) => {
+     const filteredPortfolios = chartPortfolioId ? activePortfolios.filter((p) => p.id === chartPortfolioId) : activePortfolios;
+     let items = filteredPortfolios.flatMap((p) => {
        const usePC = !!p.commission_enabled;
        const commEnabled = usePC ? true : (user?.commission_enabled || false);
        const commRate = usePC ? (p.sell_commission || 0.88) / 100 : (user?.sell_commission || 0.88) / 100;
@@ -220,16 +238,17 @@ const allItems = useMemo(() => {
        items = items.filter((i) => i.active !== false);
      }
      return items;
-   }, [dashboard, showInactivePortfolios, showInactiveChartItems, user?.commission_enabled, user?.sell_commission]);
+   }, [dashboard, showInactivePortfolios, showInactiveChartItems, chartPortfolioId, user?.commission_enabled, user?.sell_commission]);
     const allocationItems = useMemo(() => {
       const rawPortfolios = dashboard?.portfolios || [];
       const activePortfolios = showInactivePortfolios ? rawPortfolios : rawPortfolios.filter((p) => p.active !== false && p.active !== 0);
-      let items = activePortfolios.flatMap((p) => p.items || []);
+      const filteredPortfolios = chartPortfolioId ? activePortfolios.filter((p) => p.id === chartPortfolioId) : activePortfolios;
+      let items = filteredPortfolios.flatMap((p) => p.items || []);
       if (!showInactiveChartItems) {
         items = items.filter((i) => i.active !== false);
       }
       return items;
-    }, [dashboard, showInactivePortfolios, showInactiveChartItems]);
+    }, [dashboard, showInactivePortfolios, showInactiveChartItems, chartPortfolioId]);
    const totalAllItems = portfolios.reduce((sum, p) => sum + SafeNumber(p._count), 0);
 
 const totals = useMemo(() => {
@@ -407,16 +426,15 @@ const totals = useMemo(() => {
               >
                 {chartsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </button>
-              {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'treemap' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'price' ? <BarChart3 className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
-              <span className="sm:hidden">{activeChart === 'allocation' ? 'ترکیب' : activeChart === 'treemap' ? 'نقشه درختی' : activeChart === 'price' ? 'قیمت' : 'سود و زیان'}</span>
-              <span className="hidden sm:inline">{activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'treemap' ? 'نقشه درختی دارایی‌ها' : activeChart === 'price' ? 'نمودار قیمت‌ها' : 'سود و زیان'}</span>
+              {activeChart === 'allocation' ? <Package className="w-4 h-4 text-brand-500" /> : activeChart === 'treemap' ? <Package className="w-4 h-4 text-brand-500" /> : <TrendingUp className="w-4 h-4 text-brand-500" />}
+              <span className="sm:hidden">{activeChart === 'allocation' ? 'ترکیب' : activeChart === 'treemap' ? 'نقشه درختی' : 'سود و زیان'}</span>
+              <span className="hidden sm:inline">{activeChart === 'allocation' ? 'ترکیب ارزش دارایی‌ها' : activeChart === 'treemap' ? 'نقشه درختی دارایی‌ها' : 'سود و زیان'}</span>
             </h2>
             <div className="flex items-center gap-2">
               {chartsExpanded && <div role="tablist" aria-label="نمودارهای داشبورد" className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
               {[
                 { id: 'allocation', label: 'ترکیب', icon: <Package className="w-3.5 h-3.5" /> },
                 { id: 'treemap', label: 'نقشه درختی', icon: <Package className="w-3.5 h-3.5" /> },
-                { id: 'price', label: 'قیمت', icon: <BarChart3 className="w-3.5 h-3.5" /> },
                 { id: 'profitLoss', label: 'سود و زیان', icon: <TrendingUp className="w-3.5 h-3.5" /> },
               ].map((chart) => (
                 <button
@@ -491,6 +509,27 @@ const totals = useMemo(() => {
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${showInactiveChartItems ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
+                {/* فیلتر پرتفو */}
+                {(dashboard?.portfolios || []).length > 1 && (
+                  <div className="relative flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                    <select
+                      value={chartPortfolioId ?? ''}
+                      onChange={(e) => setChartPortfolioId(e.target.value ? Number(e.target.value) : null)}
+                      className="appearance-none text-[10px] bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-0 rounded-md shadow-sm pr-2.5 pl-6 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer rtl-text"
+                      dir="rtl"
+                    >
+                      <option value="">همه پرتفوها</option>
+                      {(dashboard?.portfolios || []).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="2,4 6,8 10,4" />
+                      </svg>
+                    </span>
+                  </div>
+                )}
                 {activeChart === 'treemap' && (
                   <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
                     <button
@@ -533,7 +572,6 @@ const totals = useMemo(() => {
            {chartsExpanded && <div role="tabpanel" className={`h-80 pb-4 ${activeChart !== 'profitLoss' ? 'mt-5' : ''}`}>
               {activeChart === 'allocation' && <PortfolioAllocationChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} />}
                {activeChart === 'treemap' && <TreemapChart items={allItems} unit={unit} sellFilter={sellFilter} plMode={plMode} colorMode={treemapColorMode} />}
-        {activeChart === 'price' && <PriceChart items={allItems} unit={unit} plMode={plMode} />}
         {activeChart === 'profitLoss' && <PLChart items={allItems} showAmount={showPLAmount} unit={unit} plMode={plMode} />}
            </div>}
          </div>
@@ -1229,47 +1267,6 @@ function PortfolioAllocationChart({ items, unit, sellFilter, plMode }) {
       </div>
     </div>
   );
-}
-
-function PriceChart({ items, unit, plMode }) {
-    const validItems = useMemo(() => {
-      if (!items || items.length === 0) return [];
-      return items.filter((i) => {
-        if (i.buy_price == null || i.buy_price <= 0 || !i.symbol) return false;
-        const hasSell = i.sell_price && i.sell_price > 0;
-        const hasLast = i.last_price && i.last_price > 0;
-        if (plMode === 'realized') return hasSell;
-        if (plMode === 'unrealized') return !hasSell && hasLast;
-        return hasSell || hasLast;
-      });
-    }, [items, plMode]);
-    const chartData = useMemo(() => {
-      if (validItems.length === 0) return null;
-      const labels = validItems.map((i) => i.symbol);
-      const buyData = validItems.map((i) => SafeNumber(i.buy_price));
-      const sellData = validItems.map((i) => SafeNumber(i.sell_price && i.sell_price > 0 ? i.sell_price : i.last_price));
-      return {
-        labels,
-        datasets: [
-{ label: 'خرید', data: buyData, borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.10)', fill: true, tension: 0.4, pointRadius: 2, pointHoverRadius: 4, borderWidth: 2 },
-          { label: 'فروش / آخرین قیمت', data: sellData, borderColor: '#10B981', backgroundColor: 'transparent', borderDash: [4, 4], tension: 0.4, pointRadius: 2, borderWidth: 1.5 },
-        ],
-     };
-   }, [validItems]);
-  const options = useMemo(() => ({
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 12, color: '#94A3B8', font: { size: 10 } } },
-        tooltip: { direction: 'rtl', bodyAlign: 'right', titleAlign: 'right', displayColors: false, padding: 10, cornerRadius: 8, bodyFont: { size: 11, family: "'Vazirmatn', system-ui, sans-serif" }, backgroundColor: '#0F172A', borderColor: 'transparent', borderWidth: 0, callbacks: { label: (ctx) => { const item = validItems[ctx.dataIndex]; const value = unit === 'toman' ? (ctx.parsed?.y ?? 0) / 10 : (ctx.parsed?.y ?? 0); const label = ctx.datasetIndex === 0 ? 'خرید' : (item && item.sell_price && item.sell_price > 0 ? 'فروش' : 'آخرین قیمت'); const lines = [`${label}: ${value.toLocaleString('fa-IR', { maximumFractionDigits: 0 })} ${unit === 'toman' ? 'تومان' : 'ریال'}`]; if (item) { const sellN = item.sell_price && item.sell_price > 0 ? SafeNumber(item.sell_price) : null; const isRealized = sellN !== null; lines.push(isRealized ? 'سود محقق شده' : 'سود محقق نشده'); } return lines; }, labelTextColor: (ctx) => ctx.datasetIndex === 0 ? '#34D399' : '#F87171' } },
-    },
-    scales: {
-      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94A3B8', font: { size: 9, weight: '600' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
-      y: { border: { display: false }, grid: { color: 'rgba(148, 163, 184, 0.16)', drawTicks: false }, ticks: { color: '#94A3B8', font: { size: 9 }, padding: 6, maxTicksLimit: 4, callback: (value) => Number(unit === 'toman' ? Number(value) / 10 : value).toLocaleString('fa-IR', { notation: 'compact', maximumFractionDigits: 1 }) } },
-    },
-    elements: { line: { borderWidth: 2 }, point: { radius: 2 } },
-  }), [unit, validItems]);
-  if (!chartData) return <div className="h-36 flex items-center justify-center text-slate-300 text-xs">بدون داده قیمت</div>;
-  return <div className="h-full"><Line key="price-chart" data={chartData} options={options} /></div>;
 }
 
 function PLChart({ items, showAmount, unit, plMode }) {
