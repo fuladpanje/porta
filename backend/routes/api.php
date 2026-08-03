@@ -48,6 +48,11 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['data' => ['schedule' => $schedule]]);
     });
 
+    Route::get('/system/last-refresh', function () {
+        $lastRefreshAt = \App\Models\SystemSetting::get('last_refresh_at');
+        return response()->json(['data' => ['last_refresh_at' => $lastRefreshAt]]);
+    });
+
     // Admin routes
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::get('/settings', [AdminController::class, 'getSettings']);

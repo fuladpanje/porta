@@ -355,21 +355,26 @@ class StockController extends Controller
                 return response()->json(['message' => 'فقط مدیر سیستم امکان بروزرسانی دستی را دارد.'], 403);
             }
 
-            $schedule = \App\Models\SystemSetting::getSchedule();
-            if ($schedule['enabled']) {
-                $start = $schedule['start_time'];
-                $end = $schedule['end_time'];
-                if ($start && $end) {
-                    $now = now()->format('H:i');
-                    $inRange = $start <= $end
-                        ? ($now >= $start && $now <= $end)
-                        : ($now >= $start || $now <= $end);
-                    if (!$inRange) {
-                        return response()->json([
-                            'message' => 'بازار بسته است. بروزرسانی خودکار در بازه زمانی غیرفعال انجام نمی‌شود.',
-                            'updated' => 0,
-                            'market_closed' => true,
-                        ], 400);
+            // Time-range check only applies to automatic/scheduled refreshes,
+            // NOT to manual refresh triggered by the admin button.
+            $isManual = $request->boolean('manual', false);
+            if (!$isManual) {
+                $schedule = \App\Models\SystemSetting::getSchedule();
+                if ($schedule['enabled']) {
+                    $start = $schedule['start_time'];
+                    $end = $schedule['end_time'];
+                    if ($start && $end) {
+                        $now = now()->format('H:i');
+                        $inRange = $start <= $end
+                            ? ($now >= $start && $now <= $end)
+                            : ($now >= $start || $now <= $end);
+                        if (!$inRange) {
+                            return response()->json([
+                                'message' => 'بازار بسته است. بروزرسانی خودکار در بازه زمانی غیرفعال انجام نمی‌شود.',
+                                'updated' => 0,
+                                'market_closed' => true,
+                            ], 400);
+                        }
                     }
                 }
             }
@@ -377,7 +382,6 @@ class StockController extends Controller
             $apiKeys = $this->getSystemApiKeys();
 
             if (empty($apiKeys)) {
-                $user->update(['is_stale' => true]);
                 return response()->json([
                     'message' => 'No API keys configured. Please ask admin to add an API key.',
                 ], 400);
@@ -386,7 +390,6 @@ class StockController extends Controller
             $symbols = $this->fetchAllSymbolsWithSystemKeys(true);
 
             if (empty($symbols)) {
-                $user->update(['is_stale' => true]);
                 return response()->json([
                     'message' => 'دریافت قیمت‌ها از سرور بیرونی ممکن نیست. لطفاً با پشتیبانی تماس بگیرید.',
                     'updated' => 0,
@@ -405,46 +408,48 @@ class StockController extends Controller
 
             $updated = 0;
 
-            foreach ($user->portfolios()->with('items')->get() as $portfolio) {
+            // Update ALL users' portfolio items (not just the admin's)
+            $allPortfolios = \App\Models\Portfolio::with('items')->get();
+            foreach ($allPortfolios as $portfolio) {
                 foreach ($portfolio->items as $item) {
                     $key = strtolower($item->symbol);
-
                     if (isset($symbolMap[$key])) {
                         $symbol = $symbolMap[$key];
+                        $updateData = [];
                         $pl = $symbol['pl'] ?? null;
                         $pe = $symbol['pe'] ?? null;
-
                         if ($pl !== null && $pl != $item->last_price) {
-                            $item->update(['last_price' => $pl]);
-                            $updated++;
+                            $updateData['last_price'] = $pl;
                         }
-
                         if ($pe !== null && $pe != $item->pe) {
-                            $item->update(['pe' => $pe]);
+                            $updateData['pe'] = $pe;
+                        }
+                        if (!empty($updateData)) {
+                            $item->update($updateData);
+                            $updated++;
                         }
                     }
                 }
             }
 
-            $user->update(['is_stale' => false]);
+            // Mark all users as fresh and record the refresh timestamp (ISO 8601 UTC)
+            \App\Models\User::query()->update(['is_stale' => false]);
+            $refreshedAt = now()->utc()->toIso8601String();
+            \App\Models\SystemSetting::set('last_refresh_at', $refreshedAt);
 
             return response()->json([
                 'message' => 'Prices refreshed successfully',
                 'updated' => $updated,
+                'refreshed_at' => $refreshedAt,
             ]);
         } catch (\Throwable $e) {
-            $user = $request->user();
-            if ($user) {
-                $user->update(['is_stale' => true]);
-            }
             \Illuminate\Support\Facades\Log::error('refreshPrices failed', [
-                'user_id' => $user?->id,
+                'user_id' => $request->user()?->id,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile() . ':' . $e->getLine(),
             ]);
             return response()->json([
-                'message' => 'خطا در بروزرسانی قیمت‌ها',
-                'error' => $e->getMessage(),
+                'message' => 'خطا در بروزرسانی قیمت‌ها: ' . $e->getMessage(),
             ], 500);
         }
     }

@@ -273,7 +273,31 @@ export default function AdminSettings() {
             زمان‌بندی بروزرسانی خودکار
           </h2>
           <button
-            onClick={() => { setScheduleEnabled(!scheduleEnabled); }}
+            onClick={async () => {
+              const next = !scheduleEnabled;
+              setScheduleEnabled(next);
+              setSavingSchedule(true);
+              try {
+                const payload = {
+                  schedule_enabled: next,
+                  schedule_seconds: scheduleIntervalUnit === 'seconds' ? scheduleInterval : 0,
+                  schedule_minutes: scheduleIntervalUnit === 'minutes' ? scheduleInterval : 0,
+                  schedule_hours: scheduleIntervalUnit === 'hours' ? scheduleInterval : 0,
+                  schedule_start_time: scheduleStartTime || null,
+                  schedule_end_time: scheduleEndTime || null,
+                };
+                await api.put('/admin/schedule', payload);
+                const userRes = await api.get('/user');
+                updateUser(userRes.data.user);
+                setSuccess(next ? 'زمان‌بندی فعال شد.' : 'زمان‌بندی غیرفعال شد.');
+                setTimeout(() => setSuccess(''), 3000);
+              } catch (err) {
+                setScheduleEnabled(!next); // revert on error
+                setError(err.response?.data?.message || 'خطا در ذخیره تنظیمات');
+              } finally {
+                setSavingSchedule(false);
+              }
+            }}
             className={`relative w-11 h-6 rounded-full transition-colors ${scheduleEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${scheduleEnabled ? 'translate-x-5' : 'translate-x-0'}`} />

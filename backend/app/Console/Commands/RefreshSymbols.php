@@ -175,6 +175,8 @@ class RefreshSymbols extends Command
 
         \App\Models\User::query()->update(['is_stale' => false]);
 
+        \App\Models\SystemSetting::set('last_refresh_at', now()->utc()->toIso8601String());
+
         $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.');
     }
 }

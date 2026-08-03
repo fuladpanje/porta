@@ -3,26 +3,62 @@ import { useAuth } from '../hooks/useAuth';
 import { useUnit } from '../contexts/UnitContext';
 import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
+import { useSize } from '../contexts/SizeContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX } from 'lucide-react';
+import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2 } from 'lucide-react';
 import { stockApi } from '../lib/api';
 import api from '../lib/api';
+
+function UserRefreshBadge({ lastRefresh, stale, isInScheduleRange }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const hasIssue = stale || !isInScheduleRange;
+
+  const tooltipText = !isInScheduleRange
+    ? 'بازار بسته است — بروزرسانی خودکار تا باز شدن بازار متوقف شده است.'
+    : stale
+    ? 'داده‌ها قدیمی هستند — آخرین بروزرسانی با مشکل مواجه شد.'
+    : null;
+
+  return (
+    <div className="relative flex items-center" dir="ltr">
+      <button
+        type="button"
+        onClick={() => hasIssue && setShowTooltip((v) => !v)}
+        onBlur={() => setShowTooltip(false)}
+        className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full rtl-text whitespace-nowrap flex items-center gap-1 focus:outline-none"
+        aria-label="آخرین بروزرسانی"
+      >
+        {stale && <AlertTriangle className="w-3 h-3 text-amber-500" />}
+        {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' })}
+        {isInScheduleRange
+          ? <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+          : <CircleX className="w-3 h-3 text-red-500" />
+        }
+      </button>
+
+      {showTooltip && tooltipText && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-56 bg-slate-800 dark:bg-slate-700 text-white text-[11px] rounded-lg px-3 py-2 shadow-lg rtl-text leading-relaxed pointer-events-none text-right" dir="rtl">
+          {tooltipText}
+          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-800 dark:bg-slate-700 rotate-45 rounded-sm" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Header() {
    const { user, logout, updateUser } = useAuth();
    const { unit, toggleUnit } = useUnit();
    const { plMode, setPlMode } = useProfitLoss();
    const { stale, setStale } = useStaleData();
+   const { size, toggleSize } = useSize();
    const navigate = useNavigate();
   const location = useLocation();
   const isSymbolsPage = location.pathname === '/symbols';
   const isSettingsPage = location.pathname === '/settings';
   const hidePlBySell = isSymbolsPage || isSettingsPage;
    const [refreshing, setRefreshing] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(() => {
-    const stored = localStorage.getItem('last_schedule_refresh');
-    return stored ? new Date(Number(stored)) : null;
-  });
+  const [lastRefresh, setLastRefresh] = useState(null);
   const [isInScheduleRange, setIsInScheduleRange] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef(null);
@@ -42,6 +78,23 @@ export function Header() {
     }
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  // Fetch last_refresh_at from server on mount and keep it in sync.
+  // This ensures all browsers/tabs show the same timestamp.
+  useEffect(() => {
+    const fetchLastRefresh = () => {
+      api.get('/system/last-refresh')
+        .then((res) => {
+          const val = res.data?.data?.last_refresh_at;
+          if (val) setLastRefresh(new Date(val));
+        })
+        .catch(() => {});
+    };
+
+    fetchLastRefresh();
+    const t = setInterval(fetchLastRefresh, 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     handleRefreshRef.current = handleRefresh;
@@ -92,12 +145,30 @@ export function Header() {
         // Set initial range state immediately
         setIsInScheduleRange(checkRange());
 
+        // On mount (or when settings change), fire immediately if the last
+        // known refresh is older than the configured interval.
+        api.get('/system/last-refresh').then((res) => {
+          const val = res.data?.data?.last_refresh_at;
+          const lastMs = val ? new Date(val).getTime() : 0;
+          const elapsed = Date.now() - lastMs;
+          if (elapsed >= ms && checkRange()) {
+            handleRefreshRef.current();
+          }
+        }).catch(() => {});
+
         // Refresh interval — only fires if currently in range
         intervalRef.current = setInterval(() => {
           const inRange = checkRange();
           setIsInScheduleRange(inRange);
           if (inRange) {
             handleRefreshRef.current();
+            // Sync lastRefresh from server after auto-refresh fires
+            api.get('/system/last-refresh')
+              .then((res) => {
+                const val = res.data?.data?.last_refresh_at;
+                if (val) setLastRefresh(new Date(val));
+              })
+              .catch(() => {});
           }
         }, ms);
 
@@ -105,7 +176,8 @@ export function Header() {
         // This makes the red icon appear/disappear within ~1 minute of
         // the range boundary, regardless of how long the refresh interval is.
         rangeCheckRef.current = setInterval(() => {
-          setIsInScheduleRange(checkRange());
+          const inRange = checkRange();
+          setIsInScheduleRange(inRange);
         }, 60_000);
       }
     } else if (!user?.schedule_enabled) {
@@ -124,11 +196,7 @@ export function Header() {
     };
   }, [user?.schedule_enabled, user?.schedule_seconds, user?.schedule_minutes, user?.schedule_hours, user?.has_api_keys, user?.schedule_start_time, user?.schedule_end_time]);
 
-  useEffect(() => {
-    if (lastRefresh) {
-      localStorage.setItem('last_schedule_refresh', lastRefresh.getTime().toString());
-    }
-  }, [lastRefresh]);
+  // lastRefresh comes from the server — no need to persist in localStorage
 
   useEffect(() => {
     if (user) {
@@ -142,15 +210,22 @@ export function Header() {
      try {
        if (user?.is_admin) {
          // Admin: call BRS API to fetch fresh prices and update all portfolio items
-         await stockApi.refreshPrices();
+         await stockApi.refreshPrices(true); // manual=true skips time-range check
+         // Fetch the canonical timestamp from server (already in UTC, displayed with Tehran tz)
+         api.get('/system/last-refresh')
+           .then((res) => {
+             const val = res.data?.data?.last_refresh_at;
+             if (val) setLastRefresh(new Date(val));
+           })
+           .catch(() => {});
        }
        // All users: notify dashboard to re-fetch (cron job already updated portfolio_items)
-       setLastRefresh(new Date());
        window.dispatchEvent(new Event('prices-refreshed'));
        setStale(false);
        api.put('/user/stale', { is_stale: false });
        updateUser({ ...user, is_stale: false });
      } catch (err) {
+       // Applies to both admin (API call failed) and non-admin (dashboard re-fetch failed)
        setStale(true);
        api.put('/user/stale', { is_stale: true });
        updateUser({ ...user, is_stale: true });
@@ -188,7 +263,7 @@ export function Header() {
                <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 group-hover:bg-brand-500/20 group-hover:text-brand-500 px-2 py-1 rounded-full rtl-text whitespace-nowrap flex items-center gap-1 transition-colors">
                  <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
                  {stale && <AlertTriangle className="w-3 h-3 text-amber-500" title="داده‌ها قدیمی هستند" />}
-                 {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}
+                 {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' })}
                  {user?.schedule_enabled && user?.has_api_keys && (
                    isInScheduleRange
                      ? <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" title="زمان‌بندی فعال" />
@@ -204,13 +279,11 @@ export function Header() {
           </button>
           ) : (
             lastRefresh && user?.schedule_enabled && user?.has_api_keys && (
-              <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full rtl-text whitespace-nowrap flex items-center gap-1" dir="ltr">
-                {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}
-                {isInScheduleRange
-                  ? <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" title="زمان‌بندی فعال" />
-                  : <CircleX className="w-3 h-3 text-red-500" title="بازار بسته است" />
-                }
-              </span>
+              <UserRefreshBadge
+                lastRefresh={lastRefresh}
+                stale={stale}
+                isInScheduleRange={isInScheduleRange}
+              />
             )
           )}
           </>
@@ -284,6 +357,22 @@ export function Header() {
                   </span>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isDark ? 'bg-brand-500/10 text-brand-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                     {isDark ? 'شب' : 'روز'}
+                  </span>
+                </button>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-700 my-2" />
+
+                {/* Size Toggle */}
+                <button
+                  onClick={() => { toggleSize(); setShowSettings(false); }}
+                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300">
+                    {size === 'large' ? <Maximize2 className="w-3.5 h-3.5 text-slate-400" /> : <Minimize2 className="w-3.5 h-3.5 text-slate-400" />}
+                    اندازه محتوا
+                  </span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${size === 'large' ? 'bg-brand-500/10 text-brand-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                    {size === 'large' ? 'بزرگ' : 'پیش‌فرض'}
                   </span>
                 </button>
 

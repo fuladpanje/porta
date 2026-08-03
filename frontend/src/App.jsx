@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ProfitLossProvider } from './contexts/ProfitLossContext';
 import { StaleDataProvider } from './contexts/StaleDataContext';
+import { SizeProvider } from './contexts/SizeContext';
 import { Layout } from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -86,13 +87,15 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <ProfitLossProvider>
-        <StaleDataProvider>
-        <Routes>
-          <Route path="/*" element={<Layout><AppRoutes /></Layout>} />
-        </Routes>
-        </StaleDataProvider>
-      </ProfitLossProvider>
+      <SizeProvider>
+        <ProfitLossProvider>
+          <StaleDataProvider>
+          <Routes>
+            <Route path="/*" element={<Layout><AppRoutes /></Layout>} />
+          </Routes>
+          </StaleDataProvider>
+        </ProfitLossProvider>
+      </SizeProvider>
     </AuthProvider>
   );
 }
