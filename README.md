@@ -251,6 +251,91 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 
 ---
 
+## بروزرسانی داده‌ها و کش
+
+داده‌های قیمت سهام از وب‌سرویس **BRS API** (بورس تهران) دریافت و در دیتابیس کش می‌شود تا هم سرعت پاسخ افزایش یابد و هم تعداد درخواست‌های ارسالی به API به حداقل برسد. در این بخش معماری بروزرسانی داده‌ها، ذخیره‌سازی، کش و رفرش خودکار توضیح داده می‌شود.
+
+### نمای کلی جریان داده
+
+```mermaid
+flowchart TD
+    A["درخواست کاربر<br/>جستجوی نماد / داشبورد"] --> B{"کش در حافظه<br/>TTL: ۵ دقیقه"}
+    B -- "تازه" --> C["پاسخ از حافظه"]
+    B -- "قدیمی" --> D{"کش دیتابیس symbols_cache<br/>TTL: ۱۰ دقیقه"}
+    D -- "تازه" --> E["پاسخ از دیتابیس<br/>from_cache = true"]
+    D -- "قدیمی" --> F["درخواست به BRS API"]
+    F --> G{"پاسخ موفق؟"}
+    G -- "بله" --> H["ذخیره در symbols_cache<br/>Upsert بر اساس ISIN"]
+    H --> I["بروزرسانی قیمت portfolio_items<br/>فقط در صورت تغییر مقدار"]
+    I --> J["ثبت last_refresh_at<br/>و علامت‌گذاری is_stale = false"]
+    J --> K["پاسخ با داده تازه<br/>from_cache = false"]
+    G -- "خیر" --> L["فال‌بک به کش دیتابیس<br/>حتی اگر قدیمی باشد"]
+    L --> M["پاسخ از کش قدیمی<br/>from_cache = true"]
+```
+
+### منبع داده
+
+- **اندپوینت**: `https://Api.BrsApi.ir/Tsetmc/AllSymbols.php?key={API_KEY}`
+- خروجی شامل اطلاعات کامل همه نمادهای بازار بورس ایران است: کد ISIN، نام کوتاه/کامل، آخرین قیمت، نسبت P/E، درصد و مبلغ تغییر قیمت، صنعت و آمار سفارش‌ها.
+
+### ذخیره‌سازی در دیتابیس
+
+| جدول | نقش |
+|------|-----|
+| `symbols_cache` | کش کامل همه نمادها؛ کلید یکتای `isin` و بروزرسانی با `upsert` |
+| `portfolio_items` | اعمال آخرین قیمت، P/E و آمار سفارش‌ها روی سهام هر پورتفولیو |
+| `system_settings` | تنظیمات و ابرداده (کلیدهای API، زمان‌بندی، `last_refresh_at`) |
+
+> نکته: در `portfolio_items` مقدار یک فیلد فقط در صورتی آپدیت می‌شود که نسبت به مقدار قبلی تغییر کرده باشد تا تعداد رکوردهای تغییر یافته و ترافیک دیتابیس به حداقل برسد.
+
+### استفاده از کش دیتابیس
+
+- وقتی کش دیتابیس «تازه» است (بر اساس `symbols_cache_age_minutes` که پیش‌فرض ۱۰ دقیقه است)، درخواست‌ها مستقیماً از دیتابیس پاسخ داده می‌شوند و هیچ تماسی با API زده نمی‌شود.
+- پاسخ‌ها پرچم `from_cache` دارند تا کلاینت بداند داده از کش آمده یا مستقیم از API.
+- اگر API در دسترس نباشد (خطا یا انقضای کلید)، سیستم به‌صورت خودکار **فال‌بک** به آخرین داده کش‌شده در دیتابیس می‌دهد تا صفحه‌ها خالی نمانند (graceful degradation).
+
+### رفرش خودکار
+
+رفرش خودکار توسط کامند `symbols:refresh` انجام می‌شود که هر دقیقه توسط Cron اجرا شده و با این ۴ شرط تصمیم‌گیری می‌کند:
+
+```mermaid
+flowchart TD
+    A["هر دقیقه: اجرای symbols:refresh"] --> B{"زمان‌بندی فعال است؟"}
+    B -- "خیر" --> Z["پایان"]
+    B -- "بله" --> C{"فاصله زمانی معتبر؟<br/>ساعت + دقیقه + ثانیه > ۰"}
+    C -- "خیر" --> Z
+    C -- "بله" --> D{"در بازه زمانی بازار هستیم؟<br/>start_time تا end_time"}
+    D -- "خیر" --> Z
+    D -- "بله" --> E{"از آخرین اجرا به اندازه<br/>فاصله تعیین‌شده گذشته است؟"}
+    E -- "خیر" --> Z
+    E -- "بله" --> F["دریافت داده از API و ذخیره در دیتابیس"]
+```
+
+- **فاصله زمانی**: ثانیه، دقیقه و ساعت را ادمین از پنل تنظیمات ادمین مشخص می‌کند.
+- **بازه زمانی بازار**: شروع و پایان اجرا تعیین می‌شود و بازه‌های شبانه (مثلاً ۲۱:۰۰ تا ۰۸:۰۰) هم پشتیبانی می‌شود؛ خارج از این بازه رفرش انجام نمی‌شود.
+- **ردیابی اجرا**: زمان آخرین اجرا در دیتابیس ذخیره می‌شود (نه در حافظه کش) تا در هاست‌های اشتراکی که ریست می‌شوند، قابل اعتماد باشد.
+
+### مدیریت بهینه استفاده از API
+
+- **کش چندلایه**: حافظه (۵ دقیقه)، دیتابیس (۱۰ دقیقه) و کش سمت کلاینت برای جلوگیری از درخواست‌های تکراری.
+- **کلیدهای چندگانه و Failover**: ادمین می‌تواند چند کلید API ثبت کند. با فعال بودن **Auto Switch**، سیستم به ترتیب کلیدها را امتحان می‌کند تا یکی موفق شود؛ اگر غیرفعال باشد فقط از کلید پیش‌فرض استفاده می‌شود.
+- **عدم آپدیت بی‌مورد**: قیمت‌ها فقط در صورت تغییر واقعی ذخیره می‌شوند.
+- **پایان خارج از ساعت بازار**: در بازه‌ای که بازار بسته است، هیچ درخواستی به API ارسال نمی‌شود.
+- **درج دسته‌ای**: ذخیره نمادها در بسته‌های ۵۰۰تایی انجام می‌شود تا فشار به دیتابیس کاهش یابد.
+
+### بروزرسانی دستی
+
+- ادمین می‌تواند از دکمه «بروزرسانی قیمت‌ها» در هدر، با `manual=true` بروزرسانی را خارج از بازه زمانی هم انجام دهد.
+- از مسیر `POST /api/admin/refresh-symbols` نیز کامند رفرش مستقیماً اجرا می‌شود.
+
+### رفتار سمت کلاینت
+
+- فرانت‌اند اگر زمان‌بندی برای کاربر فعال باشد، با همان فاصله زمانی یک تایمر محلی می‌سازد و فقط در بازه بازار، داده را از سرور دریافت می‌کند.
+- بعد از هر رفرش، رویداد `prices-refreshed` منتشر می‌شود تا داشبورد و صفحات دیگر داده جدید را دوباره بگیرند.
+- نشانگر زمان آخرین بروزرسانی در هدر نمایش داده می‌شود و در صورت قدیمی بودن داده‌ها (`is_stale`) یک آیکن هشدار نشان داده می‌شود.
+
+---
+
 <a id="english-version"></a>
 
 # 🇺🇸 English Version
@@ -476,6 +561,91 @@ Access admin settings from the **Admin Settings** menu.
 | `setting_value` | text | `null` | Setting value |
 | `description` | string(255) | `null` | Description |
 | `created_at` / `updated_at` | timestamp | — | Timestamps |
+
+---
+
+## Data Update & Caching
+
+Stock price data is fetched from the **BRS API** (Tehran Stock Exchange) and cached in the database so responses stay fast and the number of API calls stays minimal. This section explains the update architecture, storage, caching and auto-refresh behavior.
+
+### High-level data flow
+
+```mermaid
+flowchart TD
+    A["User request<br/>symbol search / dashboard"] --> B{"In-memory cache<br/>TTL: 5 min"}
+    B -- "fresh" --> C["Respond from memory"]
+    B -- "stale" --> D{"DB cache symbols_cache<br/>TTL: 10 min"}
+    D -- "fresh" --> E["Respond from DB<br/>from_cache = true"]
+    D -- "stale" --> F["Call BRS API"]
+    F --> G{"Successful?"}
+    G -- "yes" --> H["Save into symbols_cache<br/>upsert by ISIN"]
+    H --> I["Update portfolio_items prices<br/>only if value changed"]
+    I --> J["Set last_refresh_at<br/>and is_stale = false"]
+    J --> K["Respond with fresh data<br/>from_cache = false"]
+    G -- "no" --> L["Fall back to DB cache<br/>even if stale"]
+    L --> M["Respond from stale cache<br/>from_cache = true"]
+```
+
+### Data source
+
+- **Endpoint**: `https://Api.BrsApi.ir/Tsetmc/AllSymbols.php?key={API_KEY}`
+- Returns full info for every symbol in the Iran stock market: ISIN code, short/full name, last price, P/E ratio, price change % and amount, sector and order-book stats.
+
+### Database storage
+
+| Table | Role |
+|-------|------|
+| `symbols_cache` | Full snapshot of all symbols; unique key `isin`, upserted on every refresh |
+| `portfolio_items` | Last price, P/E and order-book stats applied to each portfolio stock |
+| `system_settings` | Settings & metadata (API keys, schedule, `last_refresh_at`) |
+
+> Note: a field in `portfolio_items` is only written when its value actually changed, keeping DB writes and traffic to a minimum.
+
+### Using the database cache
+
+- When the DB cache is fresh (based on `symbols_cache_age_minutes`, default 10 minutes), requests are served directly from the database with **no API call**.
+- Responses include a `from_cache` flag so the client knows whether data came from cache or the API.
+- If the API is unreachable (error or expired key), the system automatically **falls back** to the latest cached data (graceful degradation) so pages never render empty.
+
+### Auto refresh
+
+Auto refresh is handled by the `symbols:refresh` command, executed every minute by Cron. It makes a decision based on 4 conditions:
+
+```mermaid
+flowchart TD
+    A["Every minute: run symbols:refresh"] --> B{"Schedule enabled?"}
+    B -- "no" --> Z["Stop"]
+    B -- "yes" --> C{"Valid interval?<br/>hours + minutes + seconds > 0"}
+    C -- "no" --> Z
+    C -- "yes" --> D{"Within market time range?<br/>start_time to end_time"}
+    D -- "no" --> Z
+    D -- "yes" --> E{"Elapsed since last run<br/>>= configured interval?"}
+    E -- "no" --> Z
+    E -- "yes" --> F["Fetch from API and save to database"]
+```
+
+- **Interval**: seconds, minutes and hours are configured by the admin from the Admin Settings panel.
+- **Market time range**: a start and end time can be defined (overnight ranges such as 21:00–08:00 are supported); no refresh happens outside this window.
+- **Run tracking**: the last run timestamp is stored in the database (not in-memory cache) so it stays reliable on shared hosting where the process gets reset.
+
+### Efficient API usage
+
+- **Multi-layer caching**: in-memory (5 min), database (10 min) and client-side cache prevent duplicate calls.
+- **Multiple keys & failover**: the admin can register several API keys. With **Auto Switch** enabled the system tries each key in order until one succeeds; otherwise only the default key is used.
+- **No unnecessary writes**: prices are only stored when their value actually changes.
+- **Market-hours gating**: while the market is closed, no requests are sent to the API.
+- **Batched inserts**: symbols are saved in batches of 500 to reduce database pressure.
+
+### Manual refresh
+
+- Admins can use the "Refresh prices" button in the header with `manual=true` to run a refresh even outside the configured time range.
+- `POST /api/admin/refresh-symbols` runs the refresh command directly.
+
+### Client-side behavior
+
+- When a schedule is active, the frontend runs a local timer with the same interval and only fetches fresh data from the server during market hours.
+- After every refresh, a `prices-refreshed` window event is dispatched so the dashboard and other pages re-fetch the new data.
+- The header shows the last refresh time and displays a warning icon when data is stale (`is_stale`).
 
 ---
 
