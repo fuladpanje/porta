@@ -257,24 +257,13 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 
 ### نمای کلی جریان داده
 
-```text
-درخواست کاربر (جستجو / داشبورد)
-        │
-        ├─ تازه ──► پاسخ از کش در حافظه (TTL: ۵ دقیقه)
-        ▼
-   کش دیتابیس (symbols_cache، TTL: ۱۰ دقیقه)
-        │
-        ├─ تازه ──► پاسخ از دیتابیس (from_cache = true)
-        ▼
-   درخواست به BRS API
-        │
-        ├─ موفق ──► ذخیره در symbols_cache (Upsert بر اساس ISIN)
-        │              └─► بروزرسانی portfolio_items (فقط در صورت تغییر)
-        │              └─► ثبت last_refresh_at و is_stale = false
-        │              └─► پاسخ با داده تازه (from_cache = false)
-        └─ ناموفق ──► فال‌بک به کش دیتابیس (حتی اگر قدیمی باشد)
-                        └─► پاسخ از کش قدیمی (from_cache = true)
-```
+جریان بروزرسانی داده به این شکل است:
+
+1. درخواست کاربر ابتدا با کش در حافظه (TTL: ۵ دقیقه) و سپس با کش دیتابیس `symbols_cache` (TTL: ۱۰ دقیقه) چک می‌شود.
+2. اگر کش تازه باشد، داده مستقیماً از دیتابیس برگردانده می‌شود (`from_cache = true`) و هیچ تماسی با API گرفته نمی‌شود.
+3. اگر کش قدیمی باشد، درخواست به BRS API ارسال می‌شود.
+4. در صورت موفقیت، داده در `symbols_cache` ذخیره (Upsert بر اساس ISIN) و قیمت‌های `portfolio_items` بروزرسانی می‌شود. در نهایت `last_refresh_at` ثبت و پاسخ با داده تازه برمی‌گردد (`from_cache = false`).
+5. در صورت خطای API، سیستم به آخرین داده کش‌شده در دیتابیس فال‌بک می‌دهد (`from_cache = true`).
 
 ### منبع داده
 
@@ -299,20 +288,14 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 
 ### رفرش خودکار
 
-رفرش خودکار توسط کامند `symbols:refresh` انجام می‌شود که هر دقیقه توسط Cron اجرا شده و با این ۴ شرط تصمیم‌گیری می‌کند:
+رفرش خودکار توسط کامند `symbols:refresh` انجام می‌شود که هر دقیقه توسط Cron اجرا می‌شود و فقط در صورتی که همه این ۴ شرط برقرار باشد، داده را بروزرسانی می‌کند:
 
-```mermaid
-flowchart TD
-    A["هر دقیقه: اجرای symbols:refresh"] --> B{"زمان‌بندی فعال است؟"}
-    B -- "خیر" --> Z["پایان"]
-    B -- "بله" --> C{"فاصله زمانی معتبر؟<br/>ساعت + دقیقه + ثانیه > ۰"}
-    C -- "خیر" --> Z
-    C -- "بله" --> D{"در بازه زمانی بازار هستیم؟<br/>start_time تا end_time"}
-    D -- "خیر" --> Z
-    D -- "بله" --> E{"از آخرین اجرا به اندازه<br/>فاصله تعیین‌شده گذشته است؟"}
-    E -- "خیر" --> Z
-    E -- "بله" --> F["دریافت داده از API و ذخیره در دیتابیس"]
-```
+1. زمان‌بندی فعال باشد (`schedule_enabled`).
+2. فاصله زمانی معتبر باشد (مجموع ساعت، دقیقه و ثانیه بزرگ‌تر از صفر).
+3. در بازه زمانی بازار باشیم (`start_time` تا `end_time`).
+4. از آخرین اجرا به اندازه فاصله تعیین‌شده گذشته باشد.
+
+اگر همه شرایط برقرار بود، داده از API دریافت و در دیتابیس ذخیره می‌شود.
 
 - **فاصله زمانی**: ثانیه، دقیقه و ساعت را ادمین از پنل تنظیمات ادمین مشخص می‌کند.
 - **بازه زمانی بازار**: شروع و پایان اجرا تعیین می‌شود و بازه‌های شبانه (مثلاً ۲۱:۰۰ تا ۰۸:۰۰) هم پشتیبانی می‌شود؛ خارج از این بازه رفرش انجام نمی‌شود.
@@ -573,24 +556,13 @@ Stock price data is fetched from the **BRS API** (Tehran Stock Exchange) and cac
 
 ### High-level data flow
 
-```text
-User request (search / dashboard)
-        │
-        ├─ fresh ──► respond from in-memory cache (TTL: 5 min)
-        ▼
-   DB cache (symbols_cache, TTL: 10 min)
-        │
-        ├─ fresh ──► respond from DB (from_cache = true)
-        ▼
-   Call BRS API
-        │
-        ├─ success ──► save into symbols_cache (upsert by ISIN)
-        │              └─► update portfolio_items prices (only if changed)
-        │              └─► set last_refresh_at and is_stale = false
-        │              └─► respond with fresh data (from_cache = false)
-        └─ failed ──► fall back to DB cache (even if stale)
-                        └─► respond from stale cache (from_cache = true)
-```
+The data update flow works as follows:
+
+1. A request is first checked against the in-memory cache (TTL: 5 min) and then the `symbols_cache` DB table (TTL: 10 min).
+2. If the cache is fresh, data is served straight from the database (`from_cache = true`) with no API call.
+3. If the cache is stale, a request is sent to the BRS API.
+4. On success, data is saved into `symbols_cache` (upsert by ISIN) and `portfolio_items` prices are updated. `last_refresh_at` is recorded and fresh data is returned (`from_cache = false`).
+5. If the API fails, the system falls back to the latest cached data in the database (`from_cache = true`).
 
 ### Data source
 
@@ -615,20 +587,14 @@ User request (search / dashboard)
 
 ### Auto refresh
 
-Auto refresh is handled by the `symbols:refresh` command, executed every minute by Cron. It makes a decision based on 4 conditions:
+Auto refresh is handled by the `symbols:refresh` command, executed every minute by Cron. It only updates data when all of these 4 conditions are met:
 
-```mermaid
-flowchart TD
-    A["Every minute: run symbols:refresh"] --> B{"Schedule enabled?"}
-    B -- "no" --> Z["Stop"]
-    B -- "yes" --> C{"Valid interval?<br/>hours + minutes + seconds > 0"}
-    C -- "no" --> Z
-    C -- "yes" --> D{"Within market time range?<br/>start_time to end_time"}
-    D -- "no" --> Z
-    D -- "yes" --> E{"Elapsed since last run<br/>>= configured interval?"}
-    E -- "no" --> Z
-    E -- "yes" --> F["Fetch from API and save to database"]
-```
+1. Scheduling is enabled (`schedule_enabled`).
+2. The interval is valid (hours + minutes + seconds greater than zero).
+3. We are within the market time range (`start_time` to `end_time`).
+4. Enough time has passed since the last run.
+
+When all conditions are met, data is fetched from the API and saved to the database.
 
 - **Interval**: seconds, minutes and hours are configured by the admin from the Admin Settings panel.
 - **Market time range**: a start and end time can be defined (overnight ranges such as 21:00–08:00 are supported); no refresh happens outside this window.
