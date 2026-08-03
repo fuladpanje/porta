@@ -231,6 +231,10 @@ class StockController extends Controller
                 'plp' => $row->price_change_percent,
                 'pcp' => $row->price_change,
                 'cs' => $row->sector,
+                'Buy_I_Volume' => $row->buy_i_volume,
+                'Buy_CountI' => $row->buy_count_i,
+                'Sell_I_Volume' => $row->sell_i_volume,
+                'Sell_CountI' => $row->sell_count_i,
             ];
         })->toArray();
 
@@ -280,6 +284,10 @@ class StockController extends Controller
                     'price_change_percent' => is_numeric($symbol['plp'] ?? null) ? $symbol['plp'] : null,
                     'price_change' => is_numeric($symbol['pcp'] ?? null) ? $symbol['pcp'] : null,
                     'sector' => is_string($symbol['cs'] ?? null) ? $symbol['cs'] : null,
+                    'buy_i_volume' => is_numeric($symbol['Buy_I_Volume'] ?? null) ? $symbol['Buy_I_Volume'] : null,
+                    'buy_count_i' => is_numeric($symbol['Buy_CountI'] ?? null) ? $symbol['Buy_CountI'] : null,
+                    'sell_i_volume' => is_numeric($symbol['Sell_I_Volume'] ?? null) ? $symbol['Sell_I_Volume'] : null,
+                    'sell_count_i' => is_numeric($symbol['Sell_CountI'] ?? null) ? $symbol['Sell_CountI'] : null,
                     'last_updated_at' => $now,
                     'updated_at' => $now,
                 ]
@@ -304,6 +312,10 @@ class StockController extends Controller
                 'plp' => $symbol['plp'] ?? null,
                 'pcp' => $symbol['pcp'] ?? null,
                 'cs' => $symbol['cs'] ?? null,
+                'Buy_I_Volume' => $symbol['Buy_I_Volume'] ?? null,
+                'Buy_CountI' => $symbol['Buy_CountI'] ?? null,
+                'Sell_I_Volume' => $symbol['Sell_I_Volume'] ?? null,
+                'Sell_CountI' => $symbol['Sell_CountI'] ?? null,
             ];
         }, $apiSymbols);
 
@@ -423,6 +435,22 @@ class StockController extends Controller
                         }
                         if ($pe !== null && $pe != $item->pe) {
                             $updateData['pe'] = $pe;
+                        }
+                        $buyIVolume = $symbol['Buy_I_Volume'] ?? null;
+                        $buyCountI = $symbol['Buy_CountI'] ?? null;
+                        $sellIVolume = $symbol['Sell_I_Volume'] ?? null;
+                        $sellCountI = $symbol['Sell_CountI'] ?? null;
+                        if ($buyIVolume !== null && $buyIVolume != $item->buy_i_volume) {
+                            $updateData['buy_i_volume'] = $buyIVolume;
+                        }
+                        if ($buyCountI !== null && $buyCountI != $item->buy_count_i) {
+                            $updateData['buy_count_i'] = $buyCountI;
+                        }
+                        if ($sellIVolume !== null && $sellIVolume != $item->sell_i_volume) {
+                            $updateData['sell_i_volume'] = $sellIVolume;
+                        }
+                        if ($sellCountI !== null && $sellCountI != $item->sell_count_i) {
+                            $updateData['sell_count_i'] = $sellCountI;
                         }
                         if (!empty($updateData)) {
                             $item->update($updateData);

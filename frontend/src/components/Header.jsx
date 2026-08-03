@@ -236,7 +236,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800">
-      <div className="flex items-center justify-between h-14 px-4 md:px-6 max-w-5xl mx-auto">
+      <div className={`flex items-center justify-between h-14 px-4 md:px-6 mx-auto ${size === 'large' ? 'max-w-7xl' : 'max-w-5xl'}`}>
         {/* Right: Logo + Title */}
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
           <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center">

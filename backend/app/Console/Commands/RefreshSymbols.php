@@ -112,8 +112,11 @@ class RefreshSymbols extends Command
                 'pe' => is_numeric($symbol['pe'] ?? null) ? $symbol['pe'] : null,
                 'price_change_percent' => is_numeric($symbol['plp'] ?? null) ? $symbol['plp'] : null,
                 'price_change' => is_numeric($symbol['pcp'] ?? null) ? $symbol['pcp'] : null,
-                'close_price' => null,
                 'sector' => $symbol['cs'] ?? null,
+                'buy_i_volume' => is_numeric($symbol['Buy_I_Volume'] ?? null) ? $symbol['Buy_I_Volume'] : null,
+                'buy_count_i' => is_numeric($symbol['Buy_CountI'] ?? null) ? $symbol['Buy_CountI'] : null,
+                'sell_i_volume' => is_numeric($symbol['Sell_I_Volume'] ?? null) ? $symbol['Sell_I_Volume'] : null,
+                'sell_count_i' => is_numeric($symbol['Sell_CountI'] ?? null) ? $symbol['Sell_CountI'] : null,
                 'last_updated_at' => $now,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -156,6 +159,10 @@ class RefreshSymbols extends Command
                     $symbol = $symbolMap[$key];
                     $pl = $symbol['pl'] ?? null;
                     $pe = $symbol['pe'] ?? null;
+                    $buyIVolume = $symbol['Buy_I_Volume'] ?? null;
+                    $buyCountI = $symbol['Buy_CountI'] ?? null;
+                    $sellIVolume = $symbol['Sell_I_Volume'] ?? null;
+                    $sellCountI = $symbol['Sell_CountI'] ?? null;
 
                     $updateData = [];
                     if ($pl !== null && $pl != $item->last_price) {
@@ -163,6 +170,18 @@ class RefreshSymbols extends Command
                     }
                     if ($pe !== null && $pe != $item->pe) {
                         $updateData['pe'] = $pe;
+                    }
+                    if ($buyIVolume !== null && $buyIVolume != $item->buy_i_volume) {
+                        $updateData['buy_i_volume'] = $buyIVolume;
+                    }
+                    if ($buyCountI !== null && $buyCountI != $item->buy_count_i) {
+                        $updateData['buy_count_i'] = $buyCountI;
+                    }
+                    if ($sellIVolume !== null && $sellIVolume != $item->sell_i_volume) {
+                        $updateData['sell_i_volume'] = $sellIVolume;
+                    }
+                    if ($sellCountI !== null && $sellCountI != $item->sell_count_i) {
+                        $updateData['sell_count_i'] = $sellCountI;
                     }
 
                     if (!empty($updateData)) {

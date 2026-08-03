@@ -21,6 +21,10 @@ class PortfolioItem extends Model
         'support_1',
         'support_2',
         'support_3',
+        'buy_i_volume',
+        'buy_count_i',
+        'sell_i_volume',
+        'sell_count_i',
         'active',
     ];
 
@@ -36,6 +40,10 @@ class PortfolioItem extends Model
         'support_1' => 'decimal:2',
         'support_2' => 'decimal:2',
         'support_3' => 'decimal:2',
+        'buy_i_volume' => 'decimal:2',
+        'buy_count_i' => 'decimal:2',
+        'sell_i_volume' => 'decimal:2',
+        'sell_count_i' => 'decimal:2',
         'active' => 'boolean',
     ];
 

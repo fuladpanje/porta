@@ -39,6 +39,10 @@ class PortfolioItemController extends Controller
             'support_1' => 'nullable|numeric|min:0',
             'support_2' => 'nullable|numeric|min:0',
             'support_3' => 'nullable|numeric|min:0',
+            'buy_i_volume' => 'nullable|numeric',
+            'buy_count_i' => 'nullable|numeric',
+            'sell_i_volume' => 'nullable|numeric',
+            'sell_count_i' => 'nullable|numeric',
             'active' => 'boolean',
         ]);
 
@@ -83,6 +87,10 @@ class PortfolioItemController extends Controller
             'support_1' => 'nullable|numeric|min:0',
             'support_2' => 'nullable|numeric|min:0',
             'support_3' => 'nullable|numeric|min:0',
+            'buy_i_volume' => 'nullable|numeric',
+            'buy_count_i' => 'nullable|numeric',
+            'sell_i_volume' => 'nullable|numeric',
+            'sell_count_i' => 'nullable|numeric',
             'active' => 'boolean',
         ]);
 

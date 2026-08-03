@@ -34,6 +34,7 @@ const COLUMNS = [
   { key: 'sell_price', label: 'فروش', hideable: true },
   { key: 'purchase_value', label: 'ارزش خرید', hideable: true },
   { key: 'totalValue', label: 'ارزش کل فعلی', hideable: true },
+  { key: 'buyer_power', label: 'قدرت خریدار', hideable: true },
   { key: 'resistance', label: 'مقاومت', hideable: true },
   { key: 'support', label: 'حمایت', hideable: true },
   { key: 'pl', label: 'سود/زیان', hideable: true },
@@ -673,6 +674,15 @@ const totals = useMemo(() => {
                   case 'sell_price': aVal = SafeNumber(a.sell_price); bVal = SafeNumber(b.sell_price); break;
                   case 'purchase_value': aVal = SafeNumber(a.buy_price) * SafeNumber(a.quantity); bVal = SafeNumber(b.buy_price) * SafeNumber(b.quantity); break;
                   case 'totalValue': aVal = SafeNumber(a.sell_price || a.last_price || a.buy_price) * SafeNumber(a.quantity); bVal = SafeNumber(b.sell_price || b.last_price || b.buy_price) * SafeNumber(b.quantity); break;
+                  case 'buyer_power': {
+                    const aBuy = SafeNumber(a.buy_i_volume) > 0 && SafeNumber(a.buy_count_i) > 0 ? SafeNumber(a.buy_i_volume) / SafeNumber(a.buy_count_i) : 0;
+                    const aSell = SafeNumber(a.sell_i_volume) > 0 && SafeNumber(a.sell_count_i) > 0 ? SafeNumber(a.sell_i_volume) / SafeNumber(a.sell_count_i) : 0;
+                    const bBuy = SafeNumber(b.buy_i_volume) > 0 && SafeNumber(b.buy_count_i) > 0 ? SafeNumber(b.buy_i_volume) / SafeNumber(b.buy_count_i) : 0;
+                    const bSell = SafeNumber(b.sell_i_volume) > 0 && SafeNumber(b.sell_count_i) > 0 ? SafeNumber(b.sell_i_volume) / SafeNumber(b.sell_count_i) : 0;
+                    aVal = aSell > 0 ? aBuy / aSell : -9999;
+                    bVal = bSell > 0 ? bBuy / bSell : -9999;
+                    break;
+                  }
 case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0) ? ((SafeNumber(a.sell_price) > 0 ? SafeNumber(a.sell_price) : SafeNumber(a.last_price)) - SafeNumber(a.buy_price)) * SafeNumber(a.quantity) : 0; bVal = (SafeNumber(b.sell_price) > 0 || SafeNumber(b.last_price) > 0) ? ((SafeNumber(b.sell_price) > 0 ? SafeNumber(b.sell_price) : SafeNumber(b.last_price)) - SafeNumber(b.buy_price)) * SafeNumber(b.quantity) : 0; break;
                    case 'pct': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0) ? (((SafeNumber(a.sell_price) > 0 ? SafeNumber(a.sell_price) : SafeNumber(a.last_price)) - SafeNumber(a.buy_price)) / SafeNumber(a.buy_price)) * 100 : 0; bVal = (SafeNumber(b.sell_price) > 0 || SafeNumber(b.last_price) > 0) ? (((SafeNumber(b.sell_price) > 0 ? SafeNumber(b.sell_price) : SafeNumber(b.last_price)) - SafeNumber(b.buy_price)) / SafeNumber(b.buy_price)) * 100 : 0; break;
                   case 'resistance': aVal = SafeNumber(a.last_price) > 0 && SafeNumber(a.resistance_1) > 0 ? (SafeNumber(a.resistance_1) - SafeNumber(a.last_price)) / SafeNumber(a.last_price) * 100 : -9999; bVal = SafeNumber(b.last_price) > 0 && SafeNumber(b.resistance_1) > 0 ? (SafeNumber(b.resistance_1) - SafeNumber(b.last_price)) / SafeNumber(b.last_price) * 100 : -9999; break;
@@ -827,9 +837,16 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                                    ? (portfolio.sell_commission || 0.88) / 100
                                    : (user?.sell_commission || 0.88) / 100;
                                const sellComm = _itemCommissionEnabled && displayPrice != null ? displayPrice * qtyN * _itemSellCommissionRate : 0;
-                               const totalValue = displayPrice != null ? displayPrice * qtyN - sellComm : purchaseValue;
-                               const plAmount = displayPrice != null ? totalValue - purchaseValue : null;
-const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) * 100 : null;
+                                const totalValue = displayPrice != null ? displayPrice * qtyN - sellComm : purchaseValue;
+                                const plAmount = displayPrice != null ? totalValue - purchaseValue : null;
+                                const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) * 100 : null;
+                                const buyIVol = SafeNumber(item.buy_i_volume);
+                                const buyCntI = SafeNumber(item.buy_count_i);
+                                const sellIVol = SafeNumber(item.sell_i_volume);
+                                const sellCntI = SafeNumber(item.sell_count_i);
+                                const allBuy = buyIVol > 0 && buyCntI > 0 ? buyIVol / buyCntI : 0;
+                                const allSell = sellIVol > 0 && sellCntI > 0 ? sellIVol / sellCntI : 0;
+                                const buyerPower = allBuy > 0 && allSell > 0 ? allBuy / allSell : null;
                                const isInactive = !item.active && portfolio.active !== false && portfolio.active !== 0;
                                  return (
 <tr key={item.id} className={`border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${!item.active && portfolio.active !== false && portfolio.active !== 0 ? 'opacity-75' : ''}`}>
@@ -857,10 +874,15 @@ const pl = plAmount !== null && purchaseValue > 0 ? (plAmount / purchaseValue) *
                                      {visibleColumns.includes('purchase_value') && (
                                        <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, purchaseValue)}>{formatPrice(purchaseValue, unit)}</td>
                                      )}
-                                     {visibleColumns.includes('totalValue') && (
-                                       <td className={`px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
-                                     )}
-                                     {visibleColumns.includes('resistance') && (
+                                      {visibleColumns.includes('totalValue') && (
+                                        <td className={`px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, totalValue)}>{formatPrice(totalValue, unit)}</td>
+                                      )}
+                                      {visibleColumns.includes('buyer_power') && (
+                                        <td className={`px-2 py-1.5 font-medium cursor-pointer whitespace-nowrap ${buyerPower !== null ? (buyerPower > 1 ? 'text-success' : buyerPower < 1 ? 'text-danger' : 'text-slate-500') : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, buyerPower, false)}>
+                                          {buyerPower !== null ? toPersianNum(buyerPower.toLocaleString('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '—'}
+                                        </td>
+                                      )}
+                                      {visibleColumns.includes('resistance') && (
                                        <td className="px-2 py-1.5 text-slate-500 cursor-pointer whitespace-nowrap" onDoubleClick={(e) => handleCopy(e, item.resistance_1)}>
                                          {item.resistance_1 ? <>
                                            {formatPrice(item.resistance_1, unit, 2)}
@@ -1025,6 +1047,10 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
   const [resistance2, setResistance2] = useState(cleanNum(conv(initialResistance2)));
   const [support1, setSupport1] = useState(cleanNum(conv(initialSupport1)));
   const [support2, setSupport2] = useState(cleanNum(conv(initialSupport2)));
+  const [buyIVolume, setBuyIVolume] = useState(null);
+  const [buyCountI, setBuyCountI] = useState(null);
+  const [sellIVolume, setSellIVolume] = useState(null);
+  const [sellCountI, setSellCountI] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const isEdit = Boolean(itemId);
@@ -1032,12 +1058,13 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
     e.preventDefault(); setLoading(true); setError('');
     try {
        const rev = (v) => toman && v ? v * 10 : v;
-       const payload = { symbol, buy_price: rev(buyPrice), quantity, sell_price: rev(sellPrice) || null, last_price: rev(lastPrice) || null, pe: pe || null, resistance_1: rev(resistance1) || null, resistance_2: rev(resistance2) || null, resistance_3: null, support_1: rev(support1) || null, support_2: rev(support2) || null, support_3: null };
+        const payload = { symbol, buy_price: rev(buyPrice), quantity, sell_price: rev(sellPrice) || null, last_price: rev(lastPrice) || null, pe: pe || null, resistance_1: rev(resistance1) || null, resistance_2: rev(resistance2) || null, resistance_3: null, support_1: rev(support1) || null, support_2: rev(support2) || null, support_3: null, buy_i_volume: buyIVolume, buy_count_i: buyCountI, sell_i_volume: sellIVolume, sell_count_i: sellCountI };
       if (isEdit) {
         await api.put(`/portfolios/${portfolioId}/items/${itemId}`, payload);
       } else {
         await api.post(`/portfolios/${portfolioId}/items`, payload);
       }
+      try { await api.post('/stocks/refresh', { manual: false }); } catch {}
       onSave();
     } catch (err) { setError(err.response?.data?.message || 'خطا'); } finally { setLoading(false); }
   };
@@ -1049,7 +1076,7 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
           <SymbolSearch
             value={symbol}
             onChange={setSymbol}
-            onSelect={(s) => { setSymbol(s.name); if (s.pl) setLastPrice(String(Math.round(toman ? s.pl / 10 : s.pl))); if (s.pe) setPe(String(s.pe)); }}
+            onSelect={(s) => { setSymbol(s.name); if (s.pl) setLastPrice(String(Math.round(toman ? s.pl / 10 : s.pl))); if (s.pe) setPe(String(s.pe)); if (s.Buy_I_Volume) setBuyIVolume(s.Buy_I_Volume); if (s.Buy_CountI) setBuyCountI(s.Buy_CountI); if (s.Sell_I_Volume) setSellIVolume(s.Sell_I_Volume); if (s.Sell_CountI) setSellCountI(s.Sell_CountI); }}
             autoFocus={!isEdit}
           />
         </div>

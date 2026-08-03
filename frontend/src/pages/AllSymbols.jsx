@@ -40,6 +40,7 @@ const COLUMNS = [
   { key: 'pcp', label: 'درصد تغییر پایانی', hideable: true },
   { key: 'diff', label: 'اختلاف درصد', hideable: true },
   { key: 'pe', label: 'P/E', hideable: true },
+  { key: 'buyer_power', label: 'قدرت خریدار', hideable: true },
   { key: 'cs', label: 'گروه صنعت', hideable: true },
   { key: 'actions', label: 'عملیات', hideable: true },
 ];
@@ -370,6 +371,15 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
   const debouncedDiffMin = useDebounce(diffMin, 300);
   const debouncedDiffMax = useDebounce(diffMax, 300);
   const debouncedDiffVal = useDebounce(diffVal, 300);
+  const [bpMode, setBpMode] = useState('single');
+  const [bpSign, setBpSign] = useState(null);
+  const [bpMin, setBpMin] = useState('');
+  const [bpMax, setBpMax] = useState('');
+  const [bpOp, setBpOp] = useState('gt');
+  const [bpVal, setBpVal] = useState('');
+  const debouncedBpMin = useDebounce(bpMin, 300);
+  const debouncedBpMax = useDebounce(bpMax, 300);
+  const debouncedBpVal = useDebounce(bpVal, 300);
   const [favorites, setFavorites] = useState([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(() => {
     try { return localStorage.getItem('porta_favorites_only') === 'true'; } catch { return false; }
@@ -534,6 +544,45 @@ function signFilter(list, key, sign) {
   });
 }
 
+function calcBuyerPower(s) {
+  const bVol = SafeNumber(s.Buy_I_Volume);
+  const bCnt = SafeNumber(s.Buy_CountI);
+  const sVol = SafeNumber(s.Sell_I_Volume);
+  const sCnt = SafeNumber(s.Sell_CountI);
+  const allBuy = bVol > 0 && bCnt > 0 ? bVol / bCnt : 0;
+  const allSell = sVol > 0 && sCnt > 0 ? sVol / sCnt : 0;
+  return allBuy > 0 && allSell > 0 ? allBuy / allSell : null;
+}
+
+function filterByBuyerPowerOp(list, op, val) {
+  if (val === '') return list;
+  const v = Number(val);
+  if (isNaN(v)) return list;
+  return list.filter((s) => {
+    const itemVal = calcBuyerPower(s);
+    if (itemVal === null) return false;
+    switch (op) {
+      case 'lt': return itemVal < v;
+      case 'lte': return itemVal <= v;
+      case 'eq': return itemVal === v;
+      case 'gte': return itemVal >= v;
+      case 'gt': return itemVal > v;
+      default: return true;
+    }
+  });
+}
+
+function buyerPowerSignFilter(list, sign) {
+  if (!sign) return list;
+  return list.filter((s) => {
+    const v = calcBuyerPower(s);
+    if (v === null) return false;
+    if (sign === 'pos') return v > 1;
+    if (sign === 'neg') return v < 1;
+    return true;
+  });
+}
+
 const filtered = useMemo(() => {
   let list = symbols;
   if (showFavoritesOnly) {
@@ -637,6 +686,20 @@ const filtered = useMemo(() => {
     list = filterByDiffOp(list, diffOp, debouncedDiffVal);
   }
   list = signFilter(list, 'diff', diffSign);
+  if (bpMode === 'between') {
+    if (debouncedBpMin !== '' || debouncedBpMax !== '') {
+      const min = debouncedBpMin !== '' ? Number(debouncedBpMin) : -Infinity;
+      const max = debouncedBpMax !== '' ? Number(debouncedBpMax) : Infinity;
+      list = list.filter((s) => {
+        const v = calcBuyerPower(s);
+        if (v === null) return false;
+        return v >= min && v <= max;
+      });
+    }
+  } else {
+    list = filterByBuyerPowerOp(list, bpOp, debouncedBpVal);
+  }
+  list = buyerPowerSignFilter(list, bpSign);
   if (sortConfig.key) {
     list = [...list].sort((a, b) => {
       let aVal, bVal;
@@ -660,13 +723,18 @@ const filtered = useMemo(() => {
         const bDiff = SafeNumber(b.plp) - SafeNumber(b.pcp);
         return sortConfig.direction === 'asc' ? aDiff - bDiff : bDiff - aDiff;
       }
+      if (sortConfig.key === 'buyer_power') {
+        const aBP = calcBuyerPower(a);
+        const bBP = calcBuyerPower(b);
+        return sortConfig.direction === 'asc' ? (aBP ?? -1) - (bBP ?? -1) : (bBP ?? -1) - (aBP ?? -1);
+      }
       aVal = SafeNumber(a[sortConfig.key]);
       bVal = SafeNumber(b[sortConfig.key]);
       return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
     });
   }
   return list;
-}, [symbols, search, sortConfig, showFavoritesOnly, favorites, hideNegativePE, peMode, peSign, debouncedPeMin, debouncedPeMax, peOp, debouncedPeVal, plMode, plSign, debouncedPlMin, debouncedPlMax, plOp, debouncedPlVal, plpMode, plpSign, debouncedPlpMin, debouncedPlpMax, plpOp, debouncedPlpVal, pcpMode, pcpSign, debouncedPcpMin, debouncedPcpMax, pcpOp, debouncedPcpVal, diffMode, diffSign, debouncedDiffMin, debouncedDiffMax, diffOp, debouncedDiffVal]);
+}, [symbols, search, sortConfig, showFavoritesOnly, favorites, hideNegativePE, peMode, peSign, debouncedPeMin, debouncedPeMax, peOp, debouncedPeVal, plMode, plSign, debouncedPlMin, debouncedPlMax, plOp, debouncedPlVal, plpMode, plpSign, debouncedPlpMin, debouncedPlpMax, plpOp, debouncedPlpVal, pcpMode, pcpSign, debouncedPcpMin, debouncedPcpMax, pcpOp, debouncedPcpVal, diffMode, diffSign, debouncedDiffMin, debouncedDiffMax, diffOp, debouncedDiffVal, bpMode, bpSign, debouncedBpMin, debouncedBpMax, bpOp, debouncedBpVal]);
 
   if (loading) {
     return (
@@ -865,9 +933,39 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+            <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">قدرت خریدار:</span>
+            <div className="flex items-center gap-2 shrink-0">
+            {bpMode === 'between' ? (
+              <>
+                <input type="number" placeholder="حداقل" value={bpMin} onChange={(e) => setBpMin(e.target.value)} className="input-field w-[7rem] py-1 text-xs text-center" dir="ltr" />
+                <span className="text-slate-400 shrink-0">—</span>
+                <input type="number" placeholder="حداکثر" value={bpMax} onChange={(e) => setBpMax(e.target.value)} className="input-field w-[7rem] py-1 text-xs text-center" dir="ltr" />
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => { const ops = ['lt','lte','eq','gte','gt']; setBpOp(ops[(ops.indexOf(bpOp) + 1) % ops.length]); }} className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors shrink-0 whitespace-nowrap w-[8rem] text-center overflow-hidden">
+                  {bpOp === 'lt' ? 'کمتر از' : bpOp === 'lte' ? 'کمتر یا مساوی' : bpOp === 'eq' ? 'مساوی' : bpOp === 'gte' ? 'بیشتر یا مساوی' : 'بیشتر از'}
+                </button>
+                <input type="number" placeholder="مقدار" value={bpVal} onChange={(e) => setBpVal(e.target.value)} className="input-field w-[7rem] py-1 text-xs text-center" dir="ltr" />
+              </>
+            )}
+            </div>
+            <button type="button" onClick={() => setBpMode(bpMode === 'between' ? 'single' : 'between')} className="px-2 py-1 rounded-full text-xs font-medium bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20 transition-colors shrink-0 w-14">
+              {bpMode === 'between' ? 'بازه' : 'مقدار'}
+            </button>
+            <span className="inline-flex rounded-md shrink-0">
+              <button type="button" onClick={() => setBpSign(bpSign === null ? 'pos' : null)} className={`px-2 py-1 text-xs font-medium w-10 text-center rounded-r-md border transition-colors ${bpSign === null ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>همه</button>
+              <button type="button" onClick={() => setBpSign(bpSign === 'pos' ? null : 'pos')} className={`px-2 py-1 text-xs font-medium w-10 text-center border-y transition-colors ${bpSign === 'pos' ? 'bg-green-500/20 text-green-600 border-green-300 dark:border-green-700' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>مثبت</button>
+              <button type="button" onClick={() => setBpSign(bpSign === 'neg' ? null : 'neg')} className={`px-2 py-1 text-xs font-medium w-10 text-center rounded-l-md border transition-colors ${bpSign === 'neg' ? 'bg-red-500/20 text-red-600 border-red-300 dark:border-red-700' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>منفی</button>
+            </span>
+            <button type="button" onClick={() => { setBpMode('single'); setBpSign(null); setBpMin(''); setBpMax(''); setBpOp('gt'); setBpVal(''); }} className="mr-auto py-1 px-0.5 rounded text-red-400 hover:text-red-600 transition-colors">
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 justify-end">
-          <button type="button" onClick={() => { setPeMode('single'); setPeSign(null); setPeMin(''); setPeMax(''); setPeOp('lt'); setPeVal(''); setHideNegativePE(false); setPlMode('single'); setPlSign(null); setPlMin(''); setPlMax(''); setPlOp('lt'); setPlVal(''); setPlpMode('single'); setPlpSign(null); setPlpMin(''); setPlpMax(''); setPlpOp('lt'); setPlpVal(''); setPcpMode('single'); setPcpSign(null); setPcpMin(''); setPcpMax(''); setPcpOp('lt'); setPcpVal(''); setDiffMode('single'); setDiffSign(null); setDiffMin(''); setDiffMax(''); setDiffOp('lt'); setDiffVal(''); }} className="p-1.5 rounded-full text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-500/10 transition-colors shrink-0">
+          <button type="button" onClick={() => { setPeMode('single'); setPeSign(null); setPeMin(''); setPeMax(''); setPeOp('lt'); setPeVal(''); setHideNegativePE(false); setPlMode('single'); setPlSign(null); setPlMin(''); setPlMax(''); setPlOp('lt'); setPlVal(''); setPlpMode('single'); setPlpSign(null); setPlpMin(''); setPlpMax(''); setPlpOp('lt'); setPlpVal(''); setPcpMode('single'); setPcpSign(null); setPcpMin(''); setPcpMax(''); setPcpOp('lt'); setPcpVal(''); setDiffMode('single'); setDiffSign(null); setDiffMin(''); setDiffMax(''); setDiffOp('lt'); setDiffVal(''); setBpMode('single'); setBpSign(null); setBpMin(''); setBpMax(''); setBpOp('gt'); setBpVal(''); }} className="p-1.5 rounded-full text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-500/10 transition-colors shrink-0">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -954,6 +1052,13 @@ const filtered = useMemo(() => {
               const plpVal = Number(s.plp);
               const pcpVal = Number(s.pcp);
               const diff = (!isNaN(plpVal) && !isNaN(pcpVal)) ? plpVal - pcpVal : null;
+              const sBuyIVol = SafeNumber(s.Buy_I_Volume);
+              const sBuyCntI = SafeNumber(s.Buy_CountI);
+              const sSellIVol = SafeNumber(s.Sell_I_Volume);
+              const sSellCntI = SafeNumber(s.Sell_CountI);
+              const sAllBuy = sBuyIVol > 0 && sBuyCntI > 0 ? sBuyIVol / sBuyCntI : 0;
+              const sAllSell = sSellIVol > 0 && sSellCntI > 0 ? sSellIVol / sSellCntI : 0;
+              const bpVal = sAllBuy > 0 && sAllSell > 0 ? sAllBuy / sAllSell : null;
               return (
 <tr key={s.isin || s.name} className="border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                  {visibleColumns.includes('star') && (
@@ -1000,6 +1105,11 @@ const filtered = useMemo(() => {
                  {visibleColumns.includes('pe') && (
                    <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} ${isStale ? 'opacity-40' : ''}`}>
                      {formatPE(s.pe)}
+                   </td>
+                 )}
+                 {visibleColumns.includes('buyer_power') && (
+                   <td className={`px-3 py-2 font-medium ${bpVal !== null ? (bpVal > 1 ? 'text-success' : bpVal < 1 ? 'text-danger' : 'text-slate-500') : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                     {bpVal !== null ? toPersianNum(bpVal.toLocaleString('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '—'}
                    </td>
                  )}
                  {visibleColumns.includes('cs') && (
