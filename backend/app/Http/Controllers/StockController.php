@@ -354,21 +354,58 @@ class StockController extends Controller
         return $result;
     }
 
+    private static function debugLog(string $step, string $message, array $extra = []): void
+    {
+        $path = storage_path('logs/refresh-debug.log');
+        $time = now()->format('Y-m-d H:i:s');
+        $extraStr = $extra ? ' | ' . json_encode($extra, JSON_UNESCAPED_UNICODE) : '';
+        $line = "[$time] [$step] $message$extraStr\n";
+        @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+        @error_log("Porta Debug: [$step] $message$extraStr");
+    }
+
     public function refreshPrices(Request $request): JsonResponse
     {
+        $reqId = substr(uniqid(), -6);
+        self::debugLog('START', "refreshPrices called [req:$reqId]", [
+            'user_id' => $request->user()?->id,
+            'is_admin' => $request->user()?->is_admin,
+            'manual' => $request->boolean('manual', false),
+            'memory_peak' => round(memory_get_peak_usage(true) / 1024 / 1024, 1) . 'MB',
+        ]);
+
         try {
+            @set_time_limit(120);
             $user = $request->user();
 
             if (!$user) {
+                self::debugLog('ERROR', 'No authenticated user');
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
             if (!$user->is_admin) {
+                self::debugLog('ERROR', 'User is not admin', ['user_id' => $user->id]);
                 return response()->json(['message' => 'فقط مدیر سیستم امکان بروزرسانی دستی را دارد.'], 403);
             }
 
-            // Time-range check only applies to automatic/scheduled refreshes,
-            // NOT to manual refresh triggered by the admin button.
+            $lockKey = 'refresh_lock';
+            $lockValue = now()->toIso8601String();
+            $lockAcquired = \App\Models\SystemSetting::updateOrCreate(
+                ['setting_key' => $lockKey],
+                ['setting_value' => $lockValue, 'description' => 'Lock to prevent concurrent refresh']
+            );
+
+            $existingLock = \App\Models\SystemSetting::where('setting_key', $lockKey)->value('setting_value');
+            if ($existingLock && $existingLock !== $lockValue) {
+                $lockTime = \App\Models\SystemSetting::where('setting_key', $lockKey)->value('updated_at');
+                if ($lockTime && now()->diffInMinutes($lockTime) < 5) {
+                    self::debugLog('ERROR', 'Another refresh is in progress, skipping');
+                    return response()->json([
+                        'message' => 'یک بروزرسانی دیگر در حال اجراست. لطفاً چند ثانیه صبر کنید.',
+                    ], 409);
+                }
+            }
+
             $isManual = $request->boolean('manual', false);
             if (!$isManual) {
                 $schedule = \App\Models\SystemSetting::getSchedule();
@@ -381,6 +418,7 @@ class StockController extends Controller
                             ? ($now >= $start && $now <= $end)
                             : ($now >= $start || $now <= $end);
                         if (!$inRange) {
+                            self::debugLog('INFO', 'Market closed', ['start' => $start, 'end' => $end, 'now' => $now]);
                             return response()->json([
                                 'message' => 'بازار بسته است. بروزرسانی خودکار در بازه زمانی غیرفعال انجام نمی‌شود.',
                                 'updated' => 0,
@@ -391,23 +429,30 @@ class StockController extends Controller
                 }
             }
 
+            self::debugLog('STEP1', 'Loading API keys...');
             $apiKeys = $this->getSystemApiKeys();
+            self::debugLog('STEP1', 'API keys loaded', ['count' => count($apiKeys)]);
 
             if (empty($apiKeys)) {
+                self::debugLog('ERROR', 'No API keys configured');
                 return response()->json([
                     'message' => 'No API keys configured. Please ask admin to add an API key.',
                 ], 400);
             }
 
+            self::debugLog('STEP2', 'Fetching symbols from BRS API...');
             $symbols = $this->fetchAllSymbolsWithSystemKeys(true);
+            self::debugLog('STEP2', 'Symbols fetched', ['count' => count($symbols)]);
 
             if (empty($symbols)) {
+                self::debugLog('ERROR', 'No symbols returned from API');
                 return response()->json([
                     'message' => 'دریافت قیمت‌ها از سرور بیرونی ممکن نیست. لطفاً با پشتیبانی تماس بگیرید.',
                     'updated' => 0,
                 ], 400);
             }
 
+            self::debugLog('STEP3', 'Building symbol map...');
             $symbolMap = [];
             foreach ($symbols as $symbol) {
                 $isin = $symbol['isin'] ?? '';
@@ -417,13 +462,26 @@ class StockController extends Controller
                     $symbolMap[strtolower($isin)] = $symbol;
                 }
             }
+            self::debugLog('STEP3', 'Symbol map built', ['keys' => count($symbolMap)]);
 
             $updated = 0;
 
-            // Update ALL users' portfolio items (not just the admin's)
+            @set_time_limit(120);
+
+            self::debugLog('STEP4', 'Loading all portfolios...');
             $allPortfolios = \App\Models\Portfolio::with('items')->get();
+            self::debugLog('STEP4', 'Portfolios loaded', ['count' => $allPortfolios->count()]);
+
+            $totalItems = $allPortfolios->sum(fn($p) => $p->items->count());
+            self::debugLog('STEP4B', 'Starting item updates...', ['total_items' => $totalItems]);
+
+            \Illuminate\Support\Facades\DB::statement('SET SESSION innodb_lock_wait_timeout = 5');
+            self::debugLog('STEP4C', 'MySQL lock timeout set to 5s');
+
+            $itemIdx = 0;
             foreach ($allPortfolios as $portfolio) {
                 foreach ($portfolio->items as $item) {
+                    $itemIdx++;
                     $key = strtolower($item->symbol);
                     if (isset($symbolMap[$key])) {
                         $symbol = $symbolMap[$key];
@@ -453,17 +511,47 @@ class StockController extends Controller
                             $updateData['sell_count_i'] = $sellCountI;
                         }
                         if (!empty($updateData)) {
-                            $item->update($updateData);
-                            $updated++;
+                            $updateData['updated_at'] = now();
+                            self::debugLog('ITEM', "[$itemIdx/$totalItems] Updating {$item->symbol} (id:{$item->id})", ['fields' => array_keys($updateData)]);
+                            try {
+                                \Illuminate\Support\Facades\DB::table('portfolio_items')
+                                    ->where('id', $item->id)
+                                    ->update($updateData);
+                                $updated++;
+                            } catch (\Throwable $e) {
+                                self::debugLog('ERROR', "[$itemIdx/$totalItems] FAILED {$item->symbol}", [
+                                    'item_id' => $item->id,
+                                    'error' => $e->getMessage(),
+                                    'code' => $e->getCode(),
+                                ]);
+                            }
                         }
                     }
                 }
             }
 
-            // Mark all users as fresh and record the refresh timestamp (ISO 8601 UTC)
-            \App\Models\User::query()->update(['is_stale' => false]);
-            $refreshedAt = now()->utc()->toIso8601String();
-            \App\Models\SystemSetting::set('last_refresh_at', $refreshedAt);
+            self::debugLog('STEP5', 'Updating user stale flags...');
+            try {
+                \App\Models\User::query()->update(['is_stale' => false]);
+            } catch (\Throwable $e) {
+                self::debugLog('ERROR', 'Stale update failed', ['error' => $e->getMessage()]);
+            }
+
+            self::debugLog('STEP6', 'Saving last_refresh_at...');
+            try {
+                $refreshedAt = now()->utc()->toIso8601String();
+                \App\Models\SystemSetting::set('last_refresh_at', $refreshedAt);
+            } catch (\Throwable $e) {
+                self::debugLog('ERROR', 'Save refresh_at failed', ['error' => $e->getMessage()]);
+                $refreshedAt = now()->utc()->toIso8601String();
+            }
+
+            \App\Models\SystemSetting::where('setting_key', $lockKey)->delete();
+
+            self::debugLog('DONE', 'Refresh completed successfully', [
+                'updated' => $updated,
+                'memory_peak' => round(memory_get_peak_usage(true) / 1024 / 1024, 1) . 'MB',
+            ]);
 
             return response()->json([
                 'message' => 'Prices refreshed successfully',
@@ -471,6 +559,13 @@ class StockController extends Controller
                 'refreshed_at' => $refreshedAt,
             ]);
         } catch (\Throwable $e) {
+            self::debugLog('ERROR', 'EXCEPTION CAUGHT', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'code' => $e->getCode(),
+                'trace_first_line' => explode("\n", $e->getTraceAsString())[0] ?? '',
+                'memory_peak' => round(memory_get_peak_usage(true) / 1024 / 1024, 1) . 'MB',
+            ]);
             \Illuminate\Support\Facades\Log::error('refreshPrices failed', [
                 'user_id' => $request->user()?->id,
                 'error' => $e->getMessage(),

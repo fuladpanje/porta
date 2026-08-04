@@ -138,6 +138,8 @@ class RefreshSymbols extends Command
 
     private function updatePortfolioPrices(array $symbols): void
     {
+        @set_time_limit(120);
+
         $symbolMap = [];
         foreach ($symbols as $symbol) {
             $isin = $symbol['isin'] ?? '';
@@ -149,6 +151,9 @@ class RefreshSymbols extends Command
         }
 
         $updated = 0;
+        $errors = 0;
+
+        \Illuminate\Support\Facades\DB::statement('SET SESSION innodb_lock_wait_timeout = 5');
 
         $portfolios = \App\Models\Portfolio::with('items')->get();
         foreach ($portfolios as $portfolio) {
@@ -185,17 +190,33 @@ class RefreshSymbols extends Command
                     }
 
                     if (!empty($updateData)) {
-                        $item->update($updateData);
-                        $updated++;
+                        $updateData['updated_at'] = now();
+                        try {
+                            \Illuminate\Support\Facades\DB::table('portfolio_items')
+                                ->where('id', $item->id)
+                                ->update($updateData);
+                            $updated++;
+                        } catch (\Throwable $e) {
+                            $errors++;
+                            $this->warn("Failed to update item {$item->id} ({$item->symbol}): " . $e->getMessage());
+                        }
                     }
                 }
             }
         }
 
-        \App\Models\User::query()->update(['is_stale' => false]);
+        try {
+            \App\Models\User::query()->update(['is_stale' => false]);
+        } catch (\Throwable $e) {
+            $this->warn("Failed to update stale flags: " . $e->getMessage());
+        }
 
-        \App\Models\SystemSetting::set('last_refresh_at', now()->utc()->toIso8601String());
+        try {
+            \App\Models\SystemSetting::set('last_refresh_at', now()->utc()->toIso8601String());
+        } catch (\Throwable $e) {
+            $this->warn("Failed to save last_refresh_at: " . $e->getMessage());
+        }
 
-        $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.');
+        $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.' . ($errors ? " ($errors خطا)" : ''));
     }
 }

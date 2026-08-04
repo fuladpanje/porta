@@ -1121,41 +1121,41 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">آخرین قیمت ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="text" inputMode="numeric" value={lastPrice} onChange={(e) => setLastPrice(stripCommas(e.target.value))} className="input-field text-xs py-2" placeholder="آخرین قیمت" />
+            <input type="number" inputMode="numeric" value={lastPrice} onChange={(e) => setLastPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" readOnly />
           </div>
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت خرید ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="text" inputMode="numeric" value={buyPrice} onChange={(e) => setBuyPrice(stripCommas(e.target.value))} className="input-field text-xs py-2" placeholder="قیمت خرید" required />
+            <input type="number" inputMode="numeric" value={buyPrice} onChange={(e) => setBuyPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" required />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">تعداد</label>
-            <input type="text" inputMode="numeric" value={quantity} onChange={(e) => setQuantity(stripCommas(e.target.value))} className="input-field text-xs py-2" placeholder="تعداد" required />
+            <input type="number" inputMode="numeric" value={quantity} onChange={(e) => setQuantity(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" required />
           </div>
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت فروش ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="text" inputMode="numeric" value={sellPrice} onChange={(e) => setSellPrice(stripCommas(e.target.value))} className="input-field text-xs py-2" placeholder="قیمت فروش" />
+            <input type="number" inputMode="numeric" value={sellPrice} onChange={(e) => setSellPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] font-bold text-red-500 rtl-text block mb-1">مقاومت ۱</label>
-            <input type="text" inputMode="numeric" value={resistance1} onChange={(e) => setResistance1(stripCommas(e.target.value))} className="input-field text-xs py-2 border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" placeholder="مقاومت ۱" />
+            <input type="number" inputMode="numeric" value={resistance1} onChange={(e) => setResistance1(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" />
           </div>
           <div>
             <label className="text-[10px] font-bold text-red-500 rtl-text block mb-1">مقاومت ۲</label>
-            <input type="text" inputMode="numeric" value={resistance2} onChange={(e) => setResistance2(stripCommas(e.target.value))} className="input-field text-xs py-2 border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" placeholder="مقاومت ۲" />
+            <input type="number" inputMode="numeric" value={resistance2} onChange={(e) => setResistance2(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] font-bold text-green-500 rtl-text block mb-1">حمایت ۱</label>
-            <input type="text" inputMode="numeric" value={support1} onChange={(e) => setSupport1(stripCommas(e.target.value))} className="input-field text-xs py-2 border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" placeholder="حمایت ۱" />
+            <input type="number" inputMode="numeric" value={support1} onChange={(e) => setSupport1(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" />
           </div>
           <div>
             <label className="text-[10px] font-bold text-green-500 rtl-text block mb-1">حمایت ۲</label>
-            <input type="text" inputMode="numeric" value={support2} onChange={(e) => setSupport2(stripCommas(e.target.value))} className="input-field text-xs py-2 border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" placeholder="حمایت ۲" />
+            <input type="number" inputMode="numeric" value={support2} onChange={(e) => setSupport2(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" />
           </div>
         </div>
         {error && <p className="text-[10px] text-danger">{error}</p>}

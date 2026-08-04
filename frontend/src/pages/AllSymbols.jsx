@@ -163,8 +163,9 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={lastPriceValue}
                   onChange={(e) => setLastPriceValue(e.target.value)}
-                  className="input-field w-full text-xs py-2"
+                  className="input-field w-full text-xs py-2 text-left"
                   min="0"
+                  readOnly
                 />
               </div>
               <div>
@@ -173,7 +174,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={buyPrice}
                   onChange={(e) => setBuyPrice(e.target.value)}
-                  className="input-field w-full text-xs py-2"
+                  className="input-field w-full text-xs py-2 text-left"
                   required
                   min="0"
                 />
@@ -188,7 +189,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="input-field w-full text-xs py-2"
+                  className="input-field w-full text-xs py-2 text-left"
                   required
                   min="1"
                 />
@@ -199,7 +200,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={sellPrice}
                   onChange={(e) => setSellPrice(e.target.value)}
-                  className="input-field w-full text-xs py-2"
+                  className="input-field w-full text-xs py-2 text-left"
                   min="0"
                 />
               </div>
@@ -213,8 +214,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={resistance1}
                   onChange={(e) => setResistance1(e.target.value)}
-                  className="input-field w-full text-xs py-2 border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400"
-                  placeholder="مقاومت ۱"
+                  className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400"
                   min="0"
                 />
               </div>
@@ -224,8 +224,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={resistance2}
                   onChange={(e) => setResistance2(e.target.value)}
-                  className="input-field w-full text-xs py-2 border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400"
-                  placeholder="مقاومت ۲"
+                  className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400"
                   min="0"
                 />
               </div>
@@ -239,8 +238,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={support1}
                   onChange={(e) => setSupport1(e.target.value)}
-                  className="input-field w-full text-xs py-2 border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400"
-                  placeholder="حمایت ۱"
+                  className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400"
                   min="0"
                 />
               </div>
@@ -250,8 +248,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={support2}
                   onChange={(e) => setSupport2(e.target.value)}
-                  className="input-field w-full text-xs py-2 border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400"
-                  placeholder="حمایت ۲"
+                  className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400"
                   min="0"
                 />
               </div>

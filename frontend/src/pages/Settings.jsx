@@ -211,8 +211,7 @@ export default function Settings() {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="input-field w-full text-xs py-2"
-                  placeholder="رمز فعلی خود را وارد کنید"
+                  className="input-field w-full text-xs py-2 text-left"
                   required
                   autoFocus
                 />
@@ -223,8 +222,7 @@ export default function Settings() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="input-field w-full text-xs py-2"
-                  placeholder="رمز جدید (حداقل ۸ کاراکتر)"
+                  className="input-field w-full text-xs py-2 text-left"
                   required
                 />
               </div>
@@ -234,8 +232,7 @@ export default function Settings() {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input-field w-full text-xs py-2"
-                  placeholder="رمز جدید را دوباره وارد کنید"
+                  className="input-field w-full text-xs py-2 text-left"
                   required
                 />
               </div>
@@ -301,23 +298,21 @@ export default function Settings() {
               <div>
                 <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد خرید (٪)</label>
                 <input
-                  type="text"
+                  type="number"
                   inputMode="decimal"
                   value={buyCommission}
                   onChange={(e) => setBuyCommission(e.target.value)}
-                  className="input-field w-full text-xs py-2"
-                  placeholder="0.37"
+                  className="input-field w-full text-xs py-2 text-left"
                 />
               </div>
               <div>
                 <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد فروش (٪)</label>
                 <input
-                  type="text"
+                  type="number"
                   inputMode="decimal"
                   value={sellCommission}
                   onChange={(e) => setSellCommission(e.target.value)}
-                  className="input-field w-full text-xs py-2"
-                  placeholder="0.88"
+                  className="input-field w-full text-xs py-2 text-left"
                 />
               </div>
             </div>
@@ -366,23 +361,21 @@ export default function Settings() {
                             <div>
                               <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد خرید (٪)</label>
                               <input
-                                type="text"
+                                type="number"
                                 inputMode="decimal"
                                 value={settings.buy_commission}
                                 onChange={(e) => updatePortfolioCommissionField(portfolio.id, 'buy_commission', e.target.value)}
-                                className="input-field w-full text-xs py-2"
-                                placeholder="0.37"
+                                className="input-field w-full text-xs py-2 text-left"
                               />
                             </div>
                             <div>
                               <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد فروش (٪)</label>
                               <input
-                                type="text"
+                                type="number"
                                 inputMode="decimal"
                                 value={settings.sell_commission}
                                 onChange={(e) => updatePortfolioCommissionField(portfolio.id, 'sell_commission', e.target.value)}
-                                className="input-field w-full text-xs py-2"
-                                placeholder="0.88"
+                                className="input-field w-full text-xs py-2 text-left"
                               />
                             </div>
                           </div>

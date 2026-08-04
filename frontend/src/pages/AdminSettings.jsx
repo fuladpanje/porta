@@ -198,8 +198,7 @@ export default function AdminSettings() {
                 type="text"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className="input-field w-full text-xs py-2 font-mono"
-                placeholder="کلید BRS API"
+                className="input-field w-full text-xs py-2 font-mono text-left"
                 required
               />
             </div>
