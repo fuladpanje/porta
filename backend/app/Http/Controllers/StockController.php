@@ -469,11 +469,14 @@ class StockController extends Controller
             @set_time_limit(120);
 
             self::debugLog('STEP4', 'Loading all portfolios...');
-            $allPortfolios = \App\Models\Portfolio::with('items')->get();
+            $allPortfolios = \App\Models\Portfolio::with('items', 'user')->get();
             self::debugLog('STEP4', 'Portfolios loaded', ['count' => $allPortfolios->count()]);
 
             $totalItems = $allPortfolios->sum(fn($p) => $p->items->count());
             self::debugLog('STEP4B', 'Starting item updates...', ['total_items' => $totalItems]);
+
+            $smsService = new \App\Services\SmsService();
+            $smsCount = 0;
 
             \Illuminate\Support\Facades\DB::statement('SET SESSION innodb_lock_wait_timeout = 5');
             self::debugLog('STEP4C', 'MySQL lock timeout set to 5s');
@@ -518,6 +521,19 @@ class StockController extends Controller
                                     ->where('id', $item->id)
                                     ->update($updateData);
                                 $updated++;
+
+                                // SMS notification check
+                                if ($pl !== null && !empty($updateData['last_price'])) {
+                                    $item->loadMissing('portfolio.user');
+                                    try {
+                                        $sent = $smsService->checkAndNotify($item, (float) $pl);
+                                        $smsCount += count($sent);
+                                    } catch (\Throwable $e) {
+                                        self::debugLog('ERROR', "[$itemIdx/$totalItems] SMS check failed {$item->symbol}", [
+                                            'error' => $e->getMessage(),
+                                        ]);
+                                    }
+                                }
                             } catch (\Throwable $e) {
                                 self::debugLog('ERROR', "[$itemIdx/$totalItems] FAILED {$item->symbol}", [
                                     'item_id' => $item->id,
@@ -550,12 +566,14 @@ class StockController extends Controller
 
             self::debugLog('DONE', 'Refresh completed successfully', [
                 'updated' => $updated,
+                'sms_sent' => $smsCount,
                 'memory_peak' => round(memory_get_peak_usage(true) / 1024 / 1024, 1) . 'MB',
             ]);
 
             return response()->json([
                 'message' => 'Prices refreshed successfully',
                 'updated' => $updated,
+                'sms_sent' => $smsCount,
                 'refreshed_at' => $refreshedAt,
             ]);
         } catch (\Throwable $e) {

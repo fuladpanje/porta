@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/fee-settings', [AuthController::class, 'updateCommission']);
     Route::put('/user/password', [AuthController::class, 'changePassword']);
     Route::put('/user/stale', [AuthController::class, 'updateStale']);
+    Route::put('/user/ippanel-settings', [AuthController::class, 'updateIppanelSettings']);
+    Route::get('/user/sms-stats', [AuthController::class, 'getSmsStats']);
 
     Route::get('/favorites', [FavoriteController::class, 'index']);
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
@@ -63,5 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/api-keys/{index}', [AdminController::class, 'deleteApiKey']);
         Route::put('/schedule', [AdminController::class, 'updateSchedule']);
         Route::post('/refresh-symbols', [AdminController::class, 'refreshSymbols']);
+        Route::put('/sms-settings', [AdminController::class, 'updateSmsSettings']);
+        Route::post('/test-sms', [AdminController::class, 'testSms']);
+        Route::post('/test-sms-user', [AdminController::class, 'testSmsWithUserKey']);
     });
 });

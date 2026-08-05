@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Key, Clock, Loader2, AlertCircle, Check, X, Plus, Trash2, Settings } from 'lucide-react';
-import { toPersianNum } from '../lib/calculations';
+import { Shield, Key, Clock, Loader2, AlertCircle, Check, X, Plus, Trash2, Send, MessageSquare } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 export default function AdminSettings() {
@@ -19,10 +18,46 @@ export default function AdminSettings() {
   const [scheduleEndTime, setScheduleEndTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [apiError, setApiError] = useState('');
+  const [apiSuccess, setApiSuccess] = useState('');
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
   const [deleteConfirmIndex, setDeleteConfirmIndex] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [testPhone, setTestPhone] = useState('');
+  const [testMsg, setTestMsg] = useState('');
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  const clearApiMessages = () => {
+    setApiError('');
+    setApiSuccess('');
+  };
+
+  const clearScheduleMessages = () => {
+    setScheduleError('');
+    setScheduleSuccess('');
+  };
+
+  const SectionMessage = ({ type, message, onClose }) => {
+    if (!message) return null;
+
+    const isSuccess = type === 'success';
+    const messageClass = isSuccess
+      ? 'bg-success/5 border border-success/20 text-success'
+      : 'bg-danger/5 border border-danger/20 text-danger';
+    const closeClass = isSuccess ? 'mr-auto hover:text-success/80' : 'mr-auto hover:text-danger/80';
+
+    return (
+      <div className={`${messageClass} rounded-lg p-3 flex items-center gap-2 text-sm rtl-text`}>
+        {isSuccess ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+        <span>{message}</span>
+        <button onClick={onClose} className={closeClass} aria-label="بستن پیام">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  };
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -47,7 +82,7 @@ export default function AdminSettings() {
       setScheduleStartTime(data.schedule?.start_time || '');
       setScheduleEndTime(data.schedule?.end_time || '');
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در دریافت تنظیمات');
+      setApiError(err.response?.data?.message || 'خطا در دریافت تنظیمات');
     }
   }, []);
 
@@ -58,17 +93,17 @@ export default function AdminSettings() {
   const handleAddApiKey = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    clearApiMessages();
     try {
       await api.post('/admin/api-keys', { name, api_key: apiKey });
       setName('');
       setApiKey('');
       setShowAddForm(false);
       await fetchSettings();
-      setSuccess('کلید API با موفقیت اضافه شد.');
-      setTimeout(() => setSuccess(''), 3000);
+      setApiSuccess('کلید API با موفقیت اضافه شد.');
+      setTimeout(() => setApiSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در افزودن کلید API');
+      setApiError(err.response?.data?.message || 'خطا در افزودن کلید API');
     } finally {
       setLoading(false);
     }
@@ -77,35 +112,37 @@ export default function AdminSettings() {
   const handleDeleteApiKey = async () => {
     if (deleteConfirmIndex === null) return;
     setDeleting(true);
+    clearApiMessages();
     try {
       await api.delete(`/admin/api-keys/${deleteConfirmIndex}`);
       await fetchSettings();
-      setSuccess('کلید API حذف شد.');
-      setTimeout(() => setSuccess(''), 3000);
+      setApiSuccess('کلید API حذف شد.');
+      setTimeout(() => setApiSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در حذف کلید API');
+      setApiError(err.response?.data?.message || 'خطا در حذف کلید API');
     } finally {
       setDeleting(false);
       setDeleteConfirmIndex(null);
     }
   };
 
-  const handleSaveAutoSwitch = async () => {
+  const handleSaveAutoSwitch = async (nextAutoSwitch = autoSwitch) => {
+    clearApiMessages();
     try {
       await api.put('/admin/api-keys', {
         api_keys: apiKeys.map(k => ({ name: k.name, api_key: k.api_key || '' })),
-        auto_switch: autoSwitch,
+        auto_switch: nextAutoSwitch,
       });
-      setSuccess('تنظیمات ذخیره شد.');
-      setTimeout(() => setSuccess(''), 3000);
+      setApiSuccess('تنظیمات ذخیره شد.');
+      setTimeout(() => setApiSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در ذخیره تنظیمات');
+      setApiError(err.response?.data?.message || 'خطا در ذخیره تنظیمات');
     }
   };
 
   const handleSaveSchedule = async () => {
     setSavingSchedule(true);
-    setError('');
+    clearScheduleMessages();
     try {
       const payload = {
         schedule_enabled: scheduleEnabled,
@@ -118,12 +155,35 @@ export default function AdminSettings() {
       await api.put('/admin/schedule', payload);
       const userRes = await api.get('/user');
       updateUser(userRes.data.user);
-      setSuccess('تنظیمات زمان‌بندی ذخیره شد.');
-      setTimeout(() => setSuccess(''), 3000);
+      setScheduleSuccess('تنظیمات زمان‌بندی ذخیره شد.');
+      setTimeout(() => setScheduleSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در ذخیره تنظیمات زمان‌بندی');
+      setScheduleError(err.response?.data?.message || 'خطا در ذخیره تنظیمات زمان‌بندی');
     } finally {
       setSavingSchedule(false);
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!testPhone) {
+      setTestResult({ type: 'error', text: 'شماره موبایل را وارد کنید.' });
+      return;
+    }
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      await api.post('/admin/test-sms', {
+        phone: testPhone,
+        message: testMsg || undefined,
+      });
+      setTestResult({ type: 'success', text: 'پیامک تست با موفقیت ارسال شد.' });
+    } catch (err) {
+      setTestResult({
+        type: 'error',
+        text: err.response?.data?.message || 'خطا در ارسال پیامک تست',
+      });
+    } finally {
+      setTestSending(false);
     }
   };
 
@@ -140,26 +200,6 @@ export default function AdminSettings() {
         تنظیمات زیر برای همه کاربران اعمال می‌شود.
       </p>
 
-      {error && (
-        <div className="bg-danger/5 border border-danger/20 rounded-lg p-3 flex items-center gap-2 text-danger text-sm">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          {error}
-          <button onClick={() => setError('')} className="mr-auto hover:text-danger/80">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-success/5 border border-success/20 rounded-lg p-3 flex items-center gap-2 text-success text-sm">
-          <Check className="w-4 h-4 shrink-0" />
-          {success}
-          <button onClick={() => setSuccess('')} className="mr-auto hover:text-success/80">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* API Keys Section */}
       <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
@@ -170,7 +210,11 @@ export default function AdminSettings() {
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-slate-400 rtl-text">چرخش خودکار</span>
             <button
-              onClick={() => { setAutoSwitch(!autoSwitch); handleSaveAutoSwitch(); }}
+              onClick={() => {
+                const next = !autoSwitch;
+                setAutoSwitch(next);
+                handleSaveAutoSwitch(next);
+              }}
               className={`relative w-11 h-6 rounded-full transition-colors ${autoSwitch ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${autoSwitch ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -179,7 +223,7 @@ export default function AdminSettings() {
         </div>
 
         {showAddForm && (
-          <form onSubmit={handleAddApiKey} className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 space-y-3">
+          <form onSubmit={handleAddApiKey} className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 space-y-3 max-w-md">
             <div>
               <label className="text-[10px] text-slate-400 rtl-text block mb-1">نام</label>
               <input
@@ -209,7 +253,7 @@ export default function AdminSettings() {
               </button>
               <button
                 type="button"
-                onClick={() => { setShowAddForm(false); setName(''); setApiKey(''); setError(''); }}
+                onClick={() => { setShowAddForm(false); setName(''); setApiKey(''); clearApiMessages(); }}
                 className="btn-secondary text-xs py-1.5 px-4"
               >
                 انصراف
@@ -263,6 +307,7 @@ export default function AdminSettings() {
           )}
         </div>
       </div>
+      <SectionMessage type={apiSuccess ? 'success' : 'error'} message={apiSuccess || apiError} onClose={clearApiMessages} />
 
       {/* Schedule Settings Section */}
       <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
@@ -276,6 +321,7 @@ export default function AdminSettings() {
               const next = !scheduleEnabled;
               setScheduleEnabled(next);
               setSavingSchedule(true);
+              clearScheduleMessages();
               try {
                 const payload = {
                   schedule_enabled: next,
@@ -288,11 +334,11 @@ export default function AdminSettings() {
                 await api.put('/admin/schedule', payload);
                 const userRes = await api.get('/user');
                 updateUser(userRes.data.user);
-                setSuccess(next ? 'زمان‌بندی فعال شد.' : 'زمان‌بندی غیرفعال شد.');
-                setTimeout(() => setSuccess(''), 3000);
+                setScheduleSuccess(next ? 'زمان‌بندی فعال شد.' : 'زمان‌بندی غیرفعال شد.');
+                setTimeout(() => setScheduleSuccess(''), 3000);
               } catch (err) {
                 setScheduleEnabled(!next); // revert on error
-                setError(err.response?.data?.message || 'خطا در ذخیره تنظیمات');
+                setScheduleError(err.response?.data?.message || 'خطا در ذخیره تنظیمات');
               } finally {
                 setSavingSchedule(false);
               }
@@ -304,7 +350,7 @@ export default function AdminSettings() {
         </div>
 
         {scheduleEnabled && (
-          <div className="px-4 py-3 space-y-3">
+          <div className="px-4 py-3 space-y-3 max-w-md">
             <p className="text-[10px] text-slate-400 rtl-text">
               بروزرسانی خودکار قیمت‌ها حتی وقتی کاربری حضور ندارد
             </p>
@@ -334,26 +380,25 @@ export default function AdminSettings() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-w-md">
               <p className="text-[10px] text-slate-400 rtl-text">بازه زمانی اجرا (اختیاری)</p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
+              <div className="space-y-2">
+                <div>
                   <label className="text-[10px] text-slate-500 rtl-text block mb-1">از ساعت</label>
                   <input
                     type="time"
                     value={scheduleStartTime}
                     onChange={(e) => setScheduleStartTime(e.target.value)}
-                    className="input-field w-full text-xs py-2"
+                    className="input-field time-field w-full text-xs py-2"
                   />
                 </div>
-                <span className="text-slate-400 mt-4">—</span>
-                <div className="flex-1">
+                <div>
                   <label className="text-[10px] text-slate-500 rtl-text block mb-1">تا ساعت</label>
                   <input
                     type="time"
                     value={scheduleEndTime}
                     onChange={(e) => setScheduleEndTime(e.target.value)}
-                    className="input-field w-full text-xs py-2"
+                    className="input-field time-field w-full text-xs py-2"
                   />
                 </div>
               </div>
@@ -394,6 +439,66 @@ export default function AdminSettings() {
             </button>
           </div>
         )}
+      </div>
+      <SectionMessage type={scheduleSuccess ? 'success' : 'error'} message={scheduleSuccess || scheduleError} onClose={clearScheduleMessages} />
+
+      {/* SMS Settings Section */}
+      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
+        <div className="px-4 py-3">
+          <p className="text-[10px] text-slate-400 rtl-text">
+            تنظیمات اعلان پیامکی (کلید API مدیر پیامک، شماره فرستنده و فاصله ارسال) در تنظیمات شخصی هر کاربر تنظیم می‌شود.
+          </p>
+        </div>
+      </div>
+
+      {/* Test SMS Section */}
+      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-brand-500" />
+            ارسال پیامک تست
+          </h2>
+        </div>
+        <div className="px-4 py-3 space-y-3 max-w-md">
+          <p className="text-[10px] text-slate-400 rtl-text">
+            برای بررسی صحت اتصال به مدیر پیامک. ابتدا باید در تنظیمات شخصی خودتان (بخش اعلان پیامکی) کلید API و شماره فرستنده را وارد کرده باشید.
+          </p>
+          <div>
+            <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره موبایل گیرنده</label>
+            <input
+              type="tel"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              dir="ltr"
+              style={{ unicodeBidi: 'plaintext' }}
+              className="input-field w-full text-xs py-2 ltr-text text-left"
+              placeholder="09121234567"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-400 rtl-text block mb-1">متن پیام (اختیاری)</label>
+            <input
+              type="text"
+              value={testMsg}
+              onChange={(e) => setTestMsg(e.target.value)}
+              className="input-field w-full text-xs py-2 rtl-text"
+              placeholder="پیام تست"
+            />
+          </div>
+          <button
+            onClick={handleTestSms}
+            disabled={testSending}
+            className="btn-primary text-xs py-1.5 px-4 flex items-center gap-1"
+          >
+            {testSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            {testSending ? 'در حال ارسال...' : 'ارسال پیامک تست'}
+          </button>
+          {testResult && (
+            <div className={`text-[10px] px-3 py-2 rounded-lg rtl-text ${testResult.type === 'success' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+              {testResult.text}
+            </div>
+          )}
+        </div>
       </div>
 
     {deleteConfirmIndex !== null && (

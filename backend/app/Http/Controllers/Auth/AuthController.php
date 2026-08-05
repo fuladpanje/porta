@@ -22,6 +22,13 @@ class AuthController extends Controller
         $userData['schedule_hours'] = $schedule['hours'];
         $userData['schedule_start_time'] = $schedule['start_time'];
         $userData['schedule_end_time'] = $schedule['end_time'];
+        $userData['phone'] = $user->phone;
+        $userData['sms_enabled'] = $user->sms_enabled;
+        $userData['sms_cooldown_minutes'] = $user->sms_cooldown_minutes ?? 60;
+        $userData['sms_start_time'] = $user->sms_start_time;
+        $userData['sms_end_time'] = $user->sms_end_time;
+        $userData['ippanel_sender'] = $user->ippanel_sender;
+        $userData['sms_configured'] = $user->hasSmsConfigured();
         return $userData;
     }
 
@@ -224,6 +231,77 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $this->enrichUser($request->user()->fresh()),
+        ]);
+    }
+
+    public function updateIppanelSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => 'nullable|string|max:20',
+            'ippanel_api_key' => 'nullable|string|max:255',
+            'ippanel_sender' => 'nullable|string|max:20',
+            'sms_enabled' => 'required|boolean',
+            'sms_cooldown_minutes' => 'nullable|integer|min:1|max:1440',
+            'sms_start_time' => 'nullable|date_format:H:i',
+            'sms_end_time' => 'nullable|date_format:H:i',
+        ]);
+
+        $hasSmsStart = !empty($validated['sms_start_time'] ?? null);
+        $hasSmsEnd = !empty($validated['sms_end_time'] ?? null);
+
+        if ($hasSmsStart !== $hasSmsEnd) {
+            return response()->json([
+                'message' => 'برای بازه زمانی ارسال پیامک، هر دو ساعت شروع و پایان را وارد کنید.',
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        $updateData = [
+            'sms_enabled' => $validated['sms_enabled'],
+        ];
+
+        if (array_key_exists('phone', $validated)) {
+            $updateData['phone'] = $validated['phone'];
+        }
+        if (array_key_exists('ippanel_api_key', $validated)) {
+            $updateData['ippanel_api_key'] = $validated['ippanel_api_key'];
+        }
+        if (array_key_exists('ippanel_sender', $validated)) {
+            $updateData['ippanel_sender'] = $validated['ippanel_sender'];
+        }
+        if (array_key_exists('sms_cooldown_minutes', $validated) && $validated['sms_cooldown_minutes'] !== null) {
+            $updateData['sms_cooldown_minutes'] = $validated['sms_cooldown_minutes'];
+        }
+        if (array_key_exists('sms_start_time', $validated)) {
+            $updateData['sms_start_time'] = $validated['sms_start_time'];
+        }
+        if (array_key_exists('sms_end_time', $validated)) {
+            $updateData['sms_end_time'] = $validated['sms_end_time'];
+        }
+
+        $user->update($updateData);
+
+        return response()->json([
+            'user' => $this->enrichUser($user->fresh()),
+        ]);
+    }
+
+    public function getSmsStats(Request $request)
+    {
+        $user = $request->user();
+
+        $totalSent = \App\Models\SmsNotification::where('user_id', $user->id)->count();
+        $todaySent = \App\Models\SmsNotification::where('user_id', $user->id)
+            ->whereDate('sent_at', today())
+            ->count();
+
+        return response()->json([
+            'data' => [
+                'total_sent' => $totalSent,
+                'today_sent' => $todaySent,
+                'sms_configured' => $user->hasSmsConfigured(),
+            ],
         ]);
     }
 

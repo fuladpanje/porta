@@ -152,10 +152,12 @@ class RefreshSymbols extends Command
 
         $updated = 0;
         $errors = 0;
+        $smsCount = 0;
 
         \Illuminate\Support\Facades\DB::statement('SET SESSION innodb_lock_wait_timeout = 5');
 
-        $portfolios = \App\Models\Portfolio::with('items')->get();
+        $smsService = new \App\Services\SmsService();
+        $portfolios = \App\Models\Portfolio::with('items', 'user')->get();
         foreach ($portfolios as $portfolio) {
             foreach ($portfolio->items as $item) {
                 $key = strtolower($item->symbol);
@@ -196,6 +198,17 @@ class RefreshSymbols extends Command
                                 ->where('id', $item->id)
                                 ->update($updateData);
                             $updated++;
+
+                            // SMS notification check
+                            if ($pl !== null && !empty($updateData['last_price'])) {
+                                try {
+                                    $item->loadMissing('portfolio.user');
+                                    $sent = $smsService->checkAndNotify($item, (float) $pl);
+                                    $smsCount += count($sent);
+                                } catch (\Throwable $e) {
+                                    $this->warn("SMS check failed for {$item->symbol}: " . $e->getMessage());
+                                }
+                            }
                         } catch (\Throwable $e) {
                             $errors++;
                             $this->warn("Failed to update item {$item->id} ({$item->symbol}): " . $e->getMessage());
@@ -217,6 +230,6 @@ class RefreshSymbols extends Command
             $this->warn("Failed to save last_refresh_at: " . $e->getMessage());
         }
 
-        $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.' . ($errors ? " ($errors خطا)" : ''));
+        $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.' . ($errors ? " ($errors خطا)" : '') . ($smsCount ? " | $smsCount SMS ارسال شد." : ''));
     }
 }

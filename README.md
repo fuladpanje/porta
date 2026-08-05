@@ -50,6 +50,7 @@
 - طراحی ریسپانسیو (موبایل، تبلت، دسکتاپ)
 - واحد پول ریال/تومان
 - کارمزد خرید/فروش قابل تنظیم
+- اعلان پیامکی هنگام رسیدن قیمت به سطوح مقاومت و حمایت
 
 ## دانلود
 
@@ -111,7 +112,7 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-> مسیر بالا را بر اساس مسیر نصب ساب‌دومین خودتان تنظیم کنید. مسیر دقیق را از بخش **Subdomains** در cPanel پیدا کنید.
+> مسیر بالا را بر اساس مسیر نصب ساب‌دومین خودتان تنظیم کنید.
 
 ### نقش ادمین
 
@@ -121,7 +122,48 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 - **زمان‌بندی بروزرسانی خودکار** (ثانیه، دقیقه، ساعت) را تنظیم کند
 - **بازه زمانی اجرا** (ساعت شروع و پایان) را مشخص کند
 
-برای دسترسی به تنظیمات ادمین، از منوی **تنظیمات ادمین** استفاده کنید.
+## اعلان پیامکی
+
+سیستم اعلان پیامکی پورتا به کاربران اجازه می‌دهد هنگام رسیدن قیمت سهام به سطوح مقاومت و حمایت، از طریق پیامک مطلع شوند. این سرویس از وب‌سرویس **مدیر پیامک** (modirpayamak.com / IPPanel) استفاده می‌کند.
+
+### نحوه کار
+
+1. قیمت جدید سهام از BRS API دریافت می‌شود
+2. سیستم بررسی می‌کند آیا قیمت جدید از سطح مقاومت بالاتر رفته یا از سطح حمایت پایین‌تر آمده
+3. اگر عبور از سطح تشخیص داده شود و فاصله زمانی ارسال قبلی از cooldown تعیین‌شده بیشتر باشد، پیامک ارسال می‌شود
+4. هر ارسال در دیتابیس ثبت می‌شود تا از ارسال تکراری جلوگیری شود
+
+### پیامک‌های ارسالی
+
+پیامک‌ها به صورت خودکار و با فرمت زیر ارسال می‌شوند:
+
+- **عبور از مقاومت**: `{نماد} به مقاومت {سطح} رسید / فعلی: {قیمت} / مقاومت: {مقدار سطح}`
+- **عبور از حمایت**: `{نماد} به حمایت {سطح} رسید / فعلی: {قیمت} / حمایت: {مقدار سطح}`
+
+سطوح پشتیبانی شده: مقاومت ۱، ۲، ۳ و حمایت ۱، ۲، ۳
+
+### تنظیمات کاربر
+
+هر کاربر می‌تواند تنظیمات پیامک خود را در صفحه **تنظیمات** مدیریت کند:
+
+| تنظیم | توضیح |
+|--------|-------|
+| فعال‌سازی پیامک | روشن/خاموش کردن اعلان پیامکی |
+| شماره تلفن | شماره موبایل دریافت‌کننده پیامک |
+| کلید API مدیر پیامک | کلید API وب‌سرویس مدیر پیامک |
+| شماره فرستنده | شماره ارسال‌کننده پیامک (مثلاً 1000xxxx) |
+| فاصله ارسال | حداقل فاصله زمانی بین دو پیامک برای یک سهم و سطح (پیش‌فرض: ۶۰ دقیقه) |
+| ساعت شروع/پایان ارسال | بازه زمانی مجاز ارسال پیامک |
+
+### تنظیمات ادمین
+
+ادمین می‌تواند از بخش **تنظیمات ادمین** موارد زیر را مدیریت کند:
+
+| تنظیم | توضیح |
+|--------|-------|
+| فاصله پیش‌فرض ارسال | فاصله زمانی پیش‌فرض بین پیامک‌ها (سیستمی) |
+| پیامک تست | ارسال پیامک تست به یک شماره دلخواه با کلید API خود ادمین |
+| پیامک تست کاربر | ارسال پیامک تست به یک کاربر خاص با کلید API آن کاربر |
 
 ## API
 
@@ -135,6 +177,8 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 | PUT | `/api/user/auto-switch` | سوییچ خودکار |
 | PUT | `/api/user/schedule` | زمان‌بندی |
 | PUT | `/api/user/fee-settings` | تنظیم کارمزد |
+| PUT | `/api/user/ippanel-settings` | تنظیمات پیامک و مدیر پیامک |
+| GET | `/api/user/sms-stats` | آمار ارسال پیامک |
 | GET/POST | `/api/portfolios` | لیست/ساخت پورتفولیو |
 | GET/PUT/DELETE | `/api/portfolios/{id}` | مدیریت پورتفولیو |
 | GET/POST | `/api/portfolios/{id}/items` | آیتم‌ها |
@@ -148,181 +192,52 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 | PUT/DELETE | `/api/admin/api-keys/{id}` | ویرایش/حذف کلید (ادمین) |
 | PUT | `/api/admin/schedule` | زمان‌بندی (ادمین) |
 | POST | `/api/admin/refresh-symbols` | بروزرسانی دستی نمادها |
+| PUT | `/api/admin/sms-settings` | تنظیمات پیامک سیستمی (ادمین) |
+| POST | `/api/admin/test-sms` | پیامک تست با کلید ادمین |
+| POST | `/api/admin/test-sms-user` | پیامک تست با کلید کاربر |
 
 ## ساختار دیتابیس
 
-### جدول `users`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `username` | string (unique) | — | نام کاربری |
-| `email` | string (unique) | — | ایمیل |
-| `password` | string | — | رمز عبور |
-| `is_admin` | boolean | `false` | آیا ادمین است |
-| `is_stale` | boolean | `true` | داده قدیمی است |
-| `unit` | string(10) | `rial` | واحد پول (rial/toman) |
-| `auto_switch` | boolean | `true` | سوییچ خودکار API |
-| `schedule_enabled` | boolean | `false` | فعال‌سازی زمان‌بندی |
-| `schedule_seconds` | integer | `0` | ثانیه زمان‌بندی |
-| `schedule_minutes` | integer | `5` | دقیقه زمان‌بندی |
-| `schedule_hours` | integer | `0` | ساعت زمان‌بندی |
-| `commission_enabled` | boolean | `false` | فعال‌سازی کارمزد |
-| `buy_commission` | decimal(5,2) | `0.37` | کارمزد خرید (%) |
-| `sell_commission` | decimal(5,2) | `0.88` | کارمزد فروش (%) |
-| `email_verified_at` | timestamp | `null` | زمان تأیید ایمیل |
-| `remember_token` | string | — | توکن مرا به خاطر بسپار |
-| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
-
-### جدول `portfolios`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `user_id` | bigint (FK) | — | مالک (حذف Cascade) |
-| `name` | string | — | نام پورتفولیو |
-| `commission_enabled` | boolean | `false` | کارمزد اختصاصی |
-| `buy_commission` | decimal(5,2) | `0.37` | کارمزد خرید اختصاصی |
-| `sell_commission` | decimal(5,2) | `0.88` | کارمزد فروش اختصاصی |
-| `active` | boolean | `true` | فعال/غیرفعال |
-| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
-
-### جدول `portfolio_items`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `portfolio_id` | bigint (FK) | — | مالک (حذف Cascade) |
-| `symbol` | string | — | نماد بورسی |
-| `last_price` | decimal(12,2) | `null` | آخرین قیمت |
-| `pe` | decimal(12,2) | `null` | نسبت P/E |
-| `buy_price` | decimal(12,2) | — | قیمت خرید |
-| `quantity` | decimal(12,4) | — | تعداد سهم |
-| `sell_price` | decimal(12,2) | `null` | قیمت فروش |
-| `resistance_1/2/3` | decimal(12,2) | `null` | سطوح مقاومت |
-| `support_1/2/3` | decimal(12,2) | `null` | سطوح حمایت |
-| `active` | boolean | `true` | فعال/غیرفعال |
-| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
-
-### جدول `api_keys`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `user_id` | bigint (FK) | — | مالک (حذف Cascade) |
-| `name` | string | — | نام کلید |
-| `api_key` | text | — | کلید API |
-| `is_default` | boolean | `false` | کلید پیش‌فرض |
-| `daily_requests` | integer | `0` | درخواست‌های روزانه |
-| `last_reset_at` | timestamp | `null` | آخرین ریست شمارنده |
-| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
-
-### جدول `favorites`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `user_id` | bigint (FK) | — | مالک (حذف Cascade) |
-| `symbol` | string | — | نماد مورد علاقه |
-| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
-
-> Unique: (`user_id`, `symbol`)
-
-### جدول `symbols_cache`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `isin` | string(50) (unique) | — | کد ISIN نماد |
-| `symbol` | string | — | نماد |
-| `full_name` | string | — | نام کامل |
-| `last_price` | decimal(12,2) | `null` | آخرین قیمت |
-| `pe` | decimal(12,2) | `null` | نسبت P/E |
-| `price_change_percent` | decimal(8,2) | `null` | درصد تغییر قیمت |
-| `price_change` | decimal(12,2) | `null` | مبلغ تغییر قیمت |
-| `sector` | string | `null` | صنعت |
-| `last_updated_at` | timestamp | `null` | آخرین بروزرسانی |
-
-### جدول `system_settings`
-
-| ستون | نوع | پیش‌فرض | توضیح |
-|------|------|---------|-------|
-| `id` | bigint (PK) | — | شناسه |
-| `setting_key` | string(100) (unique) | — | کلید تنظیم |
-| `setting_value` | text | `null` | مقدار تنظیم |
-| `description` | string(255) | `null` | توضیحات |
-| `created_at` / `updated_at` | timestamp | — | زمان ایجاد/ویرایش |
+| جدول | توضیح |
+|------|-------|
+| `users` | کاربران سیستم و تنظیمات پیامک آن‌ها |
+| `portfolios` | پورتفولیوهای سهام کاربران |
+| `portfolio_items` | سهام داخل هر پورتفولیو (قیمت خرید، تعداد، سطوح مقاومت/حمایت) |
+| `api_keys` | کلیدهای API بورس ادمین |
+| `favorites` | نمادهای مورد علاقه کاربران |
+| `sms_notifications` | تاریخچه ارسال پیامک‌های اعلان |
+| `symbols_cache` | کش قیمت همه نمادهای بازار |
+| `system_settings` | تنظیمات سیستمی (زمان‌بندی، کلیدها، فاصله پیش‌فرض پیامک) |
 
 ---
 
 ## بروزرسانی داده‌ها و کش
 
-داده‌های قیمت سهام از وب‌سرویس **BRS API** (بورس تهران) دریافت و در دیتابیس کش می‌شود تا هم سرعت پاسخ افزایش یابد و هم تعداد درخواست‌های ارسالی به API به حداقل برسد. در این بخش معماری بروزرسانی داده‌ها، ذخیره‌سازی، کش و رفرش خودکار توضیح داده می‌شود.
+داده‌های قیمت سهام از وب‌سرویس **BRS API** (بورس تهران) دریافت و در دیتابیس کش می‌شود تا هم سرعت پاسخ افزایش یابد و هم تعداد درخواست‌های ارسالی به API به حداقل برسد.
 
 ### نمای کلی جریان داده
-
-جریان بروزرسانی داده به این شکل است:
 
 1. درخواست کاربر ابتدا با کش در حافظه (TTL: ۵ دقیقه) و سپس با کش دیتابیس `symbols_cache` (TTL: ۱۰ دقیقه) چک می‌شود.
 2. اگر کش تازه باشد، داده مستقیماً از دیتابیس برگردانده می‌شود (`from_cache = true`) و هیچ تماسی با API گرفته نمی‌شود.
 3. اگر کش قدیمی باشد، درخواست به BRS API ارسال می‌شود.
-4. در صورت موفقیت، داده در `symbols_cache` ذخیره (Upsert بر اساس ISIN) و قیمت‌های `portfolio_items` بروزرسانی می‌شود. در نهایت `last_refresh_at` ثبت و پاسخ با داده تازه برمی‌گردد (`from_cache = false`).
-5. در صورت خطای API، سیستم به آخرین داده کش‌شده در دیتابیس فال‌بک می‌دهد (`from_cache = true`).
-
-### منبع داده
-
-- **اندپوینت**: `https://Api.BrsApi.ir/Tsetmc/AllSymbols.php?key={API_KEY}`
-- خروجی شامل اطلاعات کامل همه نمادهای بازار بورس ایران است: کد ISIN، نام کوتاه/کامل، آخرین قیمت، نسبت P/E، درصد و مبلغ تغییر قیمت، صنعت و آمار سفارش‌ها.
-
-### ذخیره‌سازی در دیتابیس
-
-| جدول | نقش |
-|------|-----|
-| `symbols_cache` | کش کامل همه نمادها؛ کلید یکتای `isin` و بروزرسانی با `upsert` |
-| `portfolio_items` | اعمال آخرین قیمت، P/E و آمار سفارش‌ها روی سهام هر پورتفولیو |
-| `system_settings` | تنظیمات و ابرداده (کلیدهای API، زمان‌بندی، `last_refresh_at`) |
-
-> نکته: در `portfolio_items` مقدار یک فیلد فقط در صورتی آپدیت می‌شود که نسبت به مقدار قبلی تغییر کرده باشد تا تعداد رکوردهای تغییر یافته و ترافیک دیتابیس به حداقل برسد.
-
-### استفاده از کش دیتابیس
-
-- وقتی کش دیتابیس «تازه» است (بر اساس `symbols_cache_age_minutes` که پیش‌فرض ۱۰ دقیقه است)، درخواست‌ها مستقیماً از دیتابیس پاسخ داده می‌شوند و هیچ تماسی با API زده نمی‌شود.
-- پاسخ‌ها پرچم `from_cache` دارند تا کلاینت بداند داده از کش آمده یا مستقیم از API.
-- اگر API در دسترس نباشد (خطا یا انقضای کلید)، سیستم به‌صورت خودکار **فال‌بک** به آخرین داده کش‌شده در دیتابیس می‌دهد تا صفحه‌ها خالی نمانند (graceful degradation).
+4. در صورت موفقیت، داده ذخیره و قیمت‌ها بروزرسانی می‌شود (`from_cache = false`).
+5. در صورت خطای API، سیستم به آخرین داده کش‌شده فال‌بک می‌دهد (`from_cache = true`).
 
 ### رفرش خودکار
 
-رفرش خودکار توسط کامند `symbols:refresh` انجام می‌شود که هر دقیقه توسط Cron اجرا می‌شود و فقط در صورتی که همه این ۴ شرط برقرار باشد، داده را بروزرسانی می‌کند:
+رفرش خودکار توسط کامند `symbols:refresh` انجام می‌شود و فقط در صورتی اجرا می‌شود که:
 
-1. زمان‌بندی فعال باشد (`schedule_enabled`).
-2. فاصله زمانی معتبر باشد (مجموع ساعت، دقیقه و ثانیه بزرگ‌تر از صفر).
-3. در بازه زمانی بازار باشیم (`start_time` تا `end_time`).
-4. از آخرین اجرا به اندازه فاصله تعیین‌شده گذشته باشد.
+1. زمان‌بندی فعال باشد
+2. فاصله زمانی معتبر باشد
+3. در بازه زمانی بازار باشیم
+4. از آخرین اجرا به اندازه فاصله تعیین‌شده گذشته باشد
 
-اگر همه شرایط برقرار بود، داده از API دریافت و در دیتابیس ذخیره می‌شود.
+### مدیریت بهینه API
 
-- **فاصله زمانی**: ثانیه، دقیقه و ساعت را ادمین از پنل تنظیمات ادمین مشخص می‌کند.
-- **بازه زمانی بازار**: شروع و پایان اجرا تعیین می‌شود و بازه‌های شبانه (مثلاً ۲۱:۰۰ تا ۰۸:۰۰) هم پشتیبانی می‌شود؛ خارج از این بازه رفرش انجام نمی‌شود.
-- **ردیابی اجرا**: زمان آخرین اجرا در دیتابیس ذخیره می‌شود (نه در حافظه کش) تا در هاست‌های اشتراکی که ریست می‌شوند، قابل اعتماد باشد.
-
-### مدیریت بهینه استفاده از API
-
-- **کش چندلایه**: حافظه (۵ دقیقه)، دیتابیس (۱۰ دقیقه) و کش سمت کلاینت برای جلوگیری از درخواست‌های تکراری.
-- **کلیدهای چندگانه و Failover**: ادمین می‌تواند چند کلید API ثبت کند. با فعال بودن **Auto Switch**، سیستم به ترتیب کلیدها را امتحان می‌کند تا یکی موفق شود؛ اگر غیرفعال باشد فقط از کلید پیش‌فرض استفاده می‌شود.
-- **عدم آپدیت بی‌مورد**: قیمت‌ها فقط در صورت تغییر واقعی ذخیره می‌شوند.
-- **پایان خارج از ساعت بازار**: در بازه‌ای که بازار بسته است، هیچ درخواستی به API ارسال نمی‌شود.
-- **درج دسته‌ای**: ذخیره نمادها در بسته‌های ۵۰۰تایی انجام می‌شود تا فشار به دیتابیس کاهش یابد.
-
-### بروزرسانی دستی
-
-- ادمین می‌تواند از دکمه «بروزرسانی قیمت‌ها» در هدر، با `manual=true` بروزرسانی را خارج از بازه زمانی هم انجام دهد.
-- از مسیر `POST /api/admin/refresh-symbols` نیز کامند رفرش مستقیماً اجرا می‌شود.
-
-### رفتار سمت کلاینت
-
-- فرانت‌اند اگر زمان‌بندی برای کاربر فعال باشد، با همان فاصله زمانی یک تایمر محلی می‌سازد و فقط در بازه بازار، داده را از سرور دریافت می‌کند.
-- بعد از هر رفرش، رویداد `prices-refreshed` منتشر می‌شود تا داشبورد و صفحات دیگر داده جدید را دوباره بگیرند.
-- نشانگر زمان آخرین بروزرسانی در هدر نمایش داده می‌شود و در صورت قدیمی بودن داده‌ها (`is_stale`) یک آیکن هشدار نشان داده می‌شود.
+- **کش چندلایه**: حافظه (۵ دقیقه)، دیتابیس (۱۰ دقیقه) و کش سمت کلاینت
+- **کلیدهای چندگانه**: پشتیبانی از چند کلید API با failover خودکار
+- **عدم آپدیت بی‌مورد**: قیمت‌ها فقط در صورت تغییر واقعی ذخیره می‌شوند
+- **خارج از ساعت بازار**: در بازه‌ای که بازار بسته است، درخواستی به API ارسال نمی‌شود
 
 ---
 
@@ -349,6 +264,7 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 - Responsive design (mobile, tablet, desktop)
 - Rial/Toman currency unit
 - Configurable buy/sell commission
+- SMS notifications for support/resistance level alerts
 
 ## Download
 
@@ -392,9 +308,8 @@ Auto price updates are handled via **Cron Job** in cPanel.
 
 ### Setup in cPanel
 
-1. Go to **cPanel**
-2. Open **Advanced** > **Cron Jobs**
-3. Add a new Cron Job with these settings:
+1. Go to **cPanel** > **Advanced** > **Cron Jobs**
+2. Add a new Cron Job:
 
 | Field | Value |
 |-------|-------|
@@ -404,13 +319,13 @@ Auto price updates are handled via **Cron Job** in cPanel.
 | Month | `*` |
 | Weekday | `*` |
 
-4. In the **Command** field enter:
+3. In the **Command** field enter:
 
 ```bash
 cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-> Adjust the path based on your subdomain installation. Find the exact path in **Subdomains** section of cPanel.
+> Adjust the path based on your subdomain installation.
 
 ### Admin Role
 
@@ -420,7 +335,46 @@ The **first user** to register automatically becomes **Admin**. Admin can:
 - **Configure auto-update schedule** (seconds, minutes, hours)
 - **Set execution time range** (start and end time)
 
-Access admin settings from the **Admin Settings** menu.
+## SMS Notifications
+
+Porta's SMS notification system alerts users when stock prices cross support or resistance levels. It uses the **Modir Payamak** (modirpayamak.com / IPPanel) SMS gateway.
+
+### How it works
+
+1. New stock prices are fetched from BRS API
+2. The system checks whether the new price crossed above a resistance level or below a support level
+3. If a crossing is detected and the cooldown period has passed, an SMS is sent
+4. Each send is recorded in the database to prevent duplicate alerts
+
+### SMS messages
+
+Messages are automatically formatted as:
+
+- **Resistance crossing**: `{symbol} reached resistance {level} / Current: {price} / Resistance: {level_value}`
+- **Support crossing**: `{symbol} reached support {level} / Current: {price} / Support: {level_value}`
+
+Supported levels: Resistance 1, 2, 3 and Support 1, 2, 3
+
+### User Settings
+
+Each user can manage their SMS settings in the **Settings** page:
+
+| Setting | Description |
+|---------|-------------|
+| Enable SMS | Turn SMS notifications on/off |
+| Phone number | Mobile number to receive SMS |
+| Modir Payamak API Key | Web service API key from modirpayamak.com |
+| Sender number | SMS sender number (e.g. 1000xxxx) |
+| Send interval | Minimum time between SMS for same item & level (default: 60 min) |
+| Start/End time | Allowed SMS sending window |
+
+### Admin Settings
+
+| Setting | Description |
+|---------|-------------|
+| Default send interval | System-wide default cooldown between SMS |
+| Test SMS | Send a test SMS using admin's own API key |
+| Test SMS for user | Send a test SMS to a specific user using that user's API key |
 
 ## API
 
@@ -434,6 +388,8 @@ Access admin settings from the **Admin Settings** menu.
 | PUT | `/api/user/auto-switch` | Auto switch config |
 | PUT | `/api/user/schedule` | Schedule config |
 | PUT | `/api/user/fee-settings` | Commission settings |
+| PUT | `/api/user/ippanel-settings` | Ippanel & SMS settings |
+| GET | `/api/user/sms-stats` | SMS statistics |
 | GET/POST | `/api/portfolios` | List/Create portfolios |
 | GET/PUT/DELETE | `/api/portfolios/{id}` | Manage portfolio |
 | GET/POST | `/api/portfolios/{id}/items` | Portfolio items |
@@ -447,181 +403,52 @@ Access admin settings from the **Admin Settings** menu.
 | PUT/DELETE | `/api/admin/api-keys/{id}` | Edit/Delete key (admin) |
 | PUT | `/api/admin/schedule` | Schedule (admin) |
 | POST | `/api/admin/refresh-symbols` | Manual symbol refresh |
+| PUT | `/api/admin/sms-settings` | System SMS settings (admin) |
+| POST | `/api/admin/test-sms` | Test SMS with admin key |
+| POST | `/api/admin/test-sms-user` | Test SMS with user key |
 
 ## Database Schema
 
-### `users` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `username` | string (unique) | — | Username |
-| `email` | string (unique) | — | Email |
-| `password` | string | — | Password |
-| `is_admin` | boolean | `false` | Is admin |
-| `is_stale` | boolean | `true` | Data is stale |
-| `unit` | string(10) | `rial` | Currency (rial/toman) |
-| `auto_switch` | boolean | `true` | Auto switch API |
-| `schedule_enabled` | boolean | `false` | Schedule enabled |
-| `schedule_seconds` | integer | `0` | Schedule seconds |
-| `schedule_minutes` | integer | `5` | Schedule minutes |
-| `schedule_hours` | integer | `0` | Schedule hours |
-| `commission_enabled` | boolean | `false` | Commission enabled |
-| `buy_commission` | decimal(5,2) | `0.37` | Buy commission (%) |
-| `sell_commission` | decimal(5,2) | `0.88` | Sell commission (%) |
-| `email_verified_at` | timestamp | `null` | Email verified at |
-| `remember_token` | string | — | Remember token |
-| `created_at` / `updated_at` | timestamp | — | Timestamps |
-
-### `portfolios` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `user_id` | bigint (FK) | — | Owner (cascade delete) |
-| `name` | string | — | Portfolio name |
-| `commission_enabled` | boolean | `false` | Custom commission |
-| `buy_commission` | decimal(5,2) | `0.37` | Custom buy commission |
-| `sell_commission` | decimal(5,2) | `0.88` | Custom sell commission |
-| `active` | boolean | `true` | Active/inactive |
-| `created_at` / `updated_at` | timestamp | — | Timestamps |
-
-### `portfolio_items` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `portfolio_id` | bigint (FK) | — | Owner (cascade delete) |
-| `symbol` | string | — | Stock symbol |
-| `last_price` | decimal(12,2) | `null` | Last price |
-| `pe` | decimal(12,2) | `null` | P/E ratio |
-| `buy_price` | decimal(12,2) | — | Buy price |
-| `quantity` | decimal(12,4) | — | Quantity |
-| `sell_price` | decimal(12,2) | `null` | Sell price |
-| `resistance_1/2/3` | decimal(12,2) | `null` | Resistance levels |
-| `support_1/2/3` | decimal(12,2) | `null` | Support levels |
-| `active` | boolean | `true` | Active/inactive |
-| `created_at` / `updated_at` | timestamp | — | Timestamps |
-
-### `api_keys` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `user_id` | bigint (FK) | — | Owner (cascade delete) |
-| `name` | string | — | Key name |
-| `api_key` | text | — | API key |
-| `is_default` | boolean | `false` | Default key |
-| `daily_requests` | integer | `0` | Daily request count |
-| `last_reset_at` | timestamp | `null` | Last counter reset |
-| `created_at` / `updated_at` | timestamp | — | Timestamps |
-
-### `favorites` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `user_id` | bigint (FK) | — | Owner (cascade delete) |
-| `symbol` | string | — | Favorite symbol |
-| `created_at` / `updated_at` | timestamp | — | Timestamps |
-
-> Unique: (`user_id`, `symbol`)
-
-### `symbols_cache` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `isin` | string(50) (unique) | — | Symbol ISIN code |
-| `symbol` | string | — | Symbol |
-| `full_name` | string | — | Full name |
-| `last_price` | decimal(12,2) | `null` | Last price |
-| `pe` | decimal(12,2) | `null` | P/E ratio |
-| `price_change_percent` | decimal(8,2) | `null` | Price change % |
-| `price_change` | decimal(12,2) | `null` | Price change amount |
-| `sector` | string | `null` | Industry sector |
-| `last_updated_at` | timestamp | `null` | Last updated |
-
-### `system_settings` Table
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | bigint (PK) | — | ID |
-| `setting_key` | string(100) (unique) | — | Setting key |
-| `setting_value` | text | `null` | Setting value |
-| `description` | string(255) | `null` | Description |
-| `created_at` / `updated_at` | timestamp | — | Timestamps |
+| Table | Description |
+|-------|-------------|
+| `users` | System users and their SMS settings |
+| `portfolios` | User stock portfolios |
+| `portfolio_items` | Stocks within each portfolio (buy price, quantity, support/resistance levels) |
+| `api_keys` | Admin's BRS API keys |
+| `favorites` | User favorite symbols |
+| `sms_notifications` | SMS alert history |
+| `symbols_cache` | Cached prices for all market symbols |
+| `system_settings` | System settings (schedule, keys, default SMS cooldown) |
 
 ---
 
 ## Data Update & Caching
 
-Stock price data is fetched from the **BRS API** (Tehran Stock Exchange) and cached in the database so responses stay fast and the number of API calls stays minimal. This section explains the update architecture, storage, caching and auto-refresh behavior.
+Stock price data is fetched from the **BRS API** (Tehran Stock Exchange) and cached in the database for fast responses and minimal API calls.
 
 ### High-level data flow
 
-The data update flow works as follows:
-
-1. A request is first checked against the in-memory cache (TTL: 5 min) and then the `symbols_cache` DB table (TTL: 10 min).
-2. If the cache is fresh, data is served straight from the database (`from_cache = true`) with no API call.
+1. A request is checked against in-memory cache (TTL: 5 min), then `symbols_cache` DB table (TTL: 10 min).
+2. If the cache is fresh, data is served from the database (`from_cache = true`) with no API call.
 3. If the cache is stale, a request is sent to the BRS API.
-4. On success, data is saved into `symbols_cache` (upsert by ISIN) and `portfolio_items` prices are updated. `last_refresh_at` is recorded and fresh data is returned (`from_cache = false`).
-5. If the API fails, the system falls back to the latest cached data in the database (`from_cache = true`).
-
-### Data source
-
-- **Endpoint**: `https://Api.BrsApi.ir/Tsetmc/AllSymbols.php?key={API_KEY}`
-- Returns full info for every symbol in the Iran stock market: ISIN code, short/full name, last price, P/E ratio, price change % and amount, sector and order-book stats.
-
-### Database storage
-
-| Table | Role |
-|-------|------|
-| `symbols_cache` | Full snapshot of all symbols; unique key `isin`, upserted on every refresh |
-| `portfolio_items` | Last price, P/E and order-book stats applied to each portfolio stock |
-| `system_settings` | Settings & metadata (API keys, schedule, `last_refresh_at`) |
-
-> Note: a field in `portfolio_items` is only written when its value actually changed, keeping DB writes and traffic to a minimum.
-
-### Using the database cache
-
-- When the DB cache is fresh (based on `symbols_cache_age_minutes`, default 10 minutes), requests are served directly from the database with **no API call**.
-- Responses include a `from_cache` flag so the client knows whether data came from cache or the API.
-- If the API is unreachable (error or expired key), the system automatically **falls back** to the latest cached data (graceful degradation) so pages never render empty.
+4. On success, data is saved and prices are updated (`from_cache = false`).
+5. If the API fails, the system falls back to cached data (`from_cache = true`).
 
 ### Auto refresh
 
-Auto refresh is handled by the `symbols:refresh` command, executed every minute by Cron. It only updates data when all of these 4 conditions are met:
+The `symbols:refresh` command runs every minute via Cron and only updates when:
 
-1. Scheduling is enabled (`schedule_enabled`).
-2. The interval is valid (hours + minutes + seconds greater than zero).
-3. We are within the market time range (`start_time` to `end_time`).
-4. Enough time has passed since the last run.
-
-When all conditions are met, data is fetched from the API and saved to the database.
-
-- **Interval**: seconds, minutes and hours are configured by the admin from the Admin Settings panel.
-- **Market time range**: a start and end time can be defined (overnight ranges such as 21:00–08:00 are supported); no refresh happens outside this window.
-- **Run tracking**: the last run timestamp is stored in the database (not in-memory cache) so it stays reliable on shared hosting where the process gets reset.
+1. Scheduling is enabled
+2. The interval is valid
+3. We are within market hours
+4. Enough time has passed since the last run
 
 ### Efficient API usage
 
-- **Multi-layer caching**: in-memory (5 min), database (10 min) and client-side cache prevent duplicate calls.
-- **Multiple keys & failover**: the admin can register several API keys. With **Auto Switch** enabled the system tries each key in order until one succeeds; otherwise only the default key is used.
-- **No unnecessary writes**: prices are only stored when their value actually changes.
-- **Market-hours gating**: while the market is closed, no requests are sent to the API.
-- **Batched inserts**: symbols are saved in batches of 500 to reduce database pressure.
-
-### Manual refresh
-
-- Admins can use the "Refresh prices" button in the header with `manual=true` to run a refresh even outside the configured time range.
-- `POST /api/admin/refresh-symbols` runs the refresh command directly.
-
-### Client-side behavior
-
-- When a schedule is active, the frontend runs a local timer with the same interval and only fetches fresh data from the server during market hours.
-- After every refresh, a `prices-refreshed` window event is dispatched so the dashboard and other pages re-fetch the new data.
-- The header shows the last refresh time and displays a warning icon when data is stale (`is_stale`).
+- **Multi-layer caching**: in-memory (5 min), database (10 min), client-side cache
+- **Multiple keys & failover**: support for multiple API keys with auto-switch
+- **No unnecessary writes**: prices only stored when actually changed
+- **Market-hours gating**: no API calls when market is closed
 
 ---
 

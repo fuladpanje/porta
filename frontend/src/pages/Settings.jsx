@@ -1,21 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { useStaleData } from '../contexts/StaleDataContext';
-import { Check, X, Loader2, AlertCircle, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Shield } from 'lucide-react';
+import { Check, X, Loader2, AlertCircle, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Shield, MessageSquare, Send, BarChart3 } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
-import { ConfirmModal } from '../components/ConfirmModal';
 import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
-  const { setStale } = useStaleData();
   const updateUserRef = useRef(updateUser);
   updateUserRef.current = updateUser;
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [commissionEnabled, setCommissionEnabled] = useState(false);
   const [buyCommission, setBuyCommission] = useState('0.37');
   const [sellCommission, setSellCommission] = useState('0.88');
@@ -28,6 +22,61 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [ippanelApiKey, setIppanelApiKey] = useState('');
+  const [ippanelSender, setIppanelSender] = useState('');
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [savingSms, setSavingSms] = useState(false);
+  const [smsCooldown, setSmsCooldown] = useState(60);
+  const [smsStartTime, setSmsStartTime] = useState('');
+  const [smsEndTime, setSmsEndTime] = useState('');
+  const [smsStats, setSmsStats] = useState({ total_sent: 0, today_sent: 0 });
+  
+  // Section-specific messages
+  const [smsError, setSmsError] = useState('');
+  const [smsSuccess, setSmsSuccess] = useState('');
+  const [commissionError, setCommissionError] = useState('');
+  const [commissionSuccess, setCommissionSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const clearCommissionMessages = () => {
+    setCommissionError('');
+    setCommissionSuccess('');
+  };
+
+  const clearSmsMessages = () => {
+    setSmsError('');
+    setSmsSuccess('');
+  };
+
+  const clearPasswordMessages = () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const normalizeTimeForInput = (value) => (value ? String(value).slice(0, 5) : '');
+
+  const SectionMessage = ({ type, message, onClose }) => {
+    if (!message) return null;
+
+    const isSuccess = type === 'success';
+
+    const messageClass = isSuccess
+      ? 'bg-success/5 border border-success/20 text-success'
+      : 'bg-danger/5 border border-danger/20 text-danger';
+    const closeClass = isSuccess ? 'mr-auto hover:text-success/80' : 'mr-auto hover:text-danger/80';
+
+    return (
+      <div className={`${messageClass} rounded-lg p-3 flex items-center gap-2 text-sm rtl-text`}>
+        {isSuccess ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+        <span>{message}</span>
+        <button onClick={onClose} className={closeClass} aria-label="بستن پیام">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  };
 
   const fetchUser = useCallback(async () => {
     try {
@@ -37,6 +86,21 @@ export default function Settings() {
       setCommissionEnabled(Boolean(userData.commission_enabled));
       setBuyCommission(String(parseFloat(userData.buy_commission) || 0.37));
       setSellCommission(String(parseFloat(userData.sell_commission) || 0.88));
+      setPhone(userData.phone || '');
+      setSmsEnabled(Boolean(userData.sms_enabled));
+      setIppanelSender(userData.ippanel_sender || '');
+      setSmsCooldown(userData.sms_cooldown_minutes || 60);
+      setSmsStartTime(normalizeTimeForInput(userData.sms_start_time));
+      setSmsEndTime(normalizeTimeForInput(userData.sms_end_time));
+    } catch (err) {
+      // silent
+    }
+  }, []);
+
+  const fetchSmsStats = useCallback(async () => {
+    try {
+      const res = await api.get('/user/sms-stats');
+      setSmsStats(res.data.data);
     } catch (err) {
       // silent
     }
@@ -64,13 +128,13 @@ export default function Settings() {
   useEffect(() => {
     fetchUser();
     fetchPortfolios();
-  }, [fetchUser, fetchPortfolios]);
+    fetchSmsStats();
+  }, [fetchUser, fetchPortfolios, fetchSmsStats]);
 
   const handleToggleCommission = async () => {
     const newVal = !commissionEnabled;
     setSavingCommission(true);
-    setError('');
-    setSuccess('');
+    clearCommissionMessages();
     try {
       const res = await api.put('/user/fee-settings', {
         commission_enabled: newVal,
@@ -80,7 +144,7 @@ export default function Settings() {
       setCommissionEnabled(newVal);
       updateUserRef.current(res.data.user);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در بروزرسانی تنظیمات کارمزد');
+      setCommissionError(err.response?.data?.message || 'خطا در بروزرسانی تنظیمات کارمزد');
     } finally {
       setSavingCommission(false);
     }
@@ -99,8 +163,7 @@ export default function Settings() {
 
   const handleSaveAllCommission = async () => {
     setSavingCommission(true);
-    setError('');
-    setSuccess('');
+    clearCommissionMessages();
     try {
         const userRes = await api.put('/user/fee-settings', {
         commission_enabled: commissionEnabled,
@@ -123,28 +186,61 @@ export default function Settings() {
         }
       }
 
-      setSuccess('تنظیمات کارمزد با موفقیت ذخیره شد.');
-      setTimeout(() => setSuccess(''), 3000);
+      setCommissionSuccess('تنظیمات کارمزد با موفقیت ذخیره شد.');
+      setTimeout(() => setCommissionSuccess(''), 3000);
       await fetchPortfolios();
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در بروزرسانی تنظیمات کارمزد');
+      setCommissionError(err.response?.data?.message || 'خطا در بروزرسانی تنظیمات کارمزد');
     } finally {
       setSavingCommission(false);
+    }
+  };
+
+  const handleSaveSms = async () => {
+    setSavingSms(true);
+    clearSmsMessages();
+
+    if ((smsStartTime && !smsEndTime) || (!smsStartTime && smsEndTime)) {
+      setSmsError('برای بازه زمانی ارسال، هر دو ساعت شروع و پایان را وارد کنید.');
+      setSavingSms(false);
+      return;
+    }
+
+    try {
+      const payload = {
+        sms_enabled: smsEnabled,
+        phone: phone || null,
+        ippanel_sender: ippanelSender || null,
+        sms_cooldown_minutes: parseInt(smsCooldown) || 60,
+        sms_start_time: smsStartTime || null,
+        sms_end_time: smsEndTime || null,
+      };
+      if (ippanelApiKey) {
+        payload.ippanel_api_key = ippanelApiKey;
+      }
+      const res = await api.put('/user/ippanel-settings', payload);
+      updateUserRef.current(res.data.user);
+      setSmsSuccess('تنظیمات پیامک با موفقیت ذخیره شد.');
+      setTimeout(() => setSmsSuccess(''), 3000);
+      await fetchSmsStats();
+    } catch (err) {
+      setSmsError(err.response?.data?.message || 'خطا در بروزرسانی تنظیمات پیامک');
+    } finally {
+      setSavingSms(false);
     }
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setSavingPassword(true);
-    setError('');
-    setSuccess('');
+    clearPasswordMessages();
     if (newPassword !== confirmPassword) {
-      setError('رمز جدید و تأیید آن یکسان نیستند.');
+      setPasswordError('رمز جدید و تأیید آن یکسان نیستند.');
       setSavingPassword(false);
       return;
     }
     if (newPassword.length < 8) {
-      setError('رمز جدید باید حداقل ۸ کاراکتر باشد.');
+      setPasswordError('رمز جدید باید حداقل ۸ کاراکتر باشد.');
       setSavingPassword(false);
       return;
     }
@@ -158,10 +254,10 @@ export default function Settings() {
       setNewPassword('');
       setConfirmPassword('');
       setShowPasswordForm(false);
-      setSuccess(res.data.message || 'رمز با موفقیت تغییر یافت.');
-      setTimeout(() => setSuccess(''), 3000);
+      setPasswordSuccess(res.data.message || 'رمز با موفقیت تغییر یافت.');
+      setTimeout(() => setPasswordSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطا در تغییر رمز.');
+      setPasswordError(err.response?.data?.message || 'خطا در تغییر رمز.');
     } finally {
       setSavingPassword(false);
     }
@@ -194,17 +290,17 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="px-4 py-3">
+        <div className="py-3">
           {!showPasswordForm ? (
             <button
-              onClick={() => { setShowPasswordForm(true); setError(''); setSuccess(''); }}
+              onClick={() => { setShowPasswordForm(true); clearPasswordMessages(); }}
               className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
             >
               <Lock className="w-3 h-3" />
               تغییر رمز
             </button>
           ) : (
-            <form onSubmit={handleChangePassword} className="space-y-3">
+            <form onSubmit={handleChangePassword} className="space-y-3 max-w-md px-4">
               <div>
                 <label className="text-[10px] text-slate-400 rtl-text block mb-1">رمز فعلی</label>
                 <input
@@ -243,7 +339,7 @@ export default function Settings() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowPasswordForm(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setError(''); }}
+                  onClick={() => { setShowPasswordForm(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); clearPasswordMessages(); }}
                   className="btn-secondary text-xs py-1.5 px-4"
                 >
                   انصراف
@@ -252,27 +348,12 @@ export default function Settings() {
             </form>
           )}
         </div>
+        {(passwordError || passwordSuccess) && (
+          <div className="px-4 pb-3">
+            <SectionMessage type={passwordSuccess ? 'success' : 'error'} message={passwordSuccess || passwordError} onClose={clearPasswordMessages} />
+          </div>
+        )}
       </div>
-
-{error && (
-         <div className="bg-danger/5 border border-danger/20 rounded-lg p-3 flex items-center gap-2 text-danger text-sm">
-           <AlertCircle className="w-4 h-4 shrink-0" />
-           {error}
-           <button onClick={() => setError('')} className="mr-auto hover:text-danger/80">
-             <X className="w-3.5 h-3.5" />
-           </button>
-         </div>
-       )}
-
-       {success && (
-         <div className="bg-success/5 border border-success/20 rounded-lg p-3 flex items-center gap-2 text-success text-sm">
-           <Check className="w-4 h-4 shrink-0" />
-           {success}
-           <button onClick={() => setSuccess('')} className="mr-auto hover:text-success/80">
-             <X className="w-3.5 h-3.5" />
-           </button>
-         </div>
-       )}
 
       {/* Commission Settings Section */}
       <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
@@ -293,8 +374,8 @@ export default function Settings() {
         </div>
 
         {commissionEnabled && (
-          <div className="px-4 py-3 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="px-4 py-3 space-y-3 max-w-md">
+            <div className="space-y-3">
               <div>
                 <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد خرید (٪)</label>
                 <input
@@ -346,7 +427,7 @@ export default function Settings() {
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-[90deg]' : ''}`} />
                     </button>
                     {isExpanded && (
-                      <div className="px-4 py-3 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                      <div className="py-3 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400 rtl-text">استفاده از کارمزد اختصاصی</span>
                           <button
@@ -357,7 +438,7 @@ export default function Settings() {
                           </button>
                         </div>
                         {settings.commission_enabled && (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="max-w-md space-y-3 px-4">
                             <div>
                               <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد خرید (٪)</label>
                               <input
@@ -400,6 +481,172 @@ export default function Settings() {
           </button>
         </div>
        </div>
+      <SectionMessage type={commissionSuccess ? 'success' : 'error'} message={commissionSuccess || commissionError} onClose={clearCommissionMessages} />
+
+      {/* SMS Settings Section */}
+      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 rtl-text flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-brand-500" />
+            اعلان پیامکی
+          </h2>
+          <button
+            onClick={() => setSmsEnabled(!smsEnabled)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${smsEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${smsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        {smsEnabled && (
+          <div className="px-4 py-3 space-y-3 max-w-md">
+            <p className="text-[10px] text-slate-400 rtl-text">
+              ارسال پیامک هنگام رسیدن قیمت به سطوح حمایت و مقاومت. برای فعال‌سازی ابتدا کلید API سایت{' '}
+              <a href="https://modirpayamak.com/" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">
+                مدیر پیامک
+              </a>
+              {' '}را وارد کنید.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 rtl-text">
+                  <Send className="w-3.5 h-3.5 text-brand-500" />
+                  امروز
+                </div>
+                <div className="mt-1 flex items-baseline gap-1 rtl-text">
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{toPersianNum(smsStats.today_sent || 0)}</span>
+                  <span className="text-[10px] text-slate-400">پیامک</span>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 rtl-text">
+                  <BarChart3 className="w-3.5 h-3.5 text-brand-500" />
+                  کل ارسال
+                </div>
+                <div className="mt-1 flex items-baseline gap-1 rtl-text">
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{toPersianNum(smsStats.total_sent || 0)}</span>
+                  <span className="text-[10px] text-slate-400">پیامک</span>
+                </div>
+              </div>
+            </div>
+
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره موبایل</label>
+               <input
+                 type="tel"
+                 value={phone}
+                 onChange={(e) => setPhone(e.target.value)}
+                 dir="ltr"
+                 style={{ unicodeBidi: 'plaintext' }}
+                 className="input-field w-full text-xs py-2 ltr-text text-left"
+                 placeholder="09121234567"
+               />
+             </div>
+
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">کلید API مدیر پیامک</label>
+               <input
+                 type="password"
+                 value={ippanelApiKey}
+                 onChange={(e) => setIppanelApiKey(e.target.value)}
+                 className="input-field w-full text-xs py-2 ltr-text text-left"
+                 placeholder={user?.sms_configured ? '•••••••• (قابل تغییر)' : 'کلید API را اینجا وارد کنید'}
+               />
+             </div>
+
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره فرستنده</label>
+               <input
+                 type="text"
+                 value={ippanelSender}
+                 onChange={(e) => setIppanelSender(e.target.value)}
+                 dir="ltr"
+                 style={{ unicodeBidi: 'plaintext' }}
+                 className="input-field w-full text-xs py-2 ltr-text text-left"
+                 placeholder="1000xxxx"
+               />
+             </div>
+
+             <div>
+               <label className="text-[10px] text-slate-400 rtl-text block mb-1">حداقل فاصله ارسال (دقیقه)</label>
+               <input
+                 type="number"
+                 min="1"
+                 max="1440"
+                 value={smsCooldown}
+                 onChange={(e) => setSmsCooldown(e.target.value)}
+                 className="input-field w-full text-xs py-2 text-left"
+               />
+               <p className="text-[9px] text-slate-400 mt-1 rtl-text">
+                 اگر قیمت چند بار به یک سطح برسد، پیامک فقط یکبار در این بازه ارسال می‌شود.
+               </p>
+             </div>
+
+             <div className="space-y-2">
+               <p className="text-[10px] text-slate-400 rtl-text">بازه زمانی ارسال (اختیاری)</p>
+               <div className="space-y-2">
+                 <div>
+                   <label className="text-[10px] text-slate-500 rtl-text block mb-1">از ساعت</label>
+                   <input
+                     type="time"
+                     value={smsStartTime}
+                     onChange={(e) => setSmsStartTime(e.target.value)}
+                     className="input-field time-field w-full text-xs py-2"
+                   />
+                 </div>
+                 <div>
+                   <label className="text-[10px] text-slate-500 rtl-text block mb-1">تا ساعت</label>
+                   <input
+                     type="time"
+                     value={smsEndTime}
+                     onChange={(e) => setSmsEndTime(e.target.value)}
+                     className="input-field time-field w-full text-xs py-2"
+                   />
+                 </div>
+               </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('12:30'); }}
+                  className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '12:30' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                >
+                  ۸:۴۵ — ۱۲:۳۰
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('17:00'); }}
+                  className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '17:00' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                >
+                  ۸:۴۵ — ۱۷:۰۰
+                </button>
+                {(smsStartTime || smsEndTime) && (
+                  <button
+                    type="button"
+                    onClick={() => { setSmsStartTime(''); setSmsEndTime(''); }}
+                    className="text-[10px] px-3 py-1.5 rounded-lg rtl-text bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
+                  >
+                    حذف بازه
+                  </button>
+                )}
+              </div>
+              <p className="text-[9px] text-slate-400 rtl-text">
+                خارج از این بازه، حتی در صورت عبور قیمت از سطح، پیامکی ارسال نمی‌شود.
+              </p>
+            </div>
+
+            <button
+              onClick={handleSaveSms}
+              disabled={savingSms}
+              className="btn-primary text-xs py-1.5 px-4 flex items-center gap-1"
+            >
+              {savingSms && <Loader2 className="w-3 h-3 animate-spin" />}
+              {savingSms ? 'در حال ذخیره...' : 'ذخیره تنظیمات پیامک'}
+            </button>
+          </div>
+        )}
+      </div>
+      <SectionMessage type={smsSuccess ? 'success' : 'error'} message={smsSuccess || smsError} onClose={clearSmsMessages} />
 
       {/* Admin Settings Link - only for admins */}
       {user?.is_admin && (

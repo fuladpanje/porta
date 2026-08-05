@@ -22,12 +22,15 @@ class AdminController extends Controller
             ];
         }, $apiKeys);
 
+        $smsCooldown = (int) SystemSetting::get('sms_cooldown_minutes', '60');
+
         return response()->json([
             'data' => [
                 'api_keys' => $maskedKeys,
                 'api_keys_count' => count($apiKeys),
                 'schedule' => $schedule,
                 'auto_switch' => $autoSwitch,
+                'sms_cooldown_minutes' => $smsCooldown,
             ],
         ]);
     }
@@ -141,6 +144,95 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'خطا در بروزرسانی نمادها: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateSmsSettings(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'sms_cooldown_minutes' => 'required|integer|min:1|max:1440',
+        ]);
+
+        SystemSetting::set('sms_cooldown_minutes', (string) $validated['sms_cooldown_minutes']);
+
+        return response()->json([
+            'message' => 'تنظیمات پیامک با موفقیت ذخیره شد.',
+            'data' => [
+                'sms_cooldown_minutes' => $validated['sms_cooldown_minutes'],
+            ],
+        ]);
+    }
+
+    public function testSms(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone' => 'required|string|max:20',
+            'message' => 'nullable|string|max:500',
+        ]);
+
+        $user = $request->user();
+
+        if (!$user->hasSmsConfigured()) {
+            return response()->json([
+                'message' => 'تنظیمات پیامک شما ناقص است. (API Key، شماره فرستنده و شماره موبایل باید در تنظیمات شخصی وارد شده باشد)',
+            ], 422);
+        }
+
+        $message = $validated['message'] ?? 'پیام تست پورتفولیو. این پیام برای بررسی صحت ارسال پیامک ارسال شده است.';
+
+        try {
+            $client = new \Ippanel\Client($user->ippanel_api_key);
+            $response = $client->sendWebservice($message, $user->ippanel_sender, [$validated['phone']]);
+
+            if ($response->isSuccessful()) {
+                return response()->json([
+                    'message' => 'پیامک تست با موفقیت ارسال شد.',
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'خطا در ارسال پیامک: ' . $response->getMessage(),
+            ], 500);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'خطا در ارسال پیامک: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function testSmsWithUserKey(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = \App\Models\User::findOrFail($validated['user_id']);
+
+        if (!$user->hasSmsConfigured()) {
+            return response()->json([
+                'message' => 'تنظیمات پیامک کاربر ناقص است. (API Key، شماره فرستنده و شماره موبایل باید وارد شده باشد)',
+            ], 422);
+        }
+
+        $message = 'پیام تست از پنل مدیریت. سلام ' . $user->username . '!';
+
+        try {
+            $client = new \Ippanel\Client($user->ippanel_api_key);
+            $response = $client->sendWebservice($message, $user->ippanel_sender, [$user->phone]);
+
+            if ($response->isSuccessful()) {
+                return response()->json([
+                    'message' => 'پیامک تست با موفقیت به ' . $user->username . ' ارسال شد.',
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'خطا در ارسال پیامک: ' . $response->getMessage(),
+            ], 500);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'خطا در ارسال پیامک: ' . $e->getMessage(),
             ], 500);
         }
     }
