@@ -140,7 +140,7 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 - **عبور از مقاومت**: `{نماد} به مقاومت {سطح} رسید / فعلی: {قیمت} / مقاومت: {مقدار سطح}`
 - **عبور از حمایت**: `{نماد} به حمایت {سطح} رسید / فعلی: {قیمت} / حمایت: {مقدار سطح}`
 
-سطوح پشتیبانی شده: مقاومت ۱، ۲، ۳ و حمایت ۱، ۲، ۳
+سطوح پشتیبانی شده: مقاومت ۱ و ۲ و حمایت ۱ و ۲
 
 ### تنظیمات کاربر
 
@@ -353,7 +353,7 @@ Messages are automatically formatted as:
 - **Resistance crossing**: `{symbol} reached resistance {level} / Current: {price} / Resistance: {level_value}`
 - **Support crossing**: `{symbol} reached support {level} / Current: {price} / Support: {level_value}`
 
-Supported levels: Resistance 1, 2, 3 and Support 1, 2, 3
+Supported levels: Resistance 1, 2 and Support 1, 2
 
 ### User Settings
 
