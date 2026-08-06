@@ -5,8 +5,8 @@
 <h1 align="center">پورتا | Porta</h1>
 
 <p align="center">
-  <a href="#نسخه-فارسی">فارسی</a> •
-  <a href="#english-version">English</a>
+  <a href="#فارسی">فارسی</a> •
+  <a href="#english">English</a>
 </p>
 
 <p align="center">
@@ -26,9 +26,9 @@
 
 ---
 
-<a id="نسخه-فارسی"></a>
+<a id="فارسی"></a>
 
-# نسخه فارسی
+# فارسی
 
 <p align="center">
   یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران
@@ -240,9 +240,9 @@ cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:r
 
 ---
 
-<a id="english-version"></a>
+<a id="english"></a>
 
-# 🇺🇸 English Version
+# English
 
 <p align="center">
   <em>A professional RTL dashboard for managing Tehran Stock Exchange portfolios</em>
