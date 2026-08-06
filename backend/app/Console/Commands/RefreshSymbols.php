@@ -9,35 +9,109 @@ use Illuminate\Support\Facades\DB;
 
 class RefreshSymbols extends Command
 {
-    protected $signature = 'symbols:refresh';
+    protected $signature = 'symbols:refresh {--final : بروزرسانی نهایی ساعت پایان بازار} {--post-market : تلاش مجدد بعد از اتمام بازار} {--reset-post-market : ریست تنظیمات بعد از بازار}';
     protected $description = 'بروزرسانی خودکار نمادها از BRS API و ذخیره در دیتابیس';
+
+    private int $maxRetries = 3;
+    private int $retryDelay = 30;
 
     public function handle(): int
     {
-        $this->info('شروع بروزرسانی نمادها...');
+        $isFinal = $this->option('final');
+        $isPostMarket = $this->option('post-market');
+        $isResetPostMarket = $this->option('reset-post-market');
 
-        $apiKeys = SystemSetting::getApiKeys();
-
-        if (empty($apiKeys)) {
-            $this->error('هیچ کلید API تنظیم نشده است.');
-            return 1;
+        if ($isResetPostMarket) {
+            $this->info('ریست تنظیمات بعد از بازار...');
+            SystemSetting::set('post_market_final_refresh_done', 'false');
+            SystemSetting::set('post_market_attempts', '0');
+            SystemSetting::set('schedule_last_post_market_refresh', '0');
+            $this->info('تنظیمات بعد از بازار با موفقیت ریست شد.');
+            return 0;
         }
 
-        $symbols = $this->fetchSymbolsFromApi($apiKeys);
-
-        if (empty($symbols)) {
-            $this->error('دریافت نمادها از API ناموفق بود.');
-            return 1;
+        if ($isFinal) {
+            $this->info('شروع بروزرسانی نهایی ساعت پایان بازار...');
+        } elseif ($isPostMarket) {
+            $this->info('شروع تلاش مجدد بعد از اتمام بازار...');
+        } else {
+            $this->info('شروع بروزرسانی نمادها...');
         }
 
-        $this->info(count($symbols) . ' نماد دریافت شد. در حال ذخیره‌سازی...');
+        $attempt = 0;
+        $success = false;
 
-        $this->saveSymbolsToDatabase($symbols);
+        while ($attempt < $this->maxRetries && !$success) {
+            $attempt++;
 
-        $this->updatePortfolioPrices($symbols);
+            if ($attempt > 1) {
+                $this->info("تلاش {$attempt} از {$this->maxRetries}...");
+                sleep($this->retryDelay);
+            }
 
-        $this->info('بروزرسانی نمادها با موفقیت انجام شد.');
-        return 0;
+            $result = $this->attemptRefresh();
+
+            if ($result === 0) {
+                $success = true;
+
+                if ($isFinal) {
+                    SystemSetting::set('post_market_final_refresh_done', 'true');
+                    $this->info('بروزرسانی نهایی با موفقیت انجام شد.');
+                } elseif ($isPostMarket) {
+                    SystemSetting::set('post_market_final_refresh_done', 'true');
+                    $this->info('بروزرسانی بعد از بازار با موفقیت انجام شد.');
+                } else {
+                    $this->info('بروزرسانی نمادها با موفقیت انجام شد.');
+                }
+            } else {
+                $this->error("تلاش {$attempt} ناموفق بود.");
+
+                if ($attempt >= $this->maxRetries) {
+                    $this->error("تمام تلاش‌ها ناموفق بود. آخرین خطا ثبت شد.");
+
+                    if ($isPostMarket) {
+                        $this->error('بروزرسانی بعد از بازار ناموفق بود. لطفاً بروزرسانی دستی انجام دهید.');
+                    }
+                }
+            }
+        }
+
+        return $success ? 0 : 1;
+    }
+
+    private function attemptRefresh(): int
+    {
+        try {
+            $apiKeys = SystemSetting::getApiKeys();
+
+            if (empty($apiKeys)) {
+                $this->error('هیچ کلید API تنظیم نشده است.');
+                return 1;
+            }
+
+            $symbols = $this->fetchSymbolsFromApi($apiKeys);
+
+            if (empty($symbols)) {
+                $this->error('دریافت نمادها از API ناموفق بود.');
+                return 1;
+            }
+
+            $this->info(count($symbols) . ' نماد دریافت شد. در حال ذخیره‌سازی...');
+
+            $oldPrices = $this->collectOldPrices($symbols);
+
+            $this->saveSymbolsToDatabase($symbols);
+
+            $this->updatePortfolioPrices($symbols, $oldPrices);
+
+            return 0;
+        } catch (\Throwable $e) {
+            $this->error('خطا در بروزرسانی: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('RefreshSymbols attempt failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return 1;
+        }
     }
 
     private function fetchSymbolsFromApi(array $apiKeys): array
@@ -95,6 +169,33 @@ class RefreshSymbols extends Command
         return [];
     }
 
+    private function collectOldPrices(array $symbols): array
+    {
+        $isinList = [];
+        foreach ($symbols as $symbol) {
+            $isin = $symbol['isin'] ?? '';
+            if ($isin) {
+                $isinList[] = $isin;
+            }
+        }
+
+        if (empty($isinList)) {
+            return [];
+        }
+
+        $rows = DB::table('symbols_cache')
+            ->whereIn('isin', $isinList)
+            ->select('isin', 'last_price')
+            ->get();
+
+        $oldPrices = [];
+        foreach ($rows as $row) {
+            $oldPrices[$row->isin] = $row->last_price;
+        }
+
+        return $oldPrices;
+    }
+
     private function saveSymbolsToDatabase(array $symbols): void
     {
         $now = now();
@@ -136,7 +237,7 @@ class RefreshSymbols extends Command
         $this->info(count($batch) . ' نماد در دیتابیس ذخیره شد.');
     }
 
-    private function updatePortfolioPrices(array $symbols): void
+    private function updatePortfolioPrices(array $symbols, array $oldPrices = []): void
     {
         @set_time_limit(120);
 
@@ -216,6 +317,43 @@ class RefreshSymbols extends Command
                     }
                 }
             }
+        }
+
+        try {
+            $usersWithSymbolLevels = \App\Models\User::where('sms_enabled', true)
+                ->where('sms_scope', '!=', 'portfolio')
+                ->whereHas('userSymbolLevels', function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('resistance_1', '!=', null)
+                            ->orWhere('resistance_2', '!=', null)
+                            ->orWhere('support_1', '!=', null)
+                            ->orWhere('support_2', '!=', null);
+                    });
+                })
+                ->get();
+
+            foreach ($usersWithSymbolLevels as $user) {
+                $levels = $user->userSymbolLevels()->get();
+                foreach ($levels as $levelRecord) {
+                    $key = strtolower($levelRecord->symbol);
+                    if (isset($symbolMap[$key])) {
+                        $symbol = $symbolMap[$key];
+                        $pl = $symbol['pl'] ?? null;
+                        if ($pl !== null) {
+                            try {
+                                $isin = $symbol['isin'] ?? '';
+                                $oldPrice = $oldPrices[$isin] ?? null;
+                                $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl, $oldPrice ? (float) $oldPrice : null);
+                                $smsCount += count($sent);
+                            } catch (\Throwable $e) {
+                                $this->warn("User symbol level SMS check failed for {$levelRecord->symbol}: " . $e->getMessage());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->warn("Failed to check user symbol levels: " . $e->getMessage());
         }
 
         try {

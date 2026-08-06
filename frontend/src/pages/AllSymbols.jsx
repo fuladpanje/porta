@@ -6,7 +6,7 @@ import api, { favoritesApi } from '../lib/api';
 import { stockApi } from '../lib/api';
 import { searchSymbolsLocal } from '../lib/symbolCache';
 import { formatPrice, formatPercent } from '../lib/calculations';
-import { Search, Plus, X, Trash2, Star, Filter } from 'lucide-react';
+import { Search, Plus, X, Trash2, Star, Filter, Crosshair } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 
 function useDebounce(value, delay) {
@@ -34,14 +34,14 @@ function SafeNumber(val) {
 const COLUMNS = [
   { key: 'star', label: '', hideable: false },
   { key: 'name', label: 'نماد', hideable: false },
-  { key: 'fullName', label: 'نام کامل', hideable: true },
   { key: 'pl', label: 'آخرین', hideable: false },
+  { key: 'pe', label: 'P/E', hideable: true },
   { key: 'plp', label: 'درصد تغییر آخرین', hideable: true },
   { key: 'pcp', label: 'درصد تغییر پایانی', hideable: true },
   { key: 'diff', label: 'اختلاف درصد', hideable: true },
-  { key: 'pe', label: 'P/E', hideable: true },
   { key: 'buyer_power', label: 'قدرت خریدار', hideable: true },
-  { key: 'cs', label: 'گروه صنعت', hideable: true },
+  { key: 'resistance', label: 'مقاومت', hideable: true },
+  { key: 'support', label: 'حمایت', hideable: true },
   { key: 'actions', label: 'عملیات', hideable: true },
 ];
 
@@ -63,6 +63,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
   const [resistance2, setResistance2] = useState('');
   const [support1, setSupport1] = useState('');
   const [support2, setSupport2] = useState('');
+  const [smsEnabled, setSmsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
@@ -107,6 +108,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
         resistance_2: toRial(resistance2) || null,
         support_1: toRial(support1) || null,
         support_2: toRial(support2) || null,
+        sms_enabled: smsEnabled,
       });
       onSuccess();
     } catch (err) {
@@ -254,6 +256,17 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
               </div>
             </div>
 
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+              <span className="text-[10px] text-slate-400 rtl-text">اعلام پیامک هنگام رسیدن به سطوح</span>
+              <button
+                type="button"
+                onClick={() => setSmsEnabled(!smsEnabled)}
+                className={`relative w-9 h-5 rounded-full transition-colors ${smsEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${smsEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
             {error && <p className="text-xs text-danger">{error}</p>}
 
             <div className="flex gap-2 mt-4 justify-end">
@@ -393,6 +406,12 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(() => {
     try { return localStorage.getItem('porta_favorites_only') === 'true'; } catch { return false; }
   });
+  const [userLevels, setUserLevels] = useState({});
+  const [showOnlyWithLevels, setShowOnlyWithLevels] = useState(false);
+  const [editingLevel, setEditingLevel] = useState(null);
+  const [levelForm, setLevelForm] = useState({ resistance_1: '', resistance_2: '', support_1: '', support_2: '', sms_enabled: true });
+  const [savingLevel, setSavingLevel] = useState(false);
+  const [selectedIndustry, setSelectedIndustry] = useState('');
 
   useEffect(() => {
     try { localStorage.setItem('porta_favorites_only', showFavoritesOnly); } catch {}
@@ -401,6 +420,7 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
   useEffect(() => {
     fetchSymbols();
     fetchFavorites();
+    fetchUserLevels();
   }, []);
 
   useEffect(() => {
@@ -433,6 +453,68 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
     } catch {
       // silent
     }
+  };
+
+  const fetchUserLevels = async () => {
+    try {
+      const res = await api.get('/user-symbol-levels');
+      setUserLevels(res.data.data || {});
+    } catch {
+      // silent
+    }
+  };
+
+  const saveUserLevel = async (symbol) => {
+    setSavingLevel(true);
+    try {
+      const payload = {
+        symbol,
+        resistance_1: levelForm.resistance_1 ? toRial(Number(levelForm.resistance_1)) : null,
+        resistance_2: levelForm.resistance_2 ? toRial(Number(levelForm.resistance_2)) : null,
+        support_1: levelForm.support_1 ? toRial(Number(levelForm.support_1)) : null,
+        support_2: levelForm.support_2 ? toRial(Number(levelForm.support_2)) : null,
+        sms_enabled: levelForm.sms_enabled,
+      };
+      await api.post('/user-symbol-levels', payload);
+      await fetchUserLevels();
+      setEditingLevel(null);
+    } catch {
+      // silent
+    } finally {
+      setSavingLevel(false);
+    }
+  };
+
+  const deleteUserLevel = async (symbol) => {
+    try {
+      await api.delete(`/user-symbol-levels/${symbol}`);
+      await fetchUserLevels();
+    } catch {
+      // silent
+    }
+  };
+
+  const toRial = (v) => {
+    const n = Number(v);
+    if (!n) return null;
+    return unit === 'toman' ? n * 10 : n;
+  };
+
+  const fromRial = (v) => {
+    if (!v) return '';
+    return unit === 'toman' ? String(Math.round(v / 10)) : String(v);
+  };
+
+  const openLevelEditor = (symbol) => {
+    const existing = userLevels[symbol] || {};
+    setLevelForm({
+      resistance_1: fromRial(existing.resistance_1) || '',
+      resistance_2: fromRial(existing.resistance_2) || '',
+      support_1: fromRial(existing.support_1) || '',
+      support_2: fromRial(existing.support_2) || '',
+      sms_enabled: existing.sms_enabled !== undefined ? existing.sms_enabled : true,
+    });
+    setEditingLevel(symbol);
   };
 
   const toggleFavorite = async (symbol) => {
@@ -597,6 +679,12 @@ const filtered = useMemo(() => {
   if (showFavoritesOnly) {
     list = list.filter((s) => favorites.includes(s.name));
   }
+  if (showOnlyWithLevels) {
+    list = list.filter((s) => userLevels[s.name]);
+  }
+  if (selectedIndustry) {
+    list = list.filter((s) => s.cs === selectedIndustry);
+  }
   if (search.trim()) {
     const q = search.trim().toLowerCase();
     list = list.filter(
@@ -717,20 +805,20 @@ const filtered = useMemo(() => {
         bVal = b.name || '';
         return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal, 'fa') : bVal.localeCompare(aVal, 'fa');
       }
-      if (sortConfig.key === 'fullName') {
-        aVal = a.fullName || '';
-        bVal = b.fullName || '';
-        return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal, 'fa') : bVal.localeCompare(aVal, 'fa');
-      }
-      if (sortConfig.key === 'cs') {
-        aVal = a.cs || '';
-        bVal = b.cs || '';
-        return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal, 'fa') : bVal.localeCompare(aVal, 'fa');
-      }
       if (sortConfig.key === 'diff') {
         const aDiff = SafeNumber(a.plp) - SafeNumber(a.pcp);
         const bDiff = SafeNumber(b.plp) - SafeNumber(b.pcp);
         return sortConfig.direction === 'asc' ? aDiff - bDiff : bDiff - aDiff;
+      }
+      if (sortConfig.key === 'resistance') {
+        const aVal = SafeNumber(a.pl) > 0 && userLevels[a.name]?.resistance_1 ? (SafeNumber(userLevels[a.name].resistance_1) - SafeNumber(a.pl)) / SafeNumber(a.pl) * 100 : -9999;
+        const bVal = SafeNumber(b.pl) > 0 && userLevels[b.name]?.resistance_1 ? (SafeNumber(userLevels[b.name].resistance_1) - SafeNumber(b.pl)) / SafeNumber(b.pl) * 100 : -9999;
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      if (sortConfig.key === 'support') {
+        const aVal = SafeNumber(a.pl) > 0 && userLevels[a.name]?.support_1 ? (SafeNumber(a.pl) - SafeNumber(userLevels[a.name].support_1)) / SafeNumber(a.pl) * 100 : -9999;
+        const bVal = SafeNumber(b.pl) > 0 && userLevels[b.name]?.support_1 ? (SafeNumber(b.pl) - SafeNumber(userLevels[b.name].support_1)) / SafeNumber(b.pl) * 100 : -9999;
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
       }
       if (sortConfig.key === 'buyer_power') {
         const aBP = calcBuyerPower(a);
@@ -743,7 +831,7 @@ const filtered = useMemo(() => {
     });
   }
   return list;
-}, [symbols, search, sortConfig, showFavoritesOnly, favorites, hideNegativePE, peMode, peSign, debouncedPeMin, debouncedPeMax, peOp, debouncedPeVal, plMode, plSign, debouncedPlMin, debouncedPlMax, plOp, debouncedPlVal, plpMode, plpSign, debouncedPlpMin, debouncedPlpMax, plpOp, debouncedPlpVal, pcpMode, pcpSign, debouncedPcpMin, debouncedPcpMax, pcpOp, debouncedPcpVal, diffMode, diffSign, debouncedDiffMin, debouncedDiffMax, diffOp, debouncedDiffVal, bpMode, bpSign, debouncedBpMin, debouncedBpMax, bpOp, debouncedBpVal]);
+}, [symbols, search, sortConfig, showFavoritesOnly, showOnlyWithLevels, selectedIndustry, favorites, userLevels, hideNegativePE, peMode, peSign, debouncedPeMin, debouncedPeMax, peOp, debouncedPeVal, plMode, plSign, debouncedPlMin, debouncedPlMax, plOp, debouncedPlVal, plpMode, plpSign, debouncedPlpMin, debouncedPlpMax, plpOp, debouncedPlpVal, pcpMode, pcpSign, debouncedPcpMin, debouncedPcpMax, pcpOp, debouncedPcpVal, diffMode, diffSign, debouncedDiffMin, debouncedDiffMax, diffOp, debouncedDiffVal, bpMode, bpSign, debouncedBpMin, debouncedBpMax, bpOp, debouncedBpVal]);
 
   if (loading) {
     return (
@@ -792,6 +880,14 @@ const filtered = useMemo(() => {
           title={showFavoritesOnly ? 'نمایش همه' : 'فقط نمادهای ستاره‌دار'}
         >
           <Star className="w-4 h-4" fill={showFavoritesOnly ? 'currentColor' : 'none'} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowOnlyWithLevels((p) => !p)}
+          className={`p-2 rounded-lg shrink-0 transition-colors ${showOnlyWithLevels ? 'text-brand-500 bg-brand-500/10' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`}
+          title={showOnlyWithLevels ? 'نمایش همه' : 'فقط نمادهای دارای سطوح'}
+        >
+          <Filter className="w-4 h-4" />
         </button>
       </div>
 
@@ -972,9 +1068,25 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+            <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">گروه صنعت:</span>
+            <select
+              value={selectedIndustry}
+              onChange={(e) => setSelectedIndustry(e.target.value)}
+              className="input-field text-xs py-1.5 px-2 w-[15.5rem] rtl-text"
+            >
+              <option value="">همه گروه‌ها</option>
+              {[...new Set(symbols.map((s) => s.cs).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fa')).map((cs) => (
+                <option key={cs} value={cs}>{cs}</option>
+              ))}
+            </select>
+            <button type="button" onClick={() => setSelectedIndustry('')} className={`py-1 px-0.5 rounded text-red-400 hover:text-red-600 transition-colors mr-auto ${!selectedIndustry ? 'invisible' : ''}`}>
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 justify-end">
-          <button type="button" onClick={() => { setPeMode('single'); setPeSign(null); setPeMin(''); setPeMax(''); setPeOp('lt'); setPeVal(''); setHideNegativePE(false); setPlMode('single'); setPlSign(null); setPlMin(''); setPlMax(''); setPlOp('lt'); setPlVal(''); setPlpMode('single'); setPlpSign(null); setPlpMin(''); setPlpMax(''); setPlpOp('lt'); setPlpVal(''); setPcpMode('single'); setPcpSign(null); setPcpMin(''); setPcpMax(''); setPcpOp('lt'); setPcpVal(''); setDiffMode('single'); setDiffSign(null); setDiffMin(''); setDiffMax(''); setDiffOp('lt'); setDiffVal(''); setBpMode('single'); setBpSign(null); setBpMin(''); setBpMax(''); setBpOp('gt'); setBpVal(''); }} className="p-1.5 rounded-full text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-500/10 transition-colors shrink-0">
+          <button type="button" onClick={() => { setPeMode('single'); setPeSign(null); setPeMin(''); setPeMax(''); setPeOp('lt'); setPeVal(''); setHideNegativePE(false); setPlMode('single'); setPlSign(null); setPlMin(''); setPlMax(''); setPlOp('lt'); setPlVal(''); setPlpMode('single'); setPlpSign(null); setPlpMin(''); setPlpMax(''); setPlpOp('lt'); setPlpVal(''); setPcpMode('single'); setPcpSign(null); setPcpMin(''); setPcpMax(''); setPcpOp('lt'); setPcpVal(''); setDiffMode('single'); setDiffSign(null); setDiffMin(''); setDiffMax(''); setDiffOp('lt'); setDiffVal(''); setBpMode('single'); setBpSign(null); setBpMin(''); setBpMax(''); setBpOp('gt'); setBpVal(''); setSelectedIndustry(''); }} className="p-1.5 rounded-full text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-500/10 transition-colors shrink-0">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -1081,22 +1193,22 @@ const filtered = useMemo(() => {
                      </button>
                    </td>
                  )}
-                 {visibleColumns.includes('name') && (
-                   <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
-                     {s.name}
-                   </td>
-                 )}
-                 {visibleColumns.includes('fullName') && (
-                   <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[200px] truncate">
-                     {s.fullName}
-                   </td>
-                 )}
-                 {visibleColumns.includes('pl') && (
-                   <td className={`px-3 py-2 font-medium text-slate-800 dark:text-slate-200 ${isStale ? 'opacity-40' : ''}`}>
-                     {s.pl ? formatPrice(s.pl, unit, 2) : '—'}
-                   </td>
-                 )}
-                 {visibleColumns.includes('plp') && (
+                  {visibleColumns.includes('name') && (
+                    <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200" title={s.fullName || ''}>
+                      {s.name}
+                    </td>
+                  )}
+                   {visibleColumns.includes('pl') && (
+                    <td className={`px-3 py-2 font-medium text-slate-800 dark:text-slate-200 ${isStale ? 'opacity-40' : ''}`}>
+                      {s.pl ? formatPrice(s.pl, unit, 2) : '—'}
+                    </td>
+                  )}
+                  {visibleColumns.includes('pe') && (
+                    <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} ${isStale ? 'opacity-40' : ''}`}>
+                      {formatPE(s.pe)}
+                    </td>
+                  )}
+                  {visibleColumns.includes('plp') && (
                    <td className={`px-3 py-2 font-medium ${plpVal > 0 ? 'text-success' : plpVal < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
                      {s.plp != null && s.plp !== '' ? formatPercent(plpVal) : '—'}
                    </td>
@@ -1106,37 +1218,60 @@ const filtered = useMemo(() => {
                      {s.pcp != null && s.pcp !== '' ? formatPercent(pcpVal) : '—'}
                    </td>
                  )}
-                 {visibleColumns.includes('diff') && (
-                   <td className={`px-3 py-2 font-medium ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
-                     {diff !== null ? formatPercent(diff) : '—'}
-                   </td>
-                 )}
-                 {visibleColumns.includes('pe') && (
-                   <td className={`px-3 py-2 font-medium ${s.pe < 0 ? 'text-danger' : 'text-slate-800 dark:text-slate-200'} ${isStale ? 'opacity-40' : ''}`}>
-                     {formatPE(s.pe)}
-                   </td>
-                 )}
-                 {visibleColumns.includes('buyer_power') && (
-                   <td className={`px-3 py-2 font-medium ${bpVal !== null ? (bpVal > 1 ? 'text-success' : bpVal < 1 ? 'text-danger' : 'text-slate-500') : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
-                     {bpVal !== null ? toPersianNum(bpVal.toLocaleString('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '—'}
-                   </td>
-                 )}
-                 {visibleColumns.includes('cs') && (
-                   <td className="px-3 py-2 text-slate-500 text-[10px] max-w-[120px] truncate">
-                     {s.cs || '—'}
-                   </td>
-                 )}
-                 {visibleColumns.includes('actions') && (
-                   <td className="px-3 py-2">
-                     <button
-                       onClick={() => setAddToModal(s)}
-                       className="p-1 rounded-lg hover:bg-brand-500/10 transition-colors"
-                       title="افزودن به پرتفو"
-                     >
-                       <Plus className="w-3.5 h-3.5 text-brand-500" />
-                     </button>
-                   </td>
-                 )}
+                  {visibleColumns.includes('diff') && (
+                    <td className={`px-3 py-2 font-medium ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                      {diff !== null ? formatPercent(diff) : '—'}
+                    </td>
+                  )}
+                   {visibleColumns.includes('buyer_power') && (
+                    <td className={`px-3 py-2 font-medium ${bpVal !== null ? (bpVal > 1 ? 'text-success' : bpVal < 1 ? 'text-danger' : 'text-slate-500') : 'text-slate-500'} ${isStale ? 'opacity-40' : ''}`}>
+                      {bpVal !== null ? toPersianNum(bpVal.toLocaleString('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '—'}
+                    </td>
+                  )}
+                  {visibleColumns.includes('resistance') && (
+                    <td className="px-3 py-2 text-slate-500 cursor-pointer whitespace-nowrap">
+                      {userLevels[s.name]?.resistance_1 ? <>
+                        {formatPrice(userLevels[s.name].resistance_1, unit, 2)}
+                        {SafeNumber(s.pl) > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(userLevels[s.name].resistance_1) - SafeNumber(s.pl)) / SafeNumber(s.pl) * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                      </> : '—'}
+                      {userLevels[s.name]?.resistance_2 ? <>
+                        {' - '}{formatPrice(userLevels[s.name].resistance_2, unit, 2)}
+                        {SafeNumber(s.pl) > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(userLevels[s.name].resistance_2) - SafeNumber(s.pl)) / SafeNumber(s.pl) * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                      </> : ''}
+                    </td>
+                  )}
+                  {visibleColumns.includes('support') && (
+                    <td className="px-3 py-2 text-slate-500 cursor-pointer whitespace-nowrap">
+                      {userLevels[s.name]?.support_1 ? <>
+                        {formatPrice(userLevels[s.name].support_1, unit, 2)}
+                        {SafeNumber(s.pl) > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(s.pl) - SafeNumber(userLevels[s.name].support_1)) / SafeNumber(s.pl) * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                      </> : '—'}
+                      {userLevels[s.name]?.support_2 ? <>
+                        {' - '}{formatPrice(userLevels[s.name].support_2, unit, 2)}
+                        {SafeNumber(s.pl) > 0 && <span className="text-[9px] text-slate-400 mr-0.5">({((SafeNumber(s.pl) - SafeNumber(userLevels[s.name].support_2)) / SafeNumber(s.pl) * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪)</span>}
+                      </> : ''}
+                    </td>
+                  )}
+                  {visibleColumns.includes('actions') && (
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openLevelEditor(s.name)}
+                          className={`p-1 rounded-lg transition-colors ${userLevels[s.name] ? 'text-brand-500 bg-brand-500/10 hover:bg-brand-500/20' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`}
+                          title={userLevels[s.name] ? 'ویرایش سطوح' : 'تعریف سطوح'}
+                        >
+                          <Crosshair className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setAddToModal(s)}
+                          className="p-1 rounded-lg hover:bg-brand-500/10 transition-colors"
+                          title="افزودن به پرتفو"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-brand-500" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                </tr>
             );
             })}
@@ -1154,6 +1289,60 @@ const filtered = useMemo(() => {
             setAddToModal(null);
           }}
         />
+      )}
+
+      {editingLevel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 max-w-sm w-full mx-4 shadow-xl animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white rtl-text">سطوح {editingLevel}</h3>
+              <button onClick={() => setEditingLevel(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-red-500 mb-1 rtl-text">مقاومت ۱</label>
+                  <input type="number" value={levelForm.resistance_1} onChange={(e) => setLevelForm(p => ({...p, resistance_1: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-red-500 mb-1 rtl-text">مقاومت ۲</label>
+                  <input type="number" value={levelForm.resistance_2} onChange={(e) => setLevelForm(p => ({...p, resistance_2: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-green-500 mb-1 rtl-text">حمایت ۱</label>
+                  <input type="number" value={levelForm.support_1} onChange={(e) => setLevelForm(p => ({...p, support_1: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-green-500 mb-1 rtl-text">حمایت ۲</label>
+                  <input type="number" value={levelForm.support_2} onChange={(e) => setLevelForm(p => ({...p, support_2: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+                <span className="text-[10px] text-slate-400 rtl-text">اعلام پیامک هنگام رسیدن به سطوح</span>
+                <button
+                  type="button"
+                  onClick={() => setLevelForm(p => ({...p, sms_enabled: !p.sms_enabled}))}
+                  className={`relative w-9 h-5 rounded-full transition-colors ${levelForm.sms_enabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${levelForm.sms_enabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              <div className="flex gap-2 mt-4 justify-end">
+                {userLevels[editingLevel] && (
+                  <button type="button" onClick={() => { deleteUserLevel(editingLevel); setEditingLevel(null); }} className="text-xs py-1.5 px-3 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors">حذف سطوح</button>
+                )}
+                <button type="button" onClick={() => setEditingLevel(null)} disabled={savingLevel} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
+                <button type="button" onClick={() => saveUserLevel(editingLevel)} disabled={savingLevel} className="btn-primary text-xs py-1.5 px-3">
+                  {savingLevel ? 'در حال ذخیره...' : 'ذخیره'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

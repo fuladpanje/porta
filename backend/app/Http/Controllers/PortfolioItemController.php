@@ -44,6 +44,7 @@ class PortfolioItemController extends Controller
             'sell_i_volume' => 'nullable|numeric',
             'sell_count_i' => 'nullable|numeric',
             'active' => 'boolean',
+            'sms_enabled' => 'nullable|boolean',
         ]);
 
         $item = $portfolio->items()->create($validated);
@@ -92,6 +93,7 @@ class PortfolioItemController extends Controller
             'sell_i_volume' => 'nullable|numeric',
             'sell_count_i' => 'nullable|numeric',
             'active' => 'boolean',
+            'sms_enabled' => 'nullable|boolean',
         ]);
 
         $item->update($validated);

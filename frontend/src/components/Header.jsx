@@ -29,7 +29,7 @@ function UserRefreshBadge({ lastRefresh, stale, isInScheduleRange }) {
         aria-label="آخرین بروزرسانی"
       >
         {stale && <AlertTriangle className="w-3 h-3 text-amber-500" />}
-        {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' })}
+        {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Tehran' })}
         {isInScheduleRange
           ? <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
           : <CircleX className="w-3 h-3 text-red-500" />
@@ -253,17 +253,17 @@ export function Header() {
           {user?.is_admin ? (
           <button
             onClick={handleRefresh}
-            disabled={refreshing || (!isInScheduleRange && user?.schedule_enabled)}
+            disabled={refreshing}
             className="p-2 rounded-lg text-slate-400 hover:text-brand-500 transition-colors disabled:opacity-50 flex items-center gap-2 focus:outline-none focus:ring-0 group"
             aria-label="بروزرسانی قیمت‌ها"
-            title={!isInScheduleRange && user?.schedule_enabled ? 'بازار بسته است - بروزرسانی غیرفعال' : 'بروزرسانی قیمت‌ها'}
+            title="بروزرسانی قیمت‌ها"
             dir="ltr"
           >
              {lastRefresh ? (
                <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 group-hover:bg-brand-500/20 group-hover:text-brand-500 px-2 py-1 rounded-full rtl-text whitespace-nowrap flex items-center gap-1 transition-colors">
                  <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
                  {stale && <AlertTriangle className="w-3 h-3 text-amber-500" title="داده‌ها قدیمی هستند" />}
-                 {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' })}
+                 {lastRefresh.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Tehran' })}
                  {user?.schedule_enabled && user?.has_api_keys && (
                    isInScheduleRange
                      ? <span className="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse" title="زمان‌بندی فعال" />

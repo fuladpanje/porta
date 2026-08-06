@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PortfolioItem;
 use App\Models\SmsNotification;
 use App\Models\User;
+use App\Models\UserSymbolLevel;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Ippanel\Client as IPPanelClient;
@@ -22,10 +23,6 @@ class SmsService
 
     /**
      * Check all levels for a portfolio item and send SMS if needed.
-     *
-     * @param PortfolioItem $item  The item (with old last_price in the DB)
-     * @param float         $newPrice  The new price just fetched
-     * @return array  List of SMS sent info
      */
     public function checkAndNotify(PortfolioItem $item, float $newPrice): array
     {
@@ -35,9 +32,18 @@ class SmsService
             return $sent;
         }
 
+        if ($item->sms_enabled === false) {
+            return $sent;
+        }
+
         $user = $item->portfolio->user;
 
         if (!$user->hasSmsConfigured()) {
+            return $sent;
+        }
+
+        $scope = $user->sms_scope ?? 'portfolio';
+        if ($scope === 'all') {
             return $sent;
         }
 
@@ -45,10 +51,8 @@ class SmsService
             return $sent;
         }
 
-        // Use user's cooldown, fallback to default
         $cooldownMinutes = $user->sms_cooldown_minutes ?? $this->defaultCooldown;
 
-        // Get old price from DB (before this update)
         $oldPrice = $item->getOriginal('last_price');
 
         if ($oldPrice === null) {
@@ -72,21 +76,99 @@ class SmsService
                 continue;
             }
 
-            // Cooldown check
             if (!SmsNotification::canSend($item->id, $level, $cooldownMinutes)) {
                 continue;
             }
 
-            // Send SMS
-            $result = $this->sendSms($user, $item, $level, $levelValue, $newPrice);
+            $result = $this->sendSms($user, $item->symbol, $level, $levelValue, $newPrice);
 
             if ($result) {
-                SmsNotification::record($user->id, $item->id, $level, $newPrice);
+                SmsNotification::record($user->id, $item->id, $level, $newPrice, $item->symbol);
                 $sent[] = ['level' => $level, 'price' => $newPrice];
             }
         }
 
         return $sent;
+    }
+
+    /**
+     * Check user_symbol_levels for a symbol and send SMS if needed.
+     */
+    public function checkAndNotifySymbolLevel(User $user, string $symbol, float $newPrice, ?float $oldPrice = null): array
+    {
+        $sent = [];
+
+        if (!$user->hasSmsConfigured()) {
+            return $sent;
+        }
+
+        $scope = $user->sms_scope ?? 'portfolio';
+        if ($scope === 'portfolio') {
+            return $sent;
+        }
+
+        if (!$this->isInSmsTimeRange($user)) {
+            return $sent;
+        }
+
+        $cooldownMinutes = $user->sms_cooldown_minutes ?? $this->defaultCooldown;
+
+        $levelRecord = UserSymbolLevel::where('user_id', $user->id)
+            ->where('symbol', $symbol)
+            ->first();
+
+        if (!$levelRecord || !$levelRecord->hasAnyLevel()) {
+            return $sent;
+        }
+
+        if ($levelRecord->sms_enabled === false) {
+            return $sent;
+        }
+
+        if ($oldPrice === null) {
+            $oldPrice = $this->getOldSymbolPrice($symbol);
+        }
+
+        if ($oldPrice === null) {
+            return $sent;
+        }
+
+        foreach ($this->levels as $level) {
+            $levelValue = $levelRecord->{$level};
+
+            if ($levelValue === null || $levelValue <= 0) {
+                continue;
+            }
+
+            $levelValue = (float) $levelValue;
+
+            $crossed = $this->detectCrossing($level, $oldPrice, $newPrice, $levelValue);
+
+            if (!$crossed) {
+                continue;
+            }
+
+            $fakeItemId = -abs(crc32($symbol . $level));
+
+            if (!SmsNotification::canSend($fakeItemId, $level, $cooldownMinutes)) {
+                continue;
+            }
+
+            $result = $this->sendSms($user, $symbol, $level, $levelValue, $newPrice);
+
+            if ($result) {
+                SmsNotification::record($user->id, $fakeItemId, $level, $newPrice, $symbol);
+                $sent[] = ['level' => $level, 'price' => $newPrice];
+            }
+        }
+
+        return $sent;
+    }
+
+    private function getOldSymbolPrice(string $symbol): ?float
+    {
+        $cached = \App\Models\SymbolsCache::where('symbol', $symbol)->first();
+        return $cached ? (float) $cached->last_price : null;
     }
 
     /**
@@ -97,10 +179,8 @@ class SmsService
         $isResistance = str_starts_with($level, 'resistance');
 
         if ($isResistance) {
-            // Price crossed UP past resistance
             return $oldPrice < $levelValue && $newPrice >= $levelValue;
         } else {
-            // Price crossed DOWN past support
             return $oldPrice > $levelValue && $newPrice <= $levelValue;
         }
     }
@@ -108,7 +188,7 @@ class SmsService
     /**
      * Send SMS via IPPanel
      */
-    private function sendSms(User $user, PortfolioItem $item, string $level, float $levelValue, float $currentPrice): bool
+    private function sendSms(User $user, string $symbol, string $level, float $levelValue, float $currentPrice): bool
     {
         try {
             $client = new IPPanelClient($user->ippanel_api_key);
@@ -118,7 +198,7 @@ class SmsService
             $priceFormat = number_format($currentPrice);
             $levelFormat = number_format($levelValue);
 
-            $message = "{$item->symbol} به {$direction} {$levelLabel} رسید\n"
+            $message = "{$symbol} به {$direction} {$levelLabel} رسید\n"
                 . "فعلی: {$priceFormat}\n"
                 . "{$direction}: {$levelFormat}";
 
@@ -131,7 +211,7 @@ class SmsService
             if ($response->isSuccessful()) {
                 Log::info('SMS sent successfully', [
                     'user_id' => $user->id,
-                    'symbol' => $item->symbol,
+                    'symbol' => $symbol,
                     'level' => $level,
                 ]);
                 return true;
@@ -139,7 +219,7 @@ class SmsService
 
             Log::warning('SMS send failed', [
                 'user_id' => $user->id,
-                'symbol' => $item->symbol,
+                'symbol' => $symbol,
                 'message' => $response->getMessage(),
             ]);
 
@@ -175,10 +255,8 @@ class SmsService
         return match ($level) {
             'resistance_1' => '۱',
             'resistance_2' => '۲',
-            'resistance_3' => '۳',
             'support_1' => '۱',
             'support_2' => '۲',
-            'support_3' => '۳',
             default => $level,
         };
     }

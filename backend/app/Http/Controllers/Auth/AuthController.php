@@ -27,6 +27,7 @@ class AuthController extends Controller
         $userData['sms_cooldown_minutes'] = $user->sms_cooldown_minutes ?? 60;
         $userData['sms_start_time'] = $user->sms_start_time;
         $userData['sms_end_time'] = $user->sms_end_time;
+        $userData['sms_scope'] = $user->sms_scope ?? 'portfolio';
         $userData['ippanel_sender'] = $user->ippanel_sender;
         $userData['sms_configured'] = $user->hasSmsConfigured();
         return $userData;
@@ -237,13 +238,14 @@ class AuthController extends Controller
     public function updateIppanelSettings(Request $request)
     {
         $validated = $request->validate([
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|numeric|digits_between:6,20',
             'ippanel_api_key' => 'nullable|string|max:255',
-            'ippanel_sender' => 'nullable|string|max:20',
+            'ippanel_sender' => 'nullable|numeric|digits_between:4,20',
             'sms_enabled' => 'required|boolean',
             'sms_cooldown_minutes' => 'nullable|integer|min:1|max:1440',
             'sms_start_time' => 'nullable|date_format:H:i',
             'sms_end_time' => 'nullable|date_format:H:i',
+            'sms_scope' => 'nullable|string|in:portfolio,all,both',
         ]);
 
         $hasSmsStart = !empty($validated['sms_start_time'] ?? null);
@@ -279,6 +281,9 @@ class AuthController extends Controller
         if (array_key_exists('sms_end_time', $validated)) {
             $updateData['sms_end_time'] = $validated['sms_end_time'];
         }
+        if (array_key_exists('sms_scope', $validated)) {
+            $updateData['sms_scope'] = $validated['sms_scope'] ?? 'portfolio';
+        }
 
         $user->update($updateData);
 
@@ -293,7 +298,7 @@ class AuthController extends Controller
 
         $totalSent = \App\Models\SmsNotification::where('user_id', $user->id)->count();
         $todaySent = \App\Models\SmsNotification::where('user_id', $user->id)
-            ->whereDate('sent_at', today())
+            ->where('sent_at', '>=', now()->subHours(24))
             ->count();
 
         return response()->json([
@@ -302,6 +307,43 @@ class AuthController extends Controller
                 'today_sent' => $todaySent,
                 'sms_configured' => $user->hasSmsConfigured(),
             ],
+        ]);
+    }
+
+    public function getSmsHistory(Request $request)
+    {
+        $user = $request->user();
+
+        $notifications = \App\Models\SmsNotification::where('user_id', $user->id)
+            ->where('sent_at', '>=', now()->subHours(24))
+            ->orderByDesc('sent_at')
+            ->get()
+            ->map(function ($n) {
+                $levelLabel = match ($n->level_type) {
+                    'resistance_1' => 'مقاومت ۱',
+                    'resistance_2' => 'مقاومت ۲',
+                    'resistance_3' => 'مقاومت ۳',
+                    'support_1' => 'حمایت ۱',
+                    'support_2' => 'حمایت ۲',
+                    'support_3' => 'حمایت ۳',
+                    default => $n->level_type,
+                };
+
+                $direction = str_starts_with($n->level_type, 'resistance') ? 'مقاومت' : 'حمایت';
+
+                return [
+                    'id' => $n->id,
+                    'symbol' => $n->symbol ?? '—',
+                    'level_type' => $n->level_type,
+                    'level_label' => $levelLabel,
+                    'direction' => $direction,
+                    'price_at_trigger' => $n->price_at_trigger,
+                    'sent_at' => $n->sent_at->format('H:i:s'),
+                ];
+            });
+
+        return response()->json([
+            'data' => $notifications,
         ]);
     }
 

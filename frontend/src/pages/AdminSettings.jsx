@@ -222,6 +222,10 @@ export default function AdminSettings() {
           </div>
         </div>
 
+        <p className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 rtl-text">
+          برای استفاده از سرویس سهام، باید کلید API خود را از سایت <a href="https://brsapi.ir" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">brsapi.ir</a> دریافت کنید و اضافه کنید.
+        </p>
+
         {showAddForm && (
           <form onSubmit={handleAddApiKey} className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 space-y-3 max-w-md">
             <div>
@@ -468,7 +472,7 @@ export default function AdminSettings() {
             <input
               type="tel"
               value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
+              onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, ''))}
               dir="ltr"
               style={{ unicodeBidi: 'plaintext' }}
               className="input-field w-full text-xs py-2 ltr-text text-left"

@@ -10,6 +10,7 @@ class SmsNotification extends Model
     protected $fillable = [
         'user_id',
         'portfolio_item_id',
+        'symbol',
         'level_type',
         'price_at_trigger',
         'sent_at',
@@ -50,11 +51,12 @@ class SmsNotification extends Model
     /**
      * Record that SMS was sent
      */
-    public static function record(int $userId, int $portfolioItemId, string $levelType, float $price): static
+    public static function record(int $userId, int $portfolioItemId, string $levelType, float $price, ?string $symbol = null): static
     {
         return static::create([
             'user_id' => $userId,
             'portfolio_item_id' => $portfolioItemId,
+            'symbol' => $symbol,
             'level_type' => $levelType,
             'price_at_trigger' => $price,
             'sent_at' => now(),

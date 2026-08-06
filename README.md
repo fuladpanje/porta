@@ -5,8 +5,8 @@
 <h1 align="center">پورتا | Porta</h1>
 
 <p align="center">
-  <a href="#نسخه-فارسی">🇮🇷 فارسی</a> •
-  <a href="#english-version">🇺🇸 English</a>
+  <a href="#نسخه-فارسی">فارسی</a> •
+  <a href="#english-version">English</a>
 </p>
 
 <p align="center">
@@ -14,7 +14,6 @@
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" alt="React">
   <img src="https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind">
   <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php" alt="PHP">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT">
 </p>
 
 <p align="center">
@@ -29,7 +28,7 @@
 
 <a id="نسخه-فارسی"></a>
 
-# 🇮🇷 نسخه فارسی
+# نسخه فارسی
 
 <p align="center">
   یک داشبورد حرفه‌ای RTL برای مدیریت پورتفولیوی سهام بورس ایران
@@ -449,12 +448,6 @@ The `symbols:refresh` command runs every minute via Cron and only updates when:
 - **Multiple keys & failover**: support for multiple API keys with auto-switch
 - **No unnecessary writes**: prices only stored when actually changed
 - **Market-hours gating**: no API calls when market is closed
-
----
-
-## License
-
-MIT License
 
 ---
 

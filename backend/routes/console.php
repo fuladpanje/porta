@@ -43,3 +43,79 @@ Schedule::command('symbols:refresh')->when(function () {
 
     return false;
 })->everyMinute();
+
+// بروزرسانی نهایی دقیقاً ساعت پایان بازار
+Schedule::command('symbols:refresh --final')->when(function () {
+    $endTime = SystemSetting::get('schedule_end_time');
+    if (!$endTime) {
+        return false;
+    }
+
+    $now = now()->format('H:i');
+
+    // اجرا در دقیقه دقیق پایان بازار
+    return $now === $endTime;
+})->everyMinute();
+
+// تلاش مجدد بعد از اتمام بازار (هر ۵ دقیقه، حداکثر ۳ بار)
+Schedule::command('symbols:refresh --post-market')->when(function () {
+    $endTime = SystemSetting::get('schedule_end_time');
+    if (!$endTime) {
+        return false;
+    }
+
+    // فقط بعد از ساعت پایان بازار
+    $now = now()->format('H:i');
+    if ($now <= $endTime) {
+        return false;
+    }
+
+    // بررسی آیا بروزرسانی نهایی موفق بوده
+    $finalRefreshDone = SystemSetting::get('post_market_final_refresh_done', 'false');
+    if ($finalRefreshDone === 'true') {
+        return false;
+    }
+
+    // بررسی تعداد تلاش‌های بعد از بازار
+    $postMarketAttempts = (int) SystemSetting::get('post_market_attempts', '0');
+    if ($postMarketAttempts >= 3) {
+        return false;
+    }
+
+    // بررسی فاصله زمانی (هر ۵ دقیقه)
+    $lastPostMarketRun = (int) SystemSetting::get('schedule_last_post_market_refresh', '0');
+    $nowTimestamp = now()->timestamp;
+
+    if (($nowTimestamp - $lastPostMarketRun) >= 300) { // 5 minutes
+        SystemSetting::set('schedule_last_post_market_refresh', (string) $nowTimestamp);
+        SystemSetting::set('post_market_attempts', (string) ($postMarketAttempts + 1));
+        return true;
+    }
+
+    return false;
+})->everyMinute();
+
+// ریست تنظیمات بعد از بازار در شروع روز جدید
+Schedule::command('symbols:refresh --reset-post-market')->when(function () {
+    $startTime = SystemSetting::get('schedule_start_time');
+    if (!$startTime) {
+        return false;
+    }
+
+    $now = now()->format('H:i');
+
+    // اجرا در دقیقه دقیق شروع بازار
+    if ($now !== $startTime) {
+        return false;
+    }
+
+    // فقط یکبار در روز اجرا شود
+    $lastResetDate = SystemSetting::get('post_market_reset_date');
+    $today = now()->format('Y-m-d');
+    if ($lastResetDate === $today) {
+        return false;
+    }
+
+    SystemSetting::set('post_market_reset_date', $today);
+    return true;
+})->everyMinute();

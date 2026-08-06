@@ -1072,7 +1072,7 @@ function stripCommas(v) {
   return v.replace(/[,،]/g, '');
 }
 
-function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, initialBuyPrice, initialQuantity, initialSellPrice, initialLastPrice, initialPe, initialResistance1, initialResistance2, initialSupport1, initialSupport2, unit }) {
+function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, initialBuyPrice, initialQuantity, initialSellPrice, initialLastPrice, initialPe, initialResistance1, initialResistance2, initialSupport1, initialSupport2, initialSmsEnabled, unit }) {
   const toman = unit === 'toman';
   const conv = (v) => toman && v ? v / 10 : v;
   const [symbol, setSymbol] = useState(initialSymbol || '');
@@ -1081,10 +1081,12 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
   const [sellPrice, setSellPrice] = useState(cleanNum(conv(initialSellPrice)));
   const [lastPrice, setLastPrice] = useState(cleanNum(conv(initialLastPrice)));
   const [pe, setPe] = useState(cleanNum(initialPe));
+  const [isApiSymbol, setIsApiSymbol] = useState(Boolean(initialLastPrice));
   const [resistance1, setResistance1] = useState(cleanNum(conv(initialResistance1)));
   const [resistance2, setResistance2] = useState(cleanNum(conv(initialResistance2)));
   const [support1, setSupport1] = useState(cleanNum(conv(initialSupport1)));
   const [support2, setSupport2] = useState(cleanNum(conv(initialSupport2)));
+  const [smsEnabled, setSmsEnabled] = useState(initialSmsEnabled !== undefined ? initialSmsEnabled : true);
   const [buyIVolume, setBuyIVolume] = useState(null);
   const [buyCountI, setBuyCountI] = useState(null);
   const [sellIVolume, setSellIVolume] = useState(null);
@@ -1096,7 +1098,7 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
     e.preventDefault(); setLoading(true); setError('');
     try {
        const rev = (v) => toman && v ? v * 10 : v;
-        const payload = { symbol, buy_price: rev(buyPrice), quantity, sell_price: rev(sellPrice) || null, last_price: rev(lastPrice) || null, pe: pe || null, resistance_1: rev(resistance1) || null, resistance_2: rev(resistance2) || null, resistance_3: null, support_1: rev(support1) || null, support_2: rev(support2) || null, support_3: null, buy_i_volume: buyIVolume, buy_count_i: buyCountI, sell_i_volume: sellIVolume, sell_count_i: sellCountI };
+        const payload = { symbol, buy_price: rev(buyPrice), quantity, sell_price: rev(sellPrice) || null, last_price: rev(lastPrice) || null, pe: pe || null, resistance_1: rev(resistance1) || null, resistance_2: rev(resistance2) || null, resistance_3: null, support_1: rev(support1) || null, support_2: rev(support2) || null, support_3: null, buy_i_volume: buyIVolume, buy_count_i: buyCountI, sell_i_volume: sellIVolume, sell_count_i: sellCountI, sms_enabled: smsEnabled };
       if (isEdit) {
         await api.put(`/portfolios/${portfolioId}/items/${itemId}`, payload);
       } else {
@@ -1113,15 +1115,15 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
           <label className="text-[10px] text-slate-400 rtl-text block mb-1">نماد</label>
           <SymbolSearch
             value={symbol}
-            onChange={setSymbol}
-            onSelect={(s) => { setSymbol(s.name); if (s.pl) setLastPrice(String(Math.round(toman ? s.pl / 10 : s.pl))); if (s.pe) setPe(String(s.pe)); if (s.Buy_I_Volume) setBuyIVolume(s.Buy_I_Volume); if (s.Buy_CountI) setBuyCountI(s.Buy_CountI); if (s.Sell_I_Volume) setSellIVolume(s.Sell_I_Volume); if (s.Sell_CountI) setSellCountI(s.Sell_CountI); }}
+            onChange={(val) => { setSymbol(val); setIsApiSymbol(false); }}
+            onSelect={(s) => { setIsApiSymbol(true); setSymbol(s.name); if (s.pl) setLastPrice(String(Math.round(toman ? s.pl / 10 : s.pl))); if (s.pe) setPe(String(s.pe)); if (s.Buy_I_Volume) setBuyIVolume(s.Buy_I_Volume); if (s.Buy_CountI) setBuyCountI(s.Buy_CountI); if (s.Sell_I_Volume) setSellIVolume(s.Sell_I_Volume); if (s.Sell_CountI) setSellCountI(s.Sell_CountI); }}
             autoFocus={!isEdit}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">آخرین قیمت ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="number" inputMode="numeric" value={lastPrice} onChange={(e) => setLastPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" readOnly />
+            <input type="number" inputMode="numeric" value={lastPrice} onChange={(e) => setLastPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" readOnly={isApiSymbol} />
           </div>
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت خرید ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
@@ -1157,6 +1159,16 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
             <label className="text-[10px] font-bold text-green-500 rtl-text block mb-1">حمایت ۲</label>
             <input type="number" inputMode="numeric" value={support2} onChange={(e) => setSupport2(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" />
           </div>
+        </div>
+        <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+          <span className="text-[10px] text-slate-400 rtl-text">اعلام پیامک هنگام رسیدن به سطوح</span>
+          <button
+            type="button"
+            onClick={() => setSmsEnabled(!smsEnabled)}
+            className={`relative w-9 h-5 rounded-full transition-colors ${smsEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${smsEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
         </div>
         {error && <p className="text-[10px] text-danger">{error}</p>}
         <div className="flex gap-2">

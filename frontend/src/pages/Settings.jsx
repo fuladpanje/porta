@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { Check, X, Loader2, AlertCircle, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Shield, MessageSquare, Send, BarChart3 } from 'lucide-react';
+import { Check, X, Loader2, AlertCircle, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Shield, MessageSquare, BarChart3, Clock, Timer, Sliders } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,9 +28,15 @@ export default function Settings() {
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [savingSms, setSavingSms] = useState(false);
   const [smsCooldown, setSmsCooldown] = useState(60);
+  const [smsCooldownUnit, setSmsCooldownUnit] = useState('minutes');
   const [smsStartTime, setSmsStartTime] = useState('');
   const [smsEndTime, setSmsEndTime] = useState('');
+  const [smsScope, setSmsScope] = useState('portfolio');
   const [smsStats, setSmsStats] = useState({ total_sent: 0, today_sent: 0 });
+  const [smsHistory, setSmsHistory] = useState([]);
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [showSmsContact, setShowSmsContact] = useState(false);
+  const [showSmsSettings, setShowSmsSettings] = useState(false);
   
   // Section-specific messages
   const [smsError, setSmsError] = useState('');
@@ -92,6 +98,7 @@ export default function Settings() {
       setSmsCooldown(userData.sms_cooldown_minutes || 60);
       setSmsStartTime(normalizeTimeForInput(userData.sms_start_time));
       setSmsEndTime(normalizeTimeForInput(userData.sms_end_time));
+      setSmsScope(userData.sms_scope || 'portfolio');
     } catch (err) {
       // silent
     }
@@ -101,6 +108,15 @@ export default function Settings() {
     try {
       const res = await api.get('/user/sms-stats');
       setSmsStats(res.data.data);
+    } catch (err) {
+      // silent
+    }
+  }, []);
+
+  const fetchSmsHistory = useCallback(async () => {
+    try {
+      const res = await api.get('/user/sms-history');
+      setSmsHistory(res.data.data || []);
     } catch (err) {
       // silent
     }
@@ -129,7 +145,8 @@ export default function Settings() {
     fetchUser();
     fetchPortfolios();
     fetchSmsStats();
-  }, [fetchUser, fetchPortfolios, fetchSmsStats]);
+    fetchSmsHistory();
+  }, [fetchUser, fetchPortfolios, fetchSmsStats, fetchSmsHistory]);
 
   const handleToggleCommission = async () => {
     const newVal = !commissionEnabled;
@@ -211,9 +228,10 @@ export default function Settings() {
         sms_enabled: smsEnabled,
         phone: phone || null,
         ippanel_sender: ippanelSender || null,
-        sms_cooldown_minutes: parseInt(smsCooldown) || 60,
+        sms_cooldown_minutes: smsCooldownUnit === 'hours' ? (parseInt(smsCooldown) || 1) * 60 : (parseInt(smsCooldown) || 60),
         sms_start_time: smsStartTime || null,
         sms_end_time: smsEndTime || null,
+        sms_scope: smsScope,
       };
       if (ippanelApiKey) {
         payload.ippanel_api_key = ippanelApiKey;
@@ -223,6 +241,7 @@ export default function Settings() {
       setSmsSuccess('تنظیمات پیامک با موفقیت ذخیره شد.');
       setTimeout(() => setSmsSuccess(''), 3000);
       await fetchSmsStats();
+      await fetchSmsHistory();
     } catch (err) {
       setSmsError(err.response?.data?.message || 'خطا در بروزرسانی تنظیمات پیامک');
     } finally {
@@ -266,10 +285,6 @@ export default function Settings() {
   return (
     <div className="space-y-4">
 
-      <p className="text-[10px] text-slate-400 px-1 rtl-text">
-        برای استفاده از سرویس سهام، باید کلید API خود را از سایت <a href="https://brsapi.ir" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">brsapi.ir</a> دریافت کنید و اضافه کنید.
-      </p>
-
       {/* User Info Section */}
       <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
@@ -279,22 +294,22 @@ export default function Settings() {
           </h2>
         </div>
 
-        <div className="px-4 py-3 space-y-2 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-slate-400 rtl-text">نام کاربری</span>
-            <span className="text-xs font-medium text-slate-800 dark:text-slate-200">{user?.username || '—'}</span>
+        <div className="px-4 py-3 space-y-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <span className="text-[10px] text-slate-400 rtl-text block">نام کاربری</span>
+            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 mt-0.5 block">{user?.username || '—'}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-slate-400 rtl-text">ایمیل</span>
-            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 ltr-text">{user?.email || '—'}</span>
+          <div>
+            <span className="text-[10px] text-slate-400 rtl-text block">ایمیل</span>
+            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 ltr-text mt-0.5 block">{user?.email || '—'}</span>
           </div>
         </div>
 
-        <div className="py-3">
+        <div className="px-4 py-3">
           {!showPasswordForm ? (
             <button
               onClick={() => { setShowPasswordForm(true); clearPasswordMessages(); }}
-              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
+              className="btn-primary text-xs py-1.5 px-4 flex items-center gap-1"
             >
               <Lock className="w-3 h-3" />
               تغییر رمز
@@ -404,10 +419,13 @@ export default function Settings() {
           <>
             <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800">
               <p className="text-[10px] text-slate-400 rtl-text">
-                کارمزد اختصاصی پرتفوها (در صورت فعال نبودن از تنظیمات کلی استفاده می‌شود)
+                کارمزد اختصاصی پرتفوها
+              </p>
+              <p className="text-[9px] text-slate-400 rtl-text">
+                در صورت فعال نبودن از تنظیمات کلی استفاده می‌شود
               </p>
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-w-md">
               {portfolios.map((portfolio) => {
                 const isExpanded = expandedPortfolios[portfolio.id];
                 const settings = portfolioCommission[portfolio.id] || {};
@@ -427,7 +445,7 @@ export default function Settings() {
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-[90deg]' : ''}`} />
                     </button>
                     {isExpanded && (
-                      <div className="py-3 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                      <div className="py-3 px-4 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400 rtl-text">استفاده از کارمزد اختصاصی</span>
                           <button
@@ -438,7 +456,7 @@ export default function Settings() {
                           </button>
                         </div>
                         {settings.commission_enabled && (
-                          <div className="max-w-md space-y-3 px-4">
+                          <div className="space-y-3">
                             <div>
                               <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد خرید (٪)</label>
                               <input
@@ -508,132 +526,206 @@ export default function Settings() {
               {' '}را وارد کنید.
             </p>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 rtl-text">
-                  <Send className="w-3.5 h-3.5 text-brand-500" />
-                  امروز
-                </div>
-                <div className="mt-1 flex items-baseline gap-1 rtl-text">
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{toPersianNum(smsStats.today_sent || 0)}</span>
-                  <span className="text-[10px] text-slate-400">پیامک</span>
-                </div>
+            <button
+              type="button"
+              onClick={async () => { await fetchSmsHistory(); setShowSmsModal(true); }}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-brand-500" />
+                <span className="text-xs text-slate-700 dark:text-slate-300 rtl-text">پیامک‌های امروز</span>
               </div>
-              <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 rtl-text">
-                  <BarChart3 className="w-3.5 h-3.5 text-brand-500" />
-                  کل ارسال
-                </div>
-                <div className="mt-1 flex items-baseline gap-1 rtl-text">
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{toPersianNum(smsStats.total_sent || 0)}</span>
-                  <span className="text-[10px] text-slate-400">پیامک</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-slate-400">{toPersianNum(smsStats.today_sent || 0)}</span>
               </div>
-            </div>
+            </button>
 
-             <div>
-               <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره موبایل</label>
-               <input
-                 type="tel"
-                 value={phone}
-                 onChange={(e) => setPhone(e.target.value)}
-                 dir="ltr"
-                 style={{ unicodeBidi: 'plaintext' }}
-                 className="input-field w-full text-xs py-2 ltr-text text-left"
-                 placeholder="09121234567"
-               />
-             </div>
+             <div className="rounded-lg border border-slate-100 dark:border-slate-800">
+               <button
+                 type="button"
+                 onClick={() => setShowSmsContact(!showSmsContact)}
+                 className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 rtl-text hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+               >
+                 <span className="flex items-center gap-2">
+                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSmsContact ? 'rotate-180' : ''}`} />
+                   اطلاعات API
+                 </span>
+               </button>
+               {showSmsContact && (
+                 <div className="px-3 pb-3 space-y-3">
+                   <div>
+                     <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره موبایل</label>
+                     <input
+                       type="tel"
+                       value={phone}
+                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                       dir="ltr"
+                       style={{ unicodeBidi: 'plaintext' }}
+                       className="input-field w-full text-xs py-2 ltr-text text-left"
+                       placeholder="09121234567"
+                     />
+                   </div>
 
-             <div>
-               <label className="text-[10px] text-slate-400 rtl-text block mb-1">کلید API مدیر پیامک</label>
-               <input
-                 type="password"
-                 value={ippanelApiKey}
-                 onChange={(e) => setIppanelApiKey(e.target.value)}
-                 className="input-field w-full text-xs py-2 ltr-text text-left"
-                 placeholder={user?.sms_configured ? '•••••••• (قابل تغییر)' : 'کلید API را اینجا وارد کنید'}
-               />
-             </div>
+                   <div>
+                     <label className="text-[10px] text-slate-400 rtl-text block mb-1">کلید API مدیر پیامک</label>
+                     <input
+                       type="password"
+                       value={ippanelApiKey}
+                       onChange={(e) => setIppanelApiKey(e.target.value)}
+                       className="input-field w-full text-xs py-2 ltr-text text-left"
+                       placeholder={user?.sms_configured ? '•••••••• (قابل تغییر)' : 'کلید API را اینجا وارد کنید'}
+                     />
+                   </div>
 
-             <div>
-               <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره فرستنده</label>
-               <input
-                 type="text"
-                 value={ippanelSender}
-                 onChange={(e) => setIppanelSender(e.target.value)}
-                 dir="ltr"
-                 style={{ unicodeBidi: 'plaintext' }}
-                 className="input-field w-full text-xs py-2 ltr-text text-left"
-                 placeholder="1000xxxx"
-               />
-             </div>
-
-             <div>
-               <label className="text-[10px] text-slate-400 rtl-text block mb-1">حداقل فاصله ارسال (دقیقه)</label>
-               <input
-                 type="number"
-                 min="1"
-                 max="1440"
-                 value={smsCooldown}
-                 onChange={(e) => setSmsCooldown(e.target.value)}
-                 className="input-field w-full text-xs py-2 text-left"
-               />
-               <p className="text-[9px] text-slate-400 mt-1 rtl-text">
-                 اگر قیمت چند بار به یک سطح برسد، پیامک فقط یکبار در این بازه ارسال می‌شود.
-               </p>
-             </div>
-
-             <div className="space-y-2">
-               <p className="text-[10px] text-slate-400 rtl-text">بازه زمانی ارسال (اختیاری)</p>
-               <div className="space-y-2">
-                 <div>
-                   <label className="text-[10px] text-slate-500 rtl-text block mb-1">از ساعت</label>
-                   <input
-                     type="time"
-                     value={smsStartTime}
-                     onChange={(e) => setSmsStartTime(e.target.value)}
-                     className="input-field time-field w-full text-xs py-2"
-                   />
+                   <div>
+                     <label className="text-[10px] text-slate-400 rtl-text block mb-1">شماره فرستنده</label>
+                     <input
+                       type="text"
+                       value={ippanelSender}
+                       onChange={(e) => setIppanelSender(e.target.value.replace(/\D/g, ''))}
+                       dir="ltr"
+                       style={{ unicodeBidi: 'plaintext' }}
+                       className="input-field w-full text-xs py-2 ltr-text text-left"
+                       placeholder="1000xxxx"
+                     />
+                   </div>
                  </div>
-                 <div>
-                   <label className="text-[10px] text-slate-500 rtl-text block mb-1">تا ساعت</label>
-                   <input
-                     type="time"
-                     value={smsEndTime}
-                     onChange={(e) => setSmsEndTime(e.target.value)}
-                     className="input-field time-field w-full text-xs py-2"
-                   />
+               )}
+             </div>
+
+             <div className="rounded-lg border border-slate-100 dark:border-slate-800">
+               <button
+                 type="button"
+                 onClick={() => setShowSmsSettings(!showSmsSettings)}
+                 className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 rtl-text hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+               >
+                 <span className="flex items-center gap-2">
+                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSmsSettings ? 'rotate-180' : ''}`} />
+                   تنظیمات ارسال پیامک
+                 </span>
+               </button>
+               {showSmsSettings && (
+                 <div className="px-3 pb-3 space-y-3">
+                   <div className="space-y-2">
+                     <p className="text-[10px] font-medium text-brand-500 rtl-text flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> بازه زمانی ارسال (اختیاری)</p>
+                     <div className="space-y-2">
+                       <div>
+                         <label className="text-[10px] text-slate-500 rtl-text block mb-1">از ساعت</label>
+                         <input
+                           type="time"
+                           value={smsStartTime}
+                           onChange={(e) => setSmsStartTime(e.target.value)}
+                           className="input-field time-field w-full text-xs py-2"
+                         />
+                       </div>
+                       <div>
+                         <label className="text-[10px] text-slate-500 rtl-text block mb-1">تا ساعت</label>
+                         <input
+                           type="time"
+                           value={smsEndTime}
+                           onChange={(e) => setSmsEndTime(e.target.value)}
+                           className="input-field time-field w-full text-xs py-2"
+                         />
+                       </div>
+                     </div>
+                     <div className="flex gap-2 flex-wrap">
+                       <button
+                         type="button"
+                         onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('12:30'); }}
+                         className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '12:30' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                       >
+                         ۸:۴۵ — ۱۲:۳۰
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('17:00'); }}
+                         className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '17:00' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                       >
+                         ۸:۴۵ — ۱۷:۰۰
+                       </button>
+                       {(smsStartTime || smsEndTime) && (
+                         <button
+                           type="button"
+                           onClick={() => { setSmsStartTime(''); setSmsEndTime(''); }}
+                           className="text-[10px] px-3 py-1.5 rounded-lg rtl-text bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
+                         >
+                           حذف بازه
+                         </button>
+                       )}
+                     </div>
+                     <p className="text-[9px] text-slate-400 rtl-text">
+                       خارج از این بازه، حتی در صورت عبور قیمت از سطح، پیامکی ارسال نمی‌شود.
+                     </p>
+                   </div>
+
+                   <div>
+                     <label className="text-[10px] font-medium text-brand-500 rtl-text flex items-center gap-1.5 mb-2"><Sliders className="w-3.5 h-3.5" /> محدوده ارسال پیامک</label>
+                     <div className="flex flex-row gap-2">
+                       <button
+                         type="button"
+                         onClick={() => setSmsScope('portfolio')}
+                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] rtl-text transition-colors ${smsScope === 'portfolio' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                       >
+                         <span className={`w-3 h-3 rounded-full border-2 shrink-0 ${smsScope === 'portfolio' ? 'border-brand-500 bg-brand-500' : 'border-slate-300 dark:border-slate-600'}`}></span>
+                         فقط پرتفو
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setSmsScope('all')}
+                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] rtl-text transition-colors ${smsScope === 'all' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                       >
+                         <span className={`w-3 h-3 rounded-full border-2 shrink-0 ${smsScope === 'all' ? 'border-brand-500 bg-brand-500' : 'border-slate-300 dark:border-slate-600'}`}></span>
+                         همه نمادها
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setSmsScope('both')}
+                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] rtl-text transition-colors ${smsScope === 'both' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                       >
+                         <span className={`w-3 h-3 rounded-full border-2 shrink-0 ${smsScope === 'both' ? 'border-brand-500 bg-brand-500' : 'border-slate-300 dark:border-slate-600'}`}></span>
+                         پرتفو + همه
+                       </button>
+                     </div>
+                     <p className="text-[9px] text-slate-400 mt-2 rtl-text">
+                       {smsScope === 'portfolio' && 'پیامک فقط برای نمادهای موجود در پرتفو ارسال می‌شود.'}
+                       {smsScope === 'all' && 'پیامک فقط برای نمادهایی که سطح تعریف کرده‌اید ارسال می‌شود.'}
+                       {smsScope === 'both' && 'پیامک برای هر دو حالت ارسال می‌شود.'}
+                     </p>
+                   </div>
+
+                   <div>
+                     <label className="text-[10px] font-medium text-brand-500 rtl-text flex items-center gap-1.5 mb-1"><Timer className="w-3.5 h-3.5" /> حداقل فاصله ارسال</label>
+                     <div className="flex items-center gap-2">
+                       <input
+                         type="number"
+                         min="1"
+                         value={smsCooldown}
+                         onChange={(e) => setSmsCooldown(e.target.value)}
+                         className="input-field w-24 text-xs py-2 text-center"
+                       />
+                       <div className="flex gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-8">
+                         {[
+                           { value: 'minutes', label: 'دقیقه' },
+                           { value: 'hours', label: 'ساعت' },
+                         ].map((u) => (
+                           <button
+                             key={u.value}
+                             type="button"
+                             onClick={() => setSmsCooldownUnit(u.value)}
+                             className={`flex-1 text-[10px] py-1 px-3 rounded-md rtl-text transition-colors whitespace-nowrap h-full flex items-center justify-center ${smsCooldownUnit === u.value ? 'bg-white dark:bg-slate-700 text-brand-500 shadow-sm font-medium' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                           >
+                             {u.label}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                     <p className="text-[9px] text-slate-400 mt-1 rtl-text">
+                       اگر قیمت چند بار به یک سطح برسد، پیامک فقط یکبار در این بازه ارسال می‌شود.
+                     </p>
+                   </div>
                  </div>
-               </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('12:30'); }}
-                  className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '12:30' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                >
-                  ۸:۴۵ — ۱۲:۳۰
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('17:00'); }}
-                  className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '17:00' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                >
-                  ۸:۴۵ — ۱۷:۰۰
-                </button>
-                {(smsStartTime || smsEndTime) && (
-                  <button
-                    type="button"
-                    onClick={() => { setSmsStartTime(''); setSmsEndTime(''); }}
-                    className="text-[10px] px-3 py-1.5 rounded-lg rtl-text bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
-                  >
-                    حذف بازه
-                  </button>
-                )}
-              </div>
-              <p className="text-[9px] text-slate-400 rtl-text">
-                خارج از این بازه، حتی در صورت عبور قیمت از سطح، پیامکی ارسال نمی‌شود.
-              </p>
-            </div>
+               )}
+             </div>
 
             <button
               onClick={handleSaveSms}
@@ -693,6 +785,45 @@ export default function Settings() {
         <Tag className="w-3 h-3" />
         <span>نسخه ۱.۰.۰</span>
       </div>
+
+      {showSmsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowSmsModal(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-md max-h-[70vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 rtl-text">پیامک‌های امروز</h3>
+              <button onClick={() => setShowSmsModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {smsHistory.length === 0 ? (
+                <p className="text-center text-xs text-slate-400 py-8 rtl-text">پیامکی امروز ارسال نشده</p>
+              ) : (
+                <div className="space-y-2">
+                  {smsHistory.map((sms) => (
+                    <div key={sms.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${sms.direction === 'مقاومت' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
+                          {sms.level_label}
+                        </span>
+                        <span className="text-xs font-medium text-slate-800 dark:text-slate-200 rtl-text">{sms.symbol}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-slate-500 ltr-text">{toPersianNum(sms.price_at_trigger)}</span>
+                        <span className="text-[10px] text-slate-400 ltr-text">{sms.sent_at}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

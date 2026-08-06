@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
+  `phone` varchar(20) NULL DEFAULT NULL,
   `unit` varchar(10) NOT NULL DEFAULT 'rial',
   `auto_switch` tinyint(1) NOT NULL DEFAULT 1,
   `schedule_enabled` tinyint(1) NOT NULL DEFAULT 0,
@@ -22,11 +23,18 @@ CREATE TABLE IF NOT EXISTS `users` (
   `commission_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `buy_commission` decimal(5,2) NOT NULL DEFAULT 0.37,
   `sell_commission` decimal(5,2) NOT NULL DEFAULT 0.88,
+  `is_stale` tinyint(1) NOT NULL DEFAULT 1,
+  `is_admin` tinyint(1) NOT NULL DEFAULT 0,
+  `ippanel_api_key` text NULL,
+  `ippanel_sender` varchar(20) NULL DEFAULT NULL,
+  `sms_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `sms_cooldown_minutes` int NOT NULL DEFAULT 60,
+  `sms_start_time` time NULL DEFAULT NULL,
+  `sms_end_time` time NULL DEFAULT NULL,
+  `sms_scope` varchar(20) NOT NULL DEFAULT 'portfolio',
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `remember_token` varchar(100) DEFAULT NULL,
-  `is_stale` tinyint(1) NOT NULL DEFAULT 1,
-  `is_admin` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -75,11 +83,53 @@ CREATE TABLE IF NOT EXISTS `portfolio_items` (
   `sell_i_volume` decimal(16,2) DEFAULT NULL,
   `sell_count_i` decimal(12,2) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
+  `sms_enabled` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `portfolio_items_portfolio_id_foreign` (`portfolio_id`),
   CONSTRAINT `portfolio_items_portfolio_id_foreign` FOREIGN KEY (`portfolio_id`) REFERENCES `portfolios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table: sms_notifications
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sms_notifications` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` bigint UNSIGNED NOT NULL,
+  `portfolio_item_id` bigint UNSIGNED NOT NULL,
+  `symbol` varchar(255) NULL,
+  `level_type` enum('resistance_1','resistance_2','resistance_3','support_1','support_2','support_3') NOT NULL,
+  `price_at_trigger` decimal(12,2) NOT NULL,
+  `sent_at` timestamp NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `sms_notifications_user_id_foreign` (`user_id`),
+  KEY `sms_notifications_portfolio_item_id_foreign` (`portfolio_item_id`),
+  KEY `sms_notifications_portfolio_item_id_level_type_sent_at_index` (`portfolio_item_id`, `level_type`, `sent_at`),
+  CONSTRAINT `sms_notifications_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `sms_notifications_portfolio_item_id_foreign` FOREIGN KEY (`portfolio_item_id`) REFERENCES `portfolio_items` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table: user_symbol_levels
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_symbol_levels` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` bigint UNSIGNED NOT NULL,
+  `symbol` varchar(20) NOT NULL,
+  `resistance_1` decimal(12,2) NULL DEFAULT NULL,
+  `resistance_2` decimal(12,2) NULL DEFAULT NULL,
+  `support_1` decimal(12,2) NULL DEFAULT NULL,
+  `support_2` decimal(12,2) NULL DEFAULT NULL,
+  `sms_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_symbol_levels_user_id_symbol_unique` (`user_id`, `symbol`),
+  KEY `user_symbol_levels_symbol_index` (`symbol`),
+  CONSTRAINT `user_symbol_levels_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -210,6 +260,7 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`, `c
 ('schedule_hours', '0', 'ساعت‌های زمان‌بندی', NOW(), NOW()),
 ('schedule_start_time', NULL, 'زمان شروع بازه اجرا', NOW(), NOW()),
 ('schedule_end_time', NULL, 'زمان پایان بازه اجرا', NOW(), NOW()),
-('auto_switch', 'true', 'چرخش خودکار کلید API', NOW(), NOW());
+('auto_switch', 'true', 'چرخش خودکار کلید API', NOW(), NOW()),
+('sms_cooldown_minutes', '60', 'فاصله زمانی بین ارسال پیامک‌ها (دقیقه)', NOW(), NOW());
 
 SET FOREIGN_KEY_CHECKS = 1;

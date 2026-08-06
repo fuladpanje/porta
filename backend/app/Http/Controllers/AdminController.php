@@ -167,7 +167,7 @@ class AdminController extends Controller
     public function testSms(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|numeric|digits_between:2,20',
             'message' => 'nullable|string|max:500',
         ]);
 

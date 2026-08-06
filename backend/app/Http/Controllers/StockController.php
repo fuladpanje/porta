@@ -441,13 +441,28 @@ class StockController extends Controller
             }
 
             self::debugLog('STEP2', 'Fetching symbols from BRS API...');
-            $symbols = $this->fetchAllSymbolsWithSystemKeys(true);
-            self::debugLog('STEP2', 'Symbols fetched', ['count' => count($symbols)]);
+            $maxRetries = 3;
+            $retryDelay = 30;
+            $symbols = [];
+
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                if ($attempt > 1) {
+                    self::debugLog('RETRY', "Attempt $attempt of $maxRetries, waiting {$retryDelay}s...");
+                    sleep($retryDelay);
+                }
+
+                $symbols = $this->fetchAllSymbolsWithSystemKeys(true);
+                self::debugLog('STEP2', "Symbols fetched (attempt $attempt)", ['count' => count($symbols)]);
+
+                if (!empty($symbols)) {
+                    break;
+                }
+            }
 
             if (empty($symbols)) {
-                self::debugLog('ERROR', 'No symbols returned from API');
+                self::debugLog('ERROR', "All $maxRetries attempts failed");
                 return response()->json([
-                    'message' => 'دریافت قیمت‌ها از سرور بیرونی ممکن نیست. لطفاً با پشتیبانی تماس بگیرید.',
+                    'message' => "دریافت قیمت‌ها پس از $maxRetries تلاش ناموفق بود. لطفاً با پشتیبانی تماس بگیرید.",
                     'updated' => 0,
                 ], 400);
             }
@@ -544,6 +559,45 @@ class StockController extends Controller
                         }
                     }
                 }
+            }
+
+            self::debugLog('STEP4D', 'Checking user symbol levels for SMS...');
+            try {
+                $usersWithSymbolLevels = \App\Models\User::where('sms_enabled', true)
+                    ->where('sms_scope', '!=', 'portfolio')
+                    ->whereHas('userSymbolLevels', function ($q) {
+                        $q->where(function ($q2) {
+                            $q2->where('resistance_1', '!=', null)
+                                ->orWhere('resistance_2', '!=', null)
+                                ->orWhere('support_1', '!=', null)
+                                ->orWhere('support_2', '!=', null);
+                        });
+                    })
+                    ->get();
+
+                foreach ($usersWithSymbolLevels as $user) {
+                    $levels = $user->userSymbolLevels()->get();
+                    foreach ($levels as $levelRecord) {
+                        $key = strtolower($levelRecord->symbol);
+                        if (isset($symbolMap[$key])) {
+                            $symbol = $symbolMap[$key];
+                            $pl = $symbol['pl'] ?? null;
+                            if ($pl !== null) {
+                                try {
+                                    $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl);
+                                    $smsCount += count($sent);
+                                } catch (\Throwable $e) {
+                                    self::debugLog('ERROR', "User symbol level SMS check failed {$levelRecord->symbol}", [
+                                        'user_id' => $user->id,
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                self::debugLog('ERROR', 'User symbol level SMS check failed', ['error' => $e->getMessage()]);
             }
 
             self::debugLog('STEP5', 'Updating user stale flags...');

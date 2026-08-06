@@ -42,9 +42,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/stale', [AuthController::class, 'updateStale']);
     Route::put('/user/ippanel-settings', [AuthController::class, 'updateIppanelSettings']);
     Route::get('/user/sms-stats', [AuthController::class, 'getSmsStats']);
+    Route::get('/user/sms-history', [AuthController::class, 'getSmsHistory']);
 
     Route::get('/favorites', [FavoriteController::class, 'index']);
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
+
+    Route::get('/user-symbol-levels', [\App\Http\Controllers\UserSymbolLevelController::class, 'index']);
+    Route::post('/user-symbol-levels', [\App\Http\Controllers\UserSymbolLevelController::class, 'store']);
+    Route::delete('/user-symbol-levels/{symbol}', [\App\Http\Controllers\UserSymbolLevelController::class, 'destroy']);
 
     // Public system info (available to all authenticated users)
     Route::get('/system/schedule', function () {

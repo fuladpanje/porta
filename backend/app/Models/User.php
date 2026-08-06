@@ -34,6 +34,7 @@ class User extends Authenticatable
         'sms_cooldown_minutes',
         'sms_start_time',
         'sms_end_time',
+        'sms_scope',
     ];
 
     protected $hidden = [
@@ -73,6 +74,11 @@ class User extends Authenticatable
     public function smsNotifications()
     {
         return $this->hasMany(SmsNotification::class);
+    }
+
+    public function userSymbolLevels()
+    {
+        return $this->hasMany(UserSymbolLevel::class);
     }
 
     public function hasSmsConfigured(): bool
