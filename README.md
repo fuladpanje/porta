@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://porta.fuladpanjeh.ir/">🚀 مشاهده دمو &nbsp;|&nbsp; Live Demo</a>
+  <a href="https://porta.fuladpanjeh.ir/" target="_blank" rel="noopener noreferrer">🚀 مشاهده دمو &nbsp;|&nbsp; Live Demo</a>
 </p>
 
 <p align="center">
