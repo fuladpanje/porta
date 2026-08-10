@@ -108,7 +108,7 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 4. در فیلد **Command** وارد کنید:
 
 ```bash
-cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:run >> /dev/null 2>&1
+(crontab -l 2>/dev/null | grep -v 'schedule:run'; echo '* * * * * cd /home/YOUR_USERNAME/public_html/example.com/backend && /usr/local/bin/php artisan schedule:run >> /home/YOUR_USERNAME/cron-schedule.log 2>&1') | crontab - && crontab -l
 ```
 
 > مسیر بالا را بر اساس مسیر نصب ساب‌دومین خودتان تنظیم کنید.
@@ -321,7 +321,7 @@ Auto price updates are handled via **Cron Job** in cPanel.
 3. In the **Command** field enter:
 
 ```bash
-cd /home/YOUR_USERNAME/public_html/example.com/backend && php artisan schedule:run >> /dev/null 2>&1
+(crontab -l 2>/dev/null | grep -v 'schedule:run'; echo '* * * * * cd /home/YOUR_USERNAME/public_html/example.com/backend && /usr/local/bin/php artisan schedule:run >> /home/YOUR_USERNAME/cron-schedule.log 2>&1') | crontab - && crontab -l
 ```
 
 > Adjust the path based on your subdomain installation.
