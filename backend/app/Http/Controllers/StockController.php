@@ -503,7 +503,9 @@ class StockController extends Controller
             self::debugLog('STEP4B', 'Starting item updates...', ['total_items' => $totalItems]);
 
             $smsService = new \App\Services\SmsService();
+            $crossoverService = new \App\Services\CrossoverDetectionService();
             $smsCount = 0;
+            $allCrossovers = [];
 
             \Illuminate\Support\Facades\DB::statement('SET SESSION innodb_lock_wait_timeout = 5');
             self::debugLog('STEP4C', 'MySQL lock timeout set to 5s');
@@ -570,6 +572,14 @@ class StockController extends Controller
                                     'error' => $e->getMessage(),
                                 ]);
                             }
+                            try {
+                                $detected = $crossoverService->checkPortfolioItem($item, (float) $pl);
+                                $allCrossovers = array_merge($allCrossovers, $detected);
+                            } catch (\Throwable $e) {
+                                self::debugLog('ERROR', "[$itemIdx/$totalItems] Crossover check failed {$item->symbol}", [
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
                         }
                     }
                 }
@@ -603,6 +613,17 @@ class StockController extends Controller
                                     $smsCount += count($sent);
                                 } catch (\Throwable $e) {
                                     self::debugLog('ERROR', "User symbol level SMS check failed {$levelRecord->symbol}", [
+                                        'user_id' => $user->id,
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
+                                try {
+                                    $isin = $symbol['isin'] ?? '';
+                                    $oldPrice = $oldPrices[$isin] ?? null;
+                                    $detected = $crossoverService->checkSymbolLevel($levelRecord, (float) $pl, $oldPrice ? (float) $oldPrice : null);
+                                    $allCrossovers = array_merge($allCrossovers, $detected);
+                                } catch (\Throwable $e) {
+                                    self::debugLog('ERROR', "User symbol level crossover check failed {$levelRecord->symbol}", [
                                         'user_id' => $user->id,
                                         'error' => $e->getMessage(),
                                     ]);
@@ -641,9 +662,12 @@ class StockController extends Controller
 
             \App\Models\SystemSetting::where('setting_key', $lockKey)->delete();
 
+            \App\Models\CrossoverNotification::cleanup(7);
+
             self::debugLog('DONE', 'Refresh completed successfully', [
                 'updated' => $updated,
                 'sms_sent' => $smsCount,
+                'crossovers' => count($allCrossovers),
                 'memory_peak' => round(memory_get_peak_usage(true) / 1024 / 1024, 1) . 'MB',
             ]);
 
@@ -651,6 +675,7 @@ class StockController extends Controller
                 'message' => 'Prices refreshed successfully',
                 'updated' => $updated,
                 'sms_sent' => $smsCount,
+                'crossovers' => $allCrossovers,
                 'refreshed_at' => $refreshedAt,
             ]);
         } catch (\Throwable $e) {

@@ -5,9 +5,10 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import { useSize } from '../contexts/SizeContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2, Expand } from 'lucide-react';
+import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2, Expand, Bell } from 'lucide-react';
 import { stockApi } from '../lib/api';
 import api from '../lib/api';
+import { NotificationHistoryMenu } from './NotificationHistoryMenu';
 
 function UserRefreshBadge({ lastRefresh, stale, isInScheduleRange }) {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -64,11 +65,12 @@ export function Header() {
   const settingsRef = useRef(null);
   const intervalRef = useRef(null);
   const handleRefreshRef = useRef(null);
-  const [isDark, setIsDark] = useState(() => {
+   const [isDark, setIsDark] = useState(() => {
     const stored = localStorage.getItem('theme');
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+  const prevRefreshRef = useRef(null);
 
   useEffect(() => {
     if (isDark) {
@@ -208,24 +210,20 @@ export function Header() {
      if (refreshing) return;
      setRefreshing(true);
      try {
-       if (user?.is_admin) {
-         // Admin: call BRS API to fetch fresh prices and update all portfolio items
-         await stockApi.refreshPrices(true); // manual=true skips time-range check
-         // Fetch the canonical timestamp from server (already in UTC, displayed with Tehran tz)
-         api.get('/system/last-refresh')
+        if (user?.is_admin) {
+          const res = await stockApi.refreshPrices(true);
+          api.get('/system/last-refresh')
            .then((res) => {
              const val = res.data?.data?.last_refresh_at;
              if (val) setLastRefresh(new Date(val));
            })
            .catch(() => {});
        }
-       // All users: notify dashboard to re-fetch (cron job already updated portfolio_items)
        window.dispatchEvent(new Event('prices-refreshed'));
        setStale(false);
        api.put('/user/stale', { is_stale: false });
        updateUser({ ...user, is_stale: false });
      } catch (err) {
-       // Applies to both admin (API call failed) and non-admin (dashboard re-fetch failed)
        setStale(true);
        api.put('/user/stale', { is_stale: true });
        updateUser({ ...user, is_stale: true });
@@ -312,6 +310,8 @@ export function Header() {
           >
             <List className="w-4 h-4" />
           </button>
+
+          <NotificationHistoryMenu />
 
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-700" />
 

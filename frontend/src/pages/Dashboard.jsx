@@ -1287,14 +1287,14 @@ function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) 
             <div className="rounded-lg bg-red-50 dark:bg-red-900/10 p-2 space-y-1">
               <div className="space-y-1">
                 <div>
-                  <label className="text-[10px] font-bold text-red-500 block mb-0.5">مقاومت ۱</label>
+                  <label className="text-[10px] font-bold text-red-500 block mb-0.5">مقاومت ۱ <span className="text-[8px] font-normal opacity-60">({unitLabel})</span></label>
                   <div className="flex items-center gap-1">
                     <input type="number" inputMode="numeric" value={resistance1} onChange={(e) => setResistance1(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" placeholder={unitLabel} />
                     <SmsBtn levelKey="resistance_1" value={smsR1} onChange={setSmsR1} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-red-500 block mb-0.5">مقاومت ۲</label>
+                  <label className="text-[10px] font-bold text-red-500 block mb-0.5">مقاومت ۲ <span className="text-[8px] font-normal opacity-60">({unitLabel})</span></label>
                   <div className="flex items-center gap-1">
                     <input type="number" inputMode="numeric" value={resistance2} onChange={(e) => setResistance2(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" placeholder={unitLabel} />
                     <SmsBtn levelKey="resistance_2" value={smsR2} onChange={setSmsR2} />
@@ -1306,14 +1306,14 @@ function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) 
             <div className="rounded-lg bg-green-50 dark:bg-green-900/10 p-2 space-y-1">
               <div className="space-y-1">
                 <div>
-                  <label className="text-[10px] font-bold text-green-500 block mb-0.5">حمایت ۱</label>
+                  <label className="text-[10px] font-bold text-green-500 block mb-0.5">حمایت ۱ <span className="text-[8px] font-normal opacity-60">({unitLabel})</span></label>
                   <div className="flex items-center gap-1">
                     <input type="number" inputMode="numeric" value={support1} onChange={(e) => setSupport1(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" placeholder={unitLabel} />
                     <SmsBtn levelKey="support_1" value={smsS1} onChange={setSmsS1} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-green-500 block mb-0.5">حمایت ۲</label>
+                  <label className="text-[10px] font-bold text-green-500 block mb-0.5">حمایت ۲ <span className="text-[8px] font-normal opacity-60">({unitLabel})</span></label>
                   <div className="flex items-center gap-1">
                     <input type="number" inputMode="numeric" value={support2} onChange={(e) => setSupport2(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" placeholder={unitLabel} />
                     <SmsBtn levelKey="support_2" value={smsS2} onChange={setSmsS2} />

@@ -254,10 +254,12 @@ class RefreshSymbols extends Command
         $updated = 0;
         $errors = 0;
         $smsCount = 0;
+        $crossoverCount = 0;
 
         \Illuminate\Support\Facades\DB::statement('SET SESSION innodb_lock_wait_timeout = 5');
 
         $smsService = new \App\Services\SmsService();
+        $crossoverService = new \App\Services\CrossoverDetectionService();
         $portfolios = \App\Models\Portfolio::with('items', 'user')->get();
         foreach ($portfolios as $portfolio) {
             foreach ($portfolio->items as $item) {
@@ -313,6 +315,12 @@ class RefreshSymbols extends Command
                         } catch (\Throwable $e) {
                             $this->warn("SMS check failed for {$item->symbol}: " . $e->getMessage());
                         }
+                        try {
+                            $detected = $crossoverService->checkPortfolioItem($item, (float) $pl);
+                            $crossoverCount += count($detected);
+                        } catch (\Throwable $e) {
+                            $this->warn("Crossover check failed for {$item->symbol}: " . $e->getMessage());
+                        }
                     }
                 }
             }
@@ -346,6 +354,14 @@ class RefreshSymbols extends Command
                             } catch (\Throwable $e) {
                                 $this->warn("User symbol level SMS check failed for {$levelRecord->symbol}: " . $e->getMessage());
                             }
+                            try {
+                                $isin = $symbol['isin'] ?? '';
+                                $oldPrice = $oldPrices[$isin] ?? null;
+                                $detected = $crossoverService->checkSymbolLevel($levelRecord, (float) $pl, $oldPrice ? (float) $oldPrice : null);
+                                $crossoverCount += count($detected);
+                            } catch (\Throwable $e) {
+                                $this->warn("User symbol level crossover check failed for {$levelRecord->symbol}: " . $e->getMessage());
+                            }
                         }
                     }
                 }
@@ -373,6 +389,12 @@ class RefreshSymbols extends Command
             $this->warn("Failed to save last_refresh_at: " . $e->getMessage());
         }
 
-        $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.' . ($errors ? " ($errors خطا)" : '') . ($smsCount ? " | $smsCount SMS ارسال شد." : ''));
+        try {
+            \App\Models\CrossoverNotification::cleanup(7);
+        } catch (\Throwable $e) {
+            $this->warn("Failed to cleanup crossover notifications: " . $e->getMessage());
+        }
+
+        $this->info($updated . ' آیتم پورتفولیو بروزرسانی شد.' . ($errors ? " ($errors خطا)" : '') . ($smsCount ? " | $smsCount SMS ارسال شد." : '') . ($crossoverCount ? " | $crossoverCount کراس تشخیص داده شد." : ''));
     }
 }

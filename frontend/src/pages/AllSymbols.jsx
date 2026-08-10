@@ -1275,14 +1275,14 @@ const filtered = useMemo(() => {
                 <div className="rounded-lg bg-red-50 dark:bg-red-900/10 p-2.5 space-y-1.5">
                   <div className="space-y-1.5">
                     <div>
-                      <label className="block text-[10px] font-bold text-red-500 mb-0.5 rtl-text">مقاومت ۱</label>
+                      <label className="block text-[10px] font-bold text-red-500 mb-0.5 rtl-text">مقاومت ۱ <span className="text-[8px] font-normal opacity-60">({unit === 'toman' ? 'تومان' : 'ریال'})</span></label>
                       <div className="flex items-center gap-1">
                         <input type="number" value={levelForm.resistance_1} onChange={(e) => setLevelForm(p => ({...p, resistance_1: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
                         <SmsBtn levelKey="resistance_1" value={parseInt(levelForm.sms_resistance_1_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_resistance_1_count: v}))} />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-red-500 mb-0.5 rtl-text">مقاومت ۲</label>
+                      <label className="block text-[10px] font-bold text-red-500 mb-0.5 rtl-text">مقاومت ۲ <span className="text-[8px] font-normal opacity-60">({unit === 'toman' ? 'تومان' : 'ریال'})</span></label>
                       <div className="flex items-center gap-1">
                         <input type="number" value={levelForm.resistance_2} onChange={(e) => setLevelForm(p => ({...p, resistance_2: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
                         <SmsBtn levelKey="resistance_2" value={parseInt(levelForm.sms_resistance_2_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_resistance_2_count: v}))} />
@@ -1294,14 +1294,14 @@ const filtered = useMemo(() => {
                 <div className="rounded-lg bg-green-50 dark:bg-green-900/10 p-2.5 space-y-1.5">
                   <div className="space-y-1.5">
                     <div>
-                      <label className="block text-[10px] font-bold text-green-500 mb-0.5 rtl-text">حمایت ۱</label>
+                      <label className="block text-[10px] font-bold text-green-500 mb-0.5 rtl-text">حمایت ۱ <span className="text-[8px] font-normal opacity-60">({unit === 'toman' ? 'تومان' : 'ریال'})</span></label>
                       <div className="flex items-center gap-1">
                         <input type="number" value={levelForm.support_1} onChange={(e) => setLevelForm(p => ({...p, support_1: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
                         <SmsBtn levelKey="support_1" value={parseInt(levelForm.sms_support_1_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_support_1_count: v}))} />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-green-500 mb-0.5 rtl-text">حمایت ۲</label>
+                      <label className="block text-[10px] font-bold text-green-500 mb-0.5 rtl-text">حمایت ۲ <span className="text-[8px] font-normal opacity-60">({unit === 'toman' ? 'تومان' : 'ریال'})</span></label>
                       <div className="flex items-center gap-1">
                         <input type="number" value={levelForm.support_2} onChange={(e) => setLevelForm(p => ({...p, support_2: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
                         <SmsBtn levelKey="support_2" value={parseInt(levelForm.sms_support_2_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_support_2_count: v}))} />

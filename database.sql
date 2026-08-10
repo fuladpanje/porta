@@ -283,6 +283,30 @@ CREATE TABLE `users` (
   UNIQUE KEY `users_username_unique` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `crossover_notifications` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `symbol` varchar(20) NOT NULL,
+  `level_type` varchar(20) NOT NULL,
+  `level_value` decimal(12,2) NOT NULL,
+  `price_at_trigger` decimal(12,2) NOT NULL,
+  `old_price` decimal(12,2) DEFAULT NULL,
+  `direction` varchar(10) NOT NULL,
+  `source` varchar(255) DEFAULT NULL,
+  `detected_at` timestamp NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `crossover_notifications_symbol_index` (`symbol`),
+  KEY `crossover_notifications_user_id_detected_at_index` (`user_id`,`detected_at`),
+  KEY `crossover_notifications_user_id_symbol_index` (`user_id`,`symbol`),
+  CONSTRAINT `crossover_notifications_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

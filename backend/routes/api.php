@@ -57,6 +57,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/portfolio-sms-settings/{portfolio}', [\App\Http\Controllers\PortfolioSmsController::class, 'update']);
     Route::post('/portfolio-sms-check', [\App\Http\Controllers\PortfolioSmsCheckController::class, 'check']);
 
+    // Crossover Notifications
+    Route::get('/crossover-notifications', [\App\Http\Controllers\CrossoverNotificationController::class, 'index']);
+    Route::delete('/crossover-notifications', [\App\Http\Controllers\CrossoverNotificationController::class, 'destroy']);
+
     // Public system info (available to all authenticated users)
     Route::get('/system/schedule', function () {
         $schedule = \App\Models\SystemSetting::getSchedule();

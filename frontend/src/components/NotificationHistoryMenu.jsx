@@ -1,0 +1,210 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Bell, Trash2, TrendingUp, TrendingDown, ChevronDown, Loader2 } from 'lucide-react';
+import api from '../lib/api';
+
+function formatPrice(price) {
+  if (price == null) return '—';
+  return Number(price).toLocaleString('fa-IR');
+}
+
+function formatTime(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' });
+}
+
+function formatDate(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  return d.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric', timeZone: 'Asia/Tehran' });
+}
+
+export function NotificationHistoryMenu() {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const menuRef = useRef(null);
+  const lastCheckedRef = useRef(null);
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/crossover-notifications?limit=50');
+      const all = res.data?.data || [];
+      setNotifications(all);
+      if (!lastCheckedRef.current) {
+        const unread = all.filter(n => {
+          const d = new Date(n.detected_at).getTime();
+          return Date.now() - d < 24 * 60 * 60 * 1000;
+        });
+        setUnreadCount(unread.length);
+      }
+    } catch (e) {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen) {
+      lastCheckedRef.current = Date.now();
+      setUnreadCount(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      fetchNotifications();
+    }
+  }, [open, fetchNotifications]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handler = async () => {
+      if (open) {
+        fetchNotifications();
+      } else if (lastCheckedRef.current) {
+        try {
+          const res = await api.get('/crossover-notifications?limit=10');
+          const all = res.data?.data || [];
+          const newOnes = all.filter(n => new Date(n.detected_at).getTime() > lastCheckedRef.current);
+          if (newOnes.length > 0) {
+            setUnreadCount(prev => prev + newOnes.length);
+          }
+        } catch (e) {
+          // silent
+        }
+      }
+    };
+    window.addEventListener('prices-refreshed', handler);
+    return () => window.removeEventListener('prices-refreshed', handler);
+  }, [open, fetchNotifications]);
+
+  const handleClear = async () => {
+    setClearing(true);
+    try {
+      await api.delete('/crossover-notifications');
+      setNotifications([]);
+    } catch (e) {
+      // silent
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const grouped = notifications.reduce((acc, n) => {
+    const key = formatDate(n.detected_at);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(n);
+    return acc;
+  }, {});
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={handleOpen}
+        className={`p-2 rounded-lg transition-colors relative ${
+          open
+            ? 'text-brand-500 bg-brand-500/10'
+            : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'
+        }`}
+        aria-label="سابقه نوتیفیکیشن‌ها"
+        title="سابقه نوتیفیکیشن‌ها"
+      >
+        <Bell className="w-4 h-4" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 animate-fade-in overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-brand-500" />
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">سابقه نوتیفیکیشن‌ها</span>
+            </div>
+            {notifications.length > 0 && (
+              <button
+                onClick={handleClear}
+                disabled={clearing}
+                className="text-[10px] text-red-500 hover:text-red-600 flex items-center gap-1 transition-colors disabled:opacity-50"
+              >
+                {clearing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                پاک کردن
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-80 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="py-8 text-center">
+                <Bell className="w-8 h-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
+                <p className="text-xs text-slate-400 dark:text-slate-500">نوتیفیکیشنی وجود ندارد</p>
+              </div>
+            ) : (
+              Object.entries(grouped).map(([date, items]) => (
+                <div key={date}>
+                  <div className="px-4 py-1.5 bg-slate-50 dark:bg-slate-800/50 sticky top-0">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{date}</span>
+                  </div>
+                  {items.map((n) => {
+                    const isResistance = n.is_resistance;
+                    return (
+                      <div key={n.id} className="px-4 py-2.5 border-b border-slate-50 dark:border-slate-800/50 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <div className="flex items-center gap-2">
+                          {isResistance
+                            ? <TrendingUp className="w-3.5 h-3.5 text-red-500" />
+                            : <TrendingDown className="w-3.5 h-3.5 text-green-500" />
+                          }
+                          <span className="font-bold text-xs text-slate-800 dark:text-white">{n.symbol}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                            isResistance
+                              ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'
+                              : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+                          }`}>
+                            {n.level_label}
+                          </span>
+                          {n.source && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium">
+                              {n.source}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 mr-auto">{formatTime(n.detected_at)}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 mr-5">
+                          {n.direction_label} — قیمت: {formatPrice(n.price)}
+                          {n.level_value && ` | سطح: ${formatPrice(n.level_value)}`}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
