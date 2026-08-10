@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { Check, X, Loader2, AlertCircle, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Shield, MessageSquare, BarChart3, Clock, Timer, Sliders } from 'lucide-react';
+import { Check, X, Loader2, AlertCircle, Percent, Globe, Mail, User, Tag, FolderOpen, ChevronDown, Lock, Shield, MessageSquare, BarChart3 } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 import { useNavigate } from 'react-router-dom';
 
@@ -27,16 +27,10 @@ export default function Settings() {
   const [ippanelSender, setIppanelSender] = useState('');
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [savingSms, setSavingSms] = useState(false);
-  const [smsCooldown, setSmsCooldown] = useState(60);
-  const [smsCooldownUnit, setSmsCooldownUnit] = useState('minutes');
-  const [smsStartTime, setSmsStartTime] = useState('');
-  const [smsEndTime, setSmsEndTime] = useState('');
-  const [smsScope, setSmsScope] = useState('portfolio');
   const [smsStats, setSmsStats] = useState({ total_sent: 0, today_sent: 0 });
   const [smsHistory, setSmsHistory] = useState([]);
   const [showSmsModal, setShowSmsModal] = useState(false);
   const [showSmsContact, setShowSmsContact] = useState(false);
-  const [showSmsSettings, setShowSmsSettings] = useState(false);
   
   // Section-specific messages
   const [smsError, setSmsError] = useState('');
@@ -95,10 +89,6 @@ export default function Settings() {
       setPhone(userData.phone || '');
       setSmsEnabled(Boolean(userData.sms_enabled));
       setIppanelSender(userData.ippanel_sender || '');
-      setSmsCooldown(userData.sms_cooldown_minutes || 60);
-      setSmsStartTime(normalizeTimeForInput(userData.sms_start_time));
-      setSmsEndTime(normalizeTimeForInput(userData.sms_end_time));
-      setSmsScope(userData.sms_scope || 'portfolio');
     } catch (err) {
       // silent
     }
@@ -217,21 +207,11 @@ export default function Settings() {
     setSavingSms(true);
     clearSmsMessages();
 
-    if ((smsStartTime && !smsEndTime) || (!smsStartTime && smsEndTime)) {
-      setSmsError('برای بازه زمانی ارسال، هر دو ساعت شروع و پایان را وارد کنید.');
-      setSavingSms(false);
-      return;
-    }
-
     try {
       const payload = {
         sms_enabled: smsEnabled,
         phone: phone || null,
         ippanel_sender: ippanelSender || null,
-        sms_cooldown_minutes: smsCooldownUnit === 'hours' ? (parseInt(smsCooldown) || 1) * 60 : (parseInt(smsCooldown) || 60),
-        sms_start_time: smsStartTime || null,
-        sms_end_time: smsEndTime || null,
-        sms_scope: smsScope,
       };
       if (ippanelApiKey) {
         payload.ippanel_api_key = ippanelApiKey;
@@ -322,6 +302,8 @@ export default function Settings() {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  dir="ltr"
+                  style={{ unicodeBidi: 'plaintext' }}
                   className="input-field w-full text-xs py-2 text-left"
                   required
                   autoFocus
@@ -333,6 +315,8 @@ export default function Settings() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  dir="ltr"
+                  style={{ unicodeBidi: 'plaintext' }}
                   className="input-field w-full text-xs py-2 text-left"
                   required
                 />
@@ -343,6 +327,8 @@ export default function Settings() {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  dir="ltr"
+                  style={{ unicodeBidi: 'plaintext' }}
                   className="input-field w-full text-xs py-2 text-left"
                   required
                 />
@@ -398,17 +384,17 @@ export default function Settings() {
                   inputMode="decimal"
                   value={buyCommission}
                   onChange={(e) => setBuyCommission(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد فروش (٪)</label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={sellCommission}
-                  onChange={(e) => setSellCommission(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left"
+                   className="input-field w-full text-xs py-2 text-left" dir="ltr"
+                 />
+               </div>
+               <div>
+                 <label className="text-[10px] text-slate-400 rtl-text block mb-1">کارمزد فروش (٪)</label>
+                 <input
+                   type="number"
+                   inputMode="decimal"
+                   value={sellCommission}
+                   onChange={(e) => setSellCommission(e.target.value)}
+                   className="input-field w-full text-xs py-2 text-left" dir="ltr"
                 />
               </div>
             </div>
@@ -464,7 +450,7 @@ export default function Settings() {
                                 inputMode="decimal"
                                 value={settings.buy_commission}
                                 onChange={(e) => updatePortfolioCommissionField(portfolio.id, 'buy_commission', e.target.value)}
-                                className="input-field w-full text-xs py-2 text-left"
+                                className="input-field w-full text-xs py-2 text-left" dir="ltr"
                               />
                             </div>
                             <div>
@@ -474,7 +460,7 @@ export default function Settings() {
                                 inputMode="decimal"
                                 value={settings.sell_commission}
                                 onChange={(e) => updatePortfolioCommissionField(portfolio.id, 'sell_commission', e.target.value)}
-                                className="input-field w-full text-xs py-2 text-left"
+                                className="input-field w-full text-xs py-2 text-left" dir="ltr"
                               />
                             </div>
                           </div>
@@ -588,140 +574,6 @@ export default function Settings() {
                        className="input-field w-full text-xs py-2 ltr-text text-left"
                        placeholder="1000xxxx"
                      />
-                   </div>
-                 </div>
-               )}
-             </div>
-
-             <div className="rounded-lg border border-slate-100 dark:border-slate-800">
-               <button
-                 type="button"
-                 onClick={() => setShowSmsSettings(!showSmsSettings)}
-                 className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 rtl-text hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
-               >
-                 <span className="flex items-center gap-2">
-                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSmsSettings ? 'rotate-180' : ''}`} />
-                   تنظیمات ارسال پیامک
-                 </span>
-               </button>
-               {showSmsSettings && (
-                 <div className="px-3 pb-3 space-y-3">
-                   <div className="space-y-2">
-                     <p className="text-[10px] font-medium text-brand-500 rtl-text flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> بازه زمانی ارسال (اختیاری)</p>
-                     <div className="space-y-2">
-                       <div>
-                         <label className="text-[10px] text-slate-500 rtl-text block mb-1">از ساعت</label>
-                         <input
-                           type="time"
-                           value={smsStartTime}
-                           onChange={(e) => setSmsStartTime(e.target.value)}
-                           className="input-field time-field w-full text-xs py-2"
-                         />
-                       </div>
-                       <div>
-                         <label className="text-[10px] text-slate-500 rtl-text block mb-1">تا ساعت</label>
-                         <input
-                           type="time"
-                           value={smsEndTime}
-                           onChange={(e) => setSmsEndTime(e.target.value)}
-                           className="input-field time-field w-full text-xs py-2"
-                         />
-                       </div>
-                     </div>
-                     <div className="flex gap-2 flex-wrap">
-                       <button
-                         type="button"
-                         onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('12:30'); }}
-                         className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '12:30' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                       >
-                         ۸:۴۵ — ۱۲:۳۰
-                       </button>
-                       <button
-                         type="button"
-                         onClick={() => { setSmsStartTime('08:45'); setSmsEndTime('17:00'); }}
-                         className={`text-[10px] px-3 py-1.5 rounded-lg rtl-text transition-colors ${smsStartTime === '08:45' && smsEndTime === '17:00' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                       >
-                         ۸:۴۵ — ۱۷:۰۰
-                       </button>
-                       {(smsStartTime || smsEndTime) && (
-                         <button
-                           type="button"
-                           onClick={() => { setSmsStartTime(''); setSmsEndTime(''); }}
-                           className="text-[10px] px-3 py-1.5 rounded-lg rtl-text bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
-                         >
-                           حذف بازه
-                         </button>
-                       )}
-                     </div>
-                     <p className="text-[9px] text-slate-400 rtl-text">
-                       خارج از این بازه، حتی در صورت عبور قیمت از سطح، پیامکی ارسال نمی‌شود.
-                     </p>
-                   </div>
-
-                   <div>
-                     <label className="text-[10px] font-medium text-brand-500 rtl-text flex items-center gap-1.5 mb-2"><Sliders className="w-3.5 h-3.5" /> محدوده ارسال پیامک</label>
-                     <div className="flex flex-row gap-2">
-                       <button
-                         type="button"
-                         onClick={() => setSmsScope('portfolio')}
-                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] rtl-text transition-colors ${smsScope === 'portfolio' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                       >
-                         <span className={`w-3 h-3 rounded-full border-2 shrink-0 ${smsScope === 'portfolio' ? 'border-brand-500 bg-brand-500' : 'border-slate-300 dark:border-slate-600'}`}></span>
-                         فقط پرتفو
-                       </button>
-                       <button
-                         type="button"
-                         onClick={() => setSmsScope('all')}
-                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] rtl-text transition-colors ${smsScope === 'all' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                       >
-                         <span className={`w-3 h-3 rounded-full border-2 shrink-0 ${smsScope === 'all' ? 'border-brand-500 bg-brand-500' : 'border-slate-300 dark:border-slate-600'}`}></span>
-                         همه نمادها
-                       </button>
-                       <button
-                         type="button"
-                         onClick={() => setSmsScope('both')}
-                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] rtl-text transition-colors ${smsScope === 'both' ? 'bg-brand-500/20 text-brand-500 border border-brand-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                       >
-                         <span className={`w-3 h-3 rounded-full border-2 shrink-0 ${smsScope === 'both' ? 'border-brand-500 bg-brand-500' : 'border-slate-300 dark:border-slate-600'}`}></span>
-                         پرتفو + همه
-                       </button>
-                     </div>
-                     <p className="text-[9px] text-slate-400 mt-2 rtl-text">
-                       {smsScope === 'portfolio' && 'پیامک فقط برای نمادهای موجود در پرتفو ارسال می‌شود.'}
-                       {smsScope === 'all' && 'پیامک فقط برای نمادهایی که سطح تعریف کرده‌اید ارسال می‌شود.'}
-                       {smsScope === 'both' && 'پیامک برای هر دو حالت ارسال می‌شود.'}
-                     </p>
-                   </div>
-
-                   <div>
-                     <label className="text-[10px] font-medium text-brand-500 rtl-text flex items-center gap-1.5 mb-1"><Timer className="w-3.5 h-3.5" /> حداقل فاصله ارسال</label>
-                     <div className="flex items-center gap-2">
-                       <input
-                         type="number"
-                         min="1"
-                         value={smsCooldown}
-                         onChange={(e) => setSmsCooldown(e.target.value)}
-                         className="input-field w-24 text-xs py-2 text-center"
-                       />
-                       <div className="flex gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 h-8">
-                         {[
-                           { value: 'minutes', label: 'دقیقه' },
-                           { value: 'hours', label: 'ساعت' },
-                         ].map((u) => (
-                           <button
-                             key={u.value}
-                             type="button"
-                             onClick={() => setSmsCooldownUnit(u.value)}
-                             className={`flex-1 text-[10px] py-1 px-3 rounded-md rtl-text transition-colors whitespace-nowrap h-full flex items-center justify-center ${smsCooldownUnit === u.value ? 'bg-white dark:bg-slate-700 text-brand-500 shadow-sm font-medium' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                           >
-                             {u.label}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                     <p className="text-[9px] text-slate-400 mt-1 rtl-text">
-                       اگر قیمت چند بار به یک سطح برسد، پیامک فقط یکبار در این بازه ارسال می‌شود.
-                     </p>
                    </div>
                  </div>
                )}

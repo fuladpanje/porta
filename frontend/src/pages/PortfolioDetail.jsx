@@ -121,7 +121,10 @@ import { useStaleData } from '../contexts/StaleDataContext';
           {portfolio.items.map((item) => (
             <div key={item.id} className="card p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 animate-fade-in">
 <div className="flex-1">
-                  <h3 className="font-medium text-foreground rtl-text text-lg">{item.symbol}</h3>
+                  <h3 className="font-medium text-foreground rtl-text text-lg flex items-center gap-1.5">
+                    {item.is_custom && <span className="w-2 h-2 rounded-full shrink-0 bg-red-500" title="نماد در لیست API موجود نیست"></span>}
+                    {item.symbol}
+                  </h3>
                   <div className="flex flex-wrap gap-4 mt-2 text-sm">
                     <span className="text-muted-foreground">
                       خرید: {formatPrice(item.buy_price)} × {formatNumber(item.quantity)}

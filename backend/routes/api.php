@@ -48,8 +48,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
 
     Route::get('/user-symbol-levels', [\App\Http\Controllers\UserSymbolLevelController::class, 'index']);
+    Route::get('/user-symbol-levels/{symbol}/sent-counts', [\App\Http\Controllers\UserSymbolLevelController::class, 'sentCounts']);
     Route::post('/user-symbol-levels', [\App\Http\Controllers\UserSymbolLevelController::class, 'store']);
     Route::delete('/user-symbol-levels/{symbol}', [\App\Http\Controllers\UserSymbolLevelController::class, 'destroy']);
+
+    // Portfolio SMS Settings
+    Route::get('/portfolio-sms-settings', [\App\Http\Controllers\PortfolioSmsController::class, 'index']);
+    Route::put('/portfolio-sms-settings/{portfolio}', [\App\Http\Controllers\PortfolioSmsController::class, 'update']);
+    Route::post('/portfolio-sms-check', [\App\Http\Controllers\PortfolioSmsCheckController::class, 'check']);
 
     // Public system info (available to all authenticated users)
     Route::get('/system/schedule', function () {

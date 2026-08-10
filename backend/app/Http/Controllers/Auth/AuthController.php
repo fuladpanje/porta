@@ -24,10 +24,6 @@ class AuthController extends Controller
         $userData['schedule_end_time'] = $schedule['end_time'];
         $userData['phone'] = $user->phone;
         $userData['sms_enabled'] = $user->sms_enabled;
-        $userData['sms_cooldown_minutes'] = $user->sms_cooldown_minutes ?? 60;
-        $userData['sms_start_time'] = $user->sms_start_time;
-        $userData['sms_end_time'] = $user->sms_end_time;
-        $userData['sms_scope'] = $user->sms_scope ?? 'portfolio';
         $userData['ippanel_sender'] = $user->ippanel_sender;
         $userData['sms_configured'] = $user->hasSmsConfigured();
         return $userData;
@@ -243,19 +239,7 @@ class AuthController extends Controller
             'ippanel_sender' => 'nullable|numeric|digits_between:4,20',
             'sms_enabled' => 'required|boolean',
             'sms_cooldown_minutes' => 'nullable|integer|min:1|max:1440',
-            'sms_start_time' => 'nullable|date_format:H:i',
-            'sms_end_time' => 'nullable|date_format:H:i',
-            'sms_scope' => 'nullable|string|in:portfolio,all,both',
         ]);
-
-        $hasSmsStart = !empty($validated['sms_start_time'] ?? null);
-        $hasSmsEnd = !empty($validated['sms_end_time'] ?? null);
-
-        if ($hasSmsStart !== $hasSmsEnd) {
-            return response()->json([
-                'message' => 'برای بازه زمانی ارسال پیامک، هر دو ساعت شروع و پایان را وارد کنید.',
-            ], 422);
-        }
 
         $user = $request->user();
 
@@ -272,17 +256,8 @@ class AuthController extends Controller
         if (array_key_exists('ippanel_sender', $validated)) {
             $updateData['ippanel_sender'] = $validated['ippanel_sender'];
         }
-        if (array_key_exists('sms_cooldown_minutes', $validated) && $validated['sms_cooldown_minutes'] !== null) {
+        if (array_key_exists('sms_cooldown_minutes', $validated)) {
             $updateData['sms_cooldown_minutes'] = $validated['sms_cooldown_minutes'];
-        }
-        if (array_key_exists('sms_start_time', $validated)) {
-            $updateData['sms_start_time'] = $validated['sms_start_time'];
-        }
-        if (array_key_exists('sms_end_time', $validated)) {
-            $updateData['sms_end_time'] = $validated['sms_end_time'];
-        }
-        if (array_key_exists('sms_scope', $validated)) {
-            $updateData['sms_scope'] = $validated['sms_scope'] ?? 'portfolio';
         }
 
         $user->update($updateData);

@@ -299,20 +299,19 @@ class RefreshSymbols extends Command
                                 ->where('id', $item->id)
                                 ->update($updateData);
                             $updated++;
-
-                            // SMS notification check
-                            if ($pl !== null && !empty($updateData['last_price'])) {
-                                try {
-                                    $item->loadMissing('portfolio.user');
-                                    $sent = $smsService->checkAndNotify($item, (float) $pl);
-                                    $smsCount += count($sent);
-                                } catch (\Throwable $e) {
-                                    $this->warn("SMS check failed for {$item->symbol}: " . $e->getMessage());
-                                }
-                            }
                         } catch (\Throwable $e) {
                             $errors++;
                             $this->warn("Failed to update item {$item->id} ({$item->symbol}): " . $e->getMessage());
+                        }
+                    }
+
+                    if ($pl !== null) {
+                        try {
+                            $item->loadMissing('portfolio.user');
+                            $sent = $smsService->checkAndNotify($item, (float) $pl);
+                            $smsCount += count($sent);
+                        } catch (\Throwable $e) {
+                            $this->warn("SMS check failed for {$item->symbol}: " . $e->getMessage());
                         }
                     }
                 }
@@ -321,7 +320,6 @@ class RefreshSymbols extends Command
 
         try {
             $usersWithSymbolLevels = \App\Models\User::where('sms_enabled', true)
-                ->where('sms_scope', '!=', 'portfolio')
                 ->whereHas('userSymbolLevels', function ($q) {
                     $q->where(function ($q2) {
                         $q2->where('resistance_1', '!=', null)
@@ -354,6 +352,13 @@ class RefreshSymbols extends Command
             }
         } catch (\Throwable $e) {
             $this->warn("Failed to check user symbol levels: " . $e->getMessage());
+        }
+
+        try {
+            $portfolioSmsCount = SendPortfolioDailySms::sendDailyPortfolioSms();
+            $smsCount += $portfolioSmsCount;
+        } catch (\Throwable $e) {
+            $this->warn("Failed to send portfolio daily SMS: " . $e->getMessage());
         }
 
         try {

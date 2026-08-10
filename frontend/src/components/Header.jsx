@@ -5,7 +5,7 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import { useSize } from '../contexts/SizeContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2 } from 'lucide-react';
+import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2, Expand } from 'lucide-react';
 import { stockApi } from '../lib/api';
 import api from '../lib/api';
 
@@ -51,7 +51,7 @@ export function Header() {
    const { unit, toggleUnit } = useUnit();
    const { plMode, setPlMode } = useProfitLoss();
    const { stale, setStale } = useStaleData();
-   const { size, toggleSize } = useSize();
+     const { size, toggleSize } = useSize();
    const navigate = useNavigate();
   const location = useLocation();
   const isSymbolsPage = location.pathname === '/symbols';
@@ -236,7 +236,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800">
-      <div className={`flex items-center justify-between h-14 px-4 md:px-6 mx-auto ${size === 'large' ? 'max-w-7xl' : 'max-w-5xl'}`}>
+      <div className={`flex items-center justify-between h-14 px-4 md:px-6 mx-auto ${size === 'fullwidth' ? '' : (size === 'large' ? 'max-w-7xl' : 'max-w-5xl')}`}>
         {/* Right: Logo + Title */}
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
           <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center">
@@ -368,11 +368,11 @@ export function Header() {
                   className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   <span className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300">
-                    {size === 'large' ? <Maximize2 className="w-3.5 h-3.5 text-slate-400" /> : <Minimize2 className="w-3.5 h-3.5 text-slate-400" />}
+                    {size === 'fullwidth' ? <Expand className="w-3.5 h-3.5 text-slate-400" /> : size === 'large' ? <Maximize2 className="w-3.5 h-3.5 text-slate-400" /> : <Minimize2 className="w-3.5 h-3.5 text-slate-400" />}
                     اندازه محتوا
                   </span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${size === 'large' ? 'bg-brand-500/10 text-brand-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                    {size === 'large' ? 'بزرگ' : 'پیش‌فرض'}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${size === 'fullwidth' ? 'bg-brand-500/10 text-brand-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                    {size === 'fullwidth' ? 'تمام عرض' : size === 'large' ? 'متوسط' : 'کوچک'}
                   </span>
                 </button>
 

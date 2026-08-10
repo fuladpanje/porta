@@ -479,6 +479,18 @@ class StockController extends Controller
             }
             self::debugLog('STEP3', 'Symbol map built', ['keys' => count($symbolMap)]);
 
+            $oldPrices = [];
+            $isinList = array_filter(array_map(fn($s) => $s['isin'] ?? '', $symbols));
+            if (!empty($isinList)) {
+                $oldRows = \Illuminate\Support\Facades\DB::table('symbols_cache')
+                    ->whereIn('isin', $isinList)
+                    ->select('isin', 'last_price')
+                    ->get();
+                foreach ($oldRows as $row) {
+                    $oldPrices[$row->isin] = $row->last_price;
+                }
+            }
+
             $updated = 0;
 
             @set_time_limit(120);
@@ -504,6 +516,9 @@ class StockController extends Controller
                     if (isset($symbolMap[$key])) {
                         $symbol = $symbolMap[$key];
                         $updateData = [];
+                        if ($item->is_custom) {
+                            $updateData['is_custom'] = false;
+                        }
                         $pl = $symbol['pl'] ?? null;
                         $pe = $symbol['pe'] ?? null;
                         if ($pl !== null && $pl != $item->last_price) {
@@ -536,24 +551,23 @@ class StockController extends Controller
                                     ->where('id', $item->id)
                                     ->update($updateData);
                                 $updated++;
-
-                                // SMS notification check
-                                if ($pl !== null && !empty($updateData['last_price'])) {
-                                    $item->loadMissing('portfolio.user');
-                                    try {
-                                        $sent = $smsService->checkAndNotify($item, (float) $pl);
-                                        $smsCount += count($sent);
-                                    } catch (\Throwable $e) {
-                                        self::debugLog('ERROR', "[$itemIdx/$totalItems] SMS check failed {$item->symbol}", [
-                                            'error' => $e->getMessage(),
-                                        ]);
-                                    }
-                                }
                             } catch (\Throwable $e) {
                                 self::debugLog('ERROR', "[$itemIdx/$totalItems] FAILED {$item->symbol}", [
                                     'item_id' => $item->id,
                                     'error' => $e->getMessage(),
                                     'code' => $e->getCode(),
+                                ]);
+                            }
+                        }
+
+                        if ($pl !== null) {
+                            $item->loadMissing('portfolio.user');
+                            try {
+                                $sent = $smsService->checkAndNotify($item, (float) $pl);
+                                $smsCount += count($sent);
+                            } catch (\Throwable $e) {
+                                self::debugLog('ERROR', "[$itemIdx/$totalItems] SMS check failed {$item->symbol}", [
+                                    'error' => $e->getMessage(),
                                 ]);
                             }
                         }
@@ -564,7 +578,6 @@ class StockController extends Controller
             self::debugLog('STEP4D', 'Checking user symbol levels for SMS...');
             try {
                 $usersWithSymbolLevels = \App\Models\User::where('sms_enabled', true)
-                    ->where('sms_scope', '!=', 'portfolio')
                     ->whereHas('userSymbolLevels', function ($q) {
                         $q->where(function ($q2) {
                             $q2->where('resistance_1', '!=', null)
@@ -584,7 +597,9 @@ class StockController extends Controller
                             $pl = $symbol['pl'] ?? null;
                             if ($pl !== null) {
                                 try {
-                                    $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl);
+                                    $isin = $symbol['isin'] ?? '';
+                                    $oldPrice = $oldPrices[$isin] ?? null;
+                                    $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl, $oldPrice ? (float) $oldPrice : null);
                                     $smsCount += count($sent);
                                 } catch (\Throwable $e) {
                                     self::debugLog('ERROR', "User symbol level SMS check failed {$levelRecord->symbol}", [
@@ -600,7 +615,15 @@ class StockController extends Controller
                 self::debugLog('ERROR', 'User symbol level SMS check failed', ['error' => $e->getMessage()]);
             }
 
-            self::debugLog('STEP5', 'Updating user stale flags...');
+            self::debugLog('STEP5', 'Checking portfolio daily SMS...');
+            try {
+                $portfolioSmsCount = \App\Console\Commands\SendPortfolioDailySms::sendDailyPortfolioSms();
+                $smsCount += $portfolioSmsCount;
+            } catch (\Throwable $e) {
+                self::debugLog('ERROR', 'Portfolio daily SMS failed', ['error' => $e->getMessage()]);
+            }
+
+            self::debugLog('STEP6', 'Updating user stale flags...');
             try {
                 \App\Models\User::query()->update(['is_stale' => false]);
             } catch (\Throwable $e) {

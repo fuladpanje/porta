@@ -32,9 +32,6 @@ class User extends Authenticatable
         'ippanel_sender',
         'sms_enabled',
         'sms_cooldown_minutes',
-        'sms_start_time',
-        'sms_end_time',
-        'sms_scope',
     ];
 
     protected $hidden = [

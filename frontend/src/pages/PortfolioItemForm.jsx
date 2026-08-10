@@ -31,6 +31,7 @@ export default function PortfolioItemForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [symbolData, setSymbolData] = useState(null);
+  const [isApiSymbol, setIsApiSymbol] = useState(false);
 
   const itemData = {
     buy_price: buyPrice,
@@ -62,6 +63,7 @@ export default function PortfolioItemForm() {
           setSupport1(toman && item.support_1 ? item.support_1 / 10 : (item.support_1 ?? ''));
           setSupport2(toman && item.support_2 ? item.support_2 / 10 : (item.support_2 ?? ''));
           setSupport3(toman && item.support_3 ? item.support_3 / 10 : (item.support_3 ?? ''));
+          setIsApiSymbol(item.is_custom === false || item.is_custom === 0);
         } catch (err) {
           setError('خطا در بارگذاری اطلاعات');
         }
@@ -71,6 +73,7 @@ export default function PortfolioItemForm() {
   }, [isEdit, portfolioId, itemId]);
 
   const handleSymbolSelect = (symbolObj) => {
+    setIsApiSymbol(true);
     setSymbol(symbolObj.name);
     if (symbolObj.pl != null) {
       setLastPrice(unit === 'toman' ? symbolObj.pl / 10 : symbolObj.pl);
@@ -95,6 +98,7 @@ export default function PortfolioItemForm() {
       support_1: toman && support1 ? support1 * 10 : (support1 || null),
       support_2: toman && support2 ? support2 * 10 : (support2 || null),
       support_3: toman && support3 ? support3 * 10 : (support3 || null),
+      is_custom: !isApiSymbol,
     };
 
     try {
@@ -143,7 +147,7 @@ export default function PortfolioItemForm() {
               </label>
               <SymbolSearch
                 value={symbol}
-                onChange={setSymbol}
+                onChange={(val) => { setSymbol(val); setIsApiSymbol(false); }}
                 onSelect={handleSymbolSelect}
                 autoFocus
               />

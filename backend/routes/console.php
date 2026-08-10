@@ -119,3 +119,6 @@ Schedule::command('symbols:refresh --reset-post-market')->when(function () {
     SystemSetting::set('post_market_reset_date', $today);
     return true;
 })->everyMinute();
+
+// ارسال روزانه SMS خلاصه پرتفو
+Schedule::command('portfolio:sms-daily')->everyMinute();

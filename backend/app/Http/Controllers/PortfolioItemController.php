@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Portfolio;
 use App\Models\PortfolioItem;
+use App\Models\SmsNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -44,7 +45,11 @@ class PortfolioItemController extends Controller
             'sell_i_volume' => 'nullable|numeric',
             'sell_count_i' => 'nullable|numeric',
             'active' => 'boolean',
-            'sms_enabled' => 'nullable|boolean',
+            'sms_resistance_1_count' => 'nullable|integer|min:0|max:100',
+            'sms_resistance_2_count' => 'nullable|integer|min:0|max:100',
+            'sms_support_1_count' => 'nullable|integer|min:0|max:100',
+            'sms_support_2_count' => 'nullable|integer|min:0|max:100',
+            'is_custom' => 'nullable|boolean',
         ]);
 
         $item = $portfolio->items()->create($validated);
@@ -93,10 +98,25 @@ class PortfolioItemController extends Controller
             'sell_i_volume' => 'nullable|numeric',
             'sell_count_i' => 'nullable|numeric',
             'active' => 'boolean',
-            'sms_enabled' => 'nullable|boolean',
+            'sms_resistance_1_count' => 'nullable|integer|min:0|max:100',
+            'sms_resistance_2_count' => 'nullable|integer|min:0|max:100',
+            'sms_support_1_count' => 'nullable|integer|min:0|max:100',
+            'sms_support_2_count' => 'nullable|integer|min:0|max:100',
+            'is_custom' => 'nullable|boolean',
         ]);
 
         $item->update($validated);
+
+        $levelFields = ['resistance_1', 'resistance_2', 'support_1', 'support_2'];
+        $levelChanged = array_intersect_key($validated, array_flip($levelFields));
+        if (!empty($levelChanged)) {
+            $userId = $item->portfolio->user_id ?? null;
+            if ($userId) {
+                SmsNotification::where('user_id', $userId)
+                    ->where('symbol', $item->symbol)
+                    ->delete();
+            }
+        }
 
         return response()->json([
             'data' => $item->fresh(),

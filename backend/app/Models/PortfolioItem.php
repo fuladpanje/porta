@@ -26,7 +26,11 @@ class PortfolioItem extends Model
         'sell_i_volume',
         'sell_count_i',
         'active',
-        'sms_enabled',
+        'sms_resistance_1_count',
+        'sms_resistance_2_count',
+        'sms_support_1_count',
+        'sms_support_2_count',
+        'is_custom',
     ];
 
     protected $casts = [
@@ -46,7 +50,11 @@ class PortfolioItem extends Model
         'sell_i_volume' => 'decimal:2',
         'sell_count_i' => 'decimal:2',
         'active' => 'boolean',
-        'sms_enabled' => 'boolean',
+        'sms_resistance_1_count' => 'integer',
+        'sms_resistance_2_count' => 'integer',
+        'sms_support_1_count' => 'integer',
+        'sms_support_2_count' => 'integer',
+        'is_custom' => 'boolean',
     ];
 
     public function portfolio(): BelongsTo

@@ -32,11 +32,12 @@ class SmsNotification extends Model
     }
 
     /**
-     * Check if cooldown has passed for this item+level
+     * Check if cooldown has passed for this user+symbol+level
      */
-    public static function canSend(int $portfolioItemId, string $levelType, int $cooldownMinutes = 60): bool
+    public static function canSend(int $userId, string $symbol, string $levelType, int $cooldownMinutes = 60): bool
     {
-        $lastSent = static::where('portfolio_item_id', $portfolioItemId)
+        $lastSent = static::where('user_id', $userId)
+            ->where('symbol', $symbol)
             ->where('level_type', $levelType)
             ->latest('sent_at')
             ->value('sent_at');
@@ -51,11 +52,11 @@ class SmsNotification extends Model
     /**
      * Record that SMS was sent
      */
-    public static function record(int $userId, int $portfolioItemId, string $levelType, float $price, ?string $symbol = null): static
+    public static function record(int $userId, ?string $symbol, string $levelType, float $price): static
     {
         return static::create([
             'user_id' => $userId,
-            'portfolio_item_id' => $portfolioItemId,
+            'portfolio_item_id' => null,
             'symbol' => $symbol,
             'level_type' => $levelType,
             'price_at_trigger' => $price,

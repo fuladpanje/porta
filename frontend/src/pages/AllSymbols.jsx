@@ -6,7 +6,7 @@ import api, { favoritesApi } from '../lib/api';
 import { stockApi } from '../lib/api';
 import { searchSymbolsLocal } from '../lib/symbolCache';
 import { formatPrice, formatPercent } from '../lib/calculations';
-import { Search, Plus, X, Trash2, Star, Filter, Crosshair } from 'lucide-react';
+import { Search, Plus, X, Trash2, Star, Filter, Crosshair, MessageSquare, CircleCheckBig } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 
 function useDebounce(value, delay) {
@@ -59,11 +59,6 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
   const [buyPrice, setBuyPrice] = useState('');
   const [quantity, setQuantity] = useState('');
   const [sellPrice, setSellPrice] = useState('');
-  const [resistance1, setResistance1] = useState('');
-  const [resistance2, setResistance2] = useState('');
-  const [support1, setSupport1] = useState('');
-  const [support2, setSupport2] = useState('');
-  const [smsEnabled, setSmsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
@@ -104,11 +99,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
         buy_price: toRial(buyPrice),
         quantity: Number(quantity),
         sell_price: toRial(sellPrice) || null,
-        resistance_1: toRial(resistance1) || null,
-        resistance_2: toRial(resistance2) || null,
-        support_1: toRial(support1) || null,
-        support_2: toRial(support2) || null,
-        sms_enabled: smsEnabled,
+        is_custom: false,
       });
       onSuccess();
     } catch (err) {
@@ -165,7 +156,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={lastPriceValue}
                   onChange={(e) => setLastPriceValue(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left"
+                   className="input-field w-full text-xs py-2 text-left" dir="ltr"
                   min="0"
                   readOnly
                 />
@@ -176,7 +167,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={buyPrice}
                   onChange={(e) => setBuyPrice(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left"
+                   className="input-field w-full text-xs py-2 text-left" dir="ltr"
                   required
                   min="0"
                 />
@@ -191,7 +182,7 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left"
+                   className="input-field w-full text-xs py-2 text-left" dir="ltr"
                   required
                   min="1"
                 />
@@ -202,69 +193,10 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
                   type="number"
                   value={sellPrice}
                   onChange={(e) => setSellPrice(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left"
+                   className="input-field w-full text-xs py-2 text-left" dir="ltr"
                   min="0"
                 />
               </div>
-            </div>
-
-            {/* Resistance */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[10px] font-bold text-red-500 mb-1 rtl-text">مقاومت ۱</label>
-                <input
-                  type="number"
-                  value={resistance1}
-                  onChange={(e) => setResistance1(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400"
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-red-500 mb-1 rtl-text">مقاومت ۲</label>
-                <input
-                  type="number"
-                  value={resistance2}
-                  onChange={(e) => setResistance2(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400"
-                  min="0"
-                />
-              </div>
-            </div>
-
-            {/* Support */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[10px] font-bold text-green-500 mb-1 rtl-text">حمایت ۱</label>
-                <input
-                  type="number"
-                  value={support1}
-                  onChange={(e) => setSupport1(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400"
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-green-500 mb-1 rtl-text">حمایت ۲</label>
-                <input
-                  type="number"
-                  value={support2}
-                  onChange={(e) => setSupport2(e.target.value)}
-                  className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400"
-                  min="0"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
-              <span className="text-[10px] text-slate-400 rtl-text">اعلام پیامک هنگام رسیدن به سطوح</span>
-              <button
-                type="button"
-                onClick={() => setSmsEnabled(!smsEnabled)}
-                className={`relative w-9 h-5 rounded-full transition-colors ${smsEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-              >
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${smsEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
-              </button>
             </div>
 
             {error && <p className="text-xs text-danger">{error}</p>}
@@ -409,7 +341,8 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
   const [userLevels, setUserLevels] = useState({});
   const [showOnlyWithLevels, setShowOnlyWithLevels] = useState(false);
   const [editingLevel, setEditingLevel] = useState(null);
-  const [levelForm, setLevelForm] = useState({ resistance_1: '', resistance_2: '', support_1: '', support_2: '', sms_enabled: true });
+  const [sentCounts, setSentCounts] = useState({});
+  const [levelForm, setLevelForm] = useState({ resistance_1: '', resistance_2: '', support_1: '', support_2: '', sms_resistance_1_count: 0, sms_resistance_2_count: 0, sms_support_1_count: 0, sms_support_2_count: 0, sms_cooldown_minutes: 60 });
   const [savingLevel, setSavingLevel] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState('');
 
@@ -428,6 +361,12 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
     window.addEventListener('prices-refreshed', handler);
     return () => window.removeEventListener('prices-refreshed', handler);
   }, []);
+
+  useEffect(() => {
+    if (editingLevel) {
+      api.get(`/user-symbol-levels/${editingLevel}/sent-counts`).then(r => setSentCounts(r.data?.data || {})).catch(() => {});
+    }
+  }, [editingLevel]);
 
    const fetchSymbols = async (forceRefresh = false) => {
      setLoading(true);
@@ -473,7 +412,11 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
         resistance_2: levelForm.resistance_2 ? toRial(Number(levelForm.resistance_2)) : null,
         support_1: levelForm.support_1 ? toRial(Number(levelForm.support_1)) : null,
         support_2: levelForm.support_2 ? toRial(Number(levelForm.support_2)) : null,
-        sms_enabled: levelForm.sms_enabled,
+        sms_resistance_1_count: parseInt(levelForm.sms_resistance_1_count) || 0,
+        sms_resistance_2_count: parseInt(levelForm.sms_resistance_2_count) || 0,
+        sms_support_1_count: parseInt(levelForm.sms_support_1_count) || 0,
+        sms_support_2_count: parseInt(levelForm.sms_support_2_count) || 0,
+        sms_cooldown_minutes: parseInt(levelForm.sms_cooldown_minutes) || 60,
       };
       await api.post('/user-symbol-levels', payload);
       await fetchUserLevels();
@@ -505,6 +448,29 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
     return unit === 'toman' ? String(Math.round(v / 10)) : String(v);
   };
 
+  const SmsBtn = ({ levelKey, value, onChange }) => {
+    const enabled = value > 0;
+    const sent = sentCounts[levelKey] || 0;
+    const completed = enabled && sent >= value;
+
+    return (
+      <div className="flex items-center gap-1">
+        <button type="button" onClick={() => onChange(enabled ? 0 : 1)}
+          className={`h-[30px] w-6 rounded-lg text-[8px] font-bold transition-all flex items-center justify-center ${enabled ? (completed ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500' : 'bg-brand-500 text-white') : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+          title={enabled ? (completed ? 'تمام شده — کلیک: غیرفعال' : 'فعال — کلیک: غیرفعال') : 'غیرفعال — کلیک: فعال'}>
+          {completed ? '✔' : enabled ? '●' : '○'}
+        </button>
+        {enabled && (
+          <div className="flex items-center h-[30px] rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <button type="button" onClick={() => onChange(Math.max(1, value - 1))} className="px-1 py-0.5 text-[10px] font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">−</button>
+            <span className="px-1 text-[9px] font-bold text-slate-700 dark:text-slate-300 min-w-[16px] text-center">{value}</span>
+            <button type="button" onClick={() => onChange(Math.min(100, value + 1))} className="px-1 py-0.5 text-[10px] font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">+</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const openLevelEditor = (symbol) => {
     const existing = userLevels[symbol] || {};
     setLevelForm({
@@ -512,7 +478,11 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
       resistance_2: fromRial(existing.resistance_2) || '',
       support_1: fromRial(existing.support_1) || '',
       support_2: fromRial(existing.support_2) || '',
-      sms_enabled: existing.sms_enabled !== undefined ? existing.sms_enabled : true,
+      sms_resistance_1_count: existing.sms_resistance_1_count || 0,
+      sms_resistance_2_count: existing.sms_resistance_2_count || 0,
+      sms_support_1_count: existing.sms_support_1_count || 0,
+      sms_support_2_count: existing.sms_support_2_count || 0,
+      sms_cooldown_minutes: existing.sms_cooldown_minutes || 60,
     });
     setEditingLevel(symbol);
   };
@@ -1301,42 +1271,81 @@ const filtered = useMemo(() => {
               </button>
             </div>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-red-500 mb-1 rtl-text">مقاومت ۱</label>
-                  <input type="number" value={levelForm.resistance_1} onChange={(e) => setLevelForm(p => ({...p, resistance_1: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
+              <div className="space-y-2">
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/10 p-2.5 space-y-1.5">
+                  <div className="space-y-1.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-red-500 mb-0.5 rtl-text">مقاومت ۱</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" value={levelForm.resistance_1} onChange={(e) => setLevelForm(p => ({...p, resistance_1: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
+                        <SmsBtn levelKey="resistance_1" value={parseInt(levelForm.sms_resistance_1_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_resistance_1_count: v}))} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-red-500 mb-0.5 rtl-text">مقاومت ۲</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" value={levelForm.resistance_2} onChange={(e) => setLevelForm(p => ({...p, resistance_2: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
+                        <SmsBtn levelKey="resistance_2" value={parseInt(levelForm.sms_resistance_2_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_resistance_2_count: v}))} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-red-500 mb-1 rtl-text">مقاومت ۲</label>
-                  <input type="number" value={levelForm.resistance_2} onChange={(e) => setLevelForm(p => ({...p, resistance_2: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" min="0" />
+
+                <div className="rounded-lg bg-green-50 dark:bg-green-900/10 p-2.5 space-y-1.5">
+                  <div className="space-y-1.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-green-500 mb-0.5 rtl-text">حمایت ۱</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" value={levelForm.support_1} onChange={(e) => setLevelForm(p => ({...p, support_1: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
+                        <SmsBtn levelKey="support_1" value={parseInt(levelForm.sms_support_1_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_support_1_count: v}))} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-green-500 mb-0.5 rtl-text">حمایت ۲</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" value={levelForm.support_2} onChange={(e) => setLevelForm(p => ({...p, support_2: e.target.value}))} dir="ltr" className="input-field flex-1 text-[11px] py-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
+                        <SmsBtn levelKey="support_2" value={parseInt(levelForm.sms_support_2_count) || 0} onChange={(v) => setLevelForm(p => ({...p, sms_support_2_count: v}))} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-green-500 mb-1 rtl-text">حمایت ۱</label>
-                  <input type="number" value={levelForm.support_1} onChange={(e) => setLevelForm(p => ({...p, support_1: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-green-500 mb-1 rtl-text">حمایت ۲</label>
-                  <input type="number" value={levelForm.support_2} onChange={(e) => setLevelForm(p => ({...p, support_2: e.target.value}))} className="input-field w-full text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" min="0" />
+
+              {(() => {
+                const showCooldown = [parseInt(levelForm.sms_resistance_1_count), parseInt(levelForm.sms_resistance_2_count), parseInt(levelForm.sms_support_1_count), parseInt(levelForm.sms_support_2_count)].some(v => v >= 2);
+                return (
+                  <div className={`flex items-center gap-2 rounded-lg p-2 border transition-opacity ${showCooldown ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800' : 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-100/50 dark:border-slate-800/50 opacity-40'}`}>
+                    <span className="text-[9px] text-slate-400 shrink-0 rtl-text">حداقل فاصله ارسال:</span>
+                    <input type="number" inputMode="numeric" min="1" max="1440" value={levelForm.sms_cooldown_minutes} onChange={(e) => setLevelForm(p => ({...p, sms_cooldown_minutes: e.target.value}))} disabled={!showCooldown} className="input-field text-[10px] py-0.5 px-1.5 w-12 text-center disabled:opacity-50 disabled:cursor-not-allowed" />
+                    <span className="text-[8px] text-slate-400 rtl-text">دقیقه</span>
+                  </div>
+                );
+              })()}
+
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5 space-y-1.5 border border-slate-100 dark:border-slate-800">
+                <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 rtl-text">راهنمای پیامک سطوح</p>
+                <div className="space-y-1 text-[8px] text-slate-400 dark:text-slate-500 leading-relaxed rtl-text">
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-slate-400 shrink-0">○</span>
+                    <span>غیرفعال: پیامکی ارسال نمی‌شود.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-brand-500 shrink-0">●</span>
+                    <span>فعال: با +/− تعداد ارسال را مشخص کنید. ۱ = فقط یک‌بار.</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-emerald-400 shrink-0">✔</span>
+                    <span>تمام شده. کلیک کنید تا غیرفعال شود.</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
-                <span className="text-[10px] text-slate-400 rtl-text">اعلام پیامک هنگام رسیدن به سطوح</span>
-                <button
-                  type="button"
-                  onClick={() => setLevelForm(p => ({...p, sms_enabled: !p.sms_enabled}))}
-                  className={`relative w-9 h-5 rounded-full transition-colors ${levelForm.sms_enabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${levelForm.sms_enabled ? 'translate-x-4' : 'translate-x-0'}`} />
-                </button>
-              </div>
+
               <div className="flex gap-2 mt-4 justify-end">
                 {userLevels[editingLevel] && (
-                  <button type="button" onClick={() => { deleteUserLevel(editingLevel); setEditingLevel(null); }} className="text-xs py-1.5 px-3 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors">حذف سطوح</button>
+                  <button type="button" onClick={() => { deleteUserLevel(editingLevel); setEditingLevel(null); }} className="text-xs py-1.5 px-3 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors rtl-text">حذف سطوح</button>
                 )}
-                <button type="button" onClick={() => setEditingLevel(null)} disabled={savingLevel} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
-                <button type="button" onClick={() => saveUserLevel(editingLevel)} disabled={savingLevel} className="btn-primary text-xs py-1.5 px-3">
+                <button type="button" onClick={() => setEditingLevel(null)} disabled={savingLevel} className="btn-secondary text-xs py-1.5 px-3 rtl-text">انصراف</button>
+                <button type="button" onClick={() => saveUserLevel(editingLevel)} disabled={savingLevel} className="btn-primary text-xs py-1.5 px-3 rtl-text">
                   {savingLevel ? 'در حال ذخیره...' : 'ذخیره'}
                 </button>
               </div>

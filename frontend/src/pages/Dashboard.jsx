@@ -6,7 +6,7 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter, Crosshair, MessageSquare } from 'lucide-react';
 import { Chart as ChartComponent, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { Chart as ChartJS } from 'chart.js';
@@ -57,8 +57,11 @@ export default function Dashboard() {
    const [editingPortfolio, setEditingPortfolio] = useState(null);
    const [expanded, setExpanded] = useState({});
 const [showItemForm, setShowItemForm] = useState(null);
-    const [editingItem, setEditingItem] = useState(null);
-    const [confirm, setConfirm] = useState(null);
+     const [editingItem, setEditingItem] = useState(null);
+      const [editingLevels, setEditingLevels] = useState(null);
+      const [editingPortfolioSms, setEditingPortfolioSms] = useState(null);
+      const [portfolioSmsData, setPortfolioSmsData] = useState({});
+      const [confirm, setConfirm] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
     const [portfolioSort, setPortfolioSort] = useState('default');
     const [showPLAmount, setShowPLAmount] = useState(false);
@@ -133,6 +136,17 @@ const [showInactiveChartItems, setShowInactiveChartItems] = useState(false);
   const sellFilter = { all: 'all', realized: 'sold', unrealized: 'unsold' }[plMode] || 'all';
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  // دریافت تنظیمات SMS پرتفو
+  useEffect(() => {
+    const fetchPortfolioSmsSettings = async () => {
+      try {
+        const res = await api.get('/portfolio-sms-settings');
+        setPortfolioSmsData(res.data.data || {});
+      } catch {}
+    };
+    fetchPortfolioSmsSettings();
+  }, []);
 
   // ریست فیلتر پرتفو اگه پرتفوی انتخاب‌شده دیگه در لیست نباشه
   useEffect(() => {
@@ -673,6 +687,29 @@ const totals = useMemo(() => {
            />
          )}
 
+         {editingLevels && (
+           <LevelEditorPopup
+             portfolioId={editingLevels.portfolioId}
+             itemId={editingLevels.itemId}
+             item={editingLevels.item}
+             unit={unit}
+             onClose={() => setEditingLevels(null)}
+             onSave={() => { setEditingLevels(null); refreshDashboard(); }}
+           />
+         )}
+
+{editingPortfolioSms && (
+            <PortfolioSmsPopup
+              portfolio={editingPortfolioSms}
+              times={portfolioSmsData[editingPortfolioSms.id] || []}
+              onClose={() => setEditingPortfolioSms(null)}
+              onSave={(times) => {
+                setPortfolioSmsData((prev) => ({ ...prev, [editingPortfolioSms.id]: times }));
+                setEditingPortfolioSms(null);
+              }}
+            />
+          )}
+
         {portfolios.length === 0 && !showPortfolioForm && !editingPortfolio && (
           <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg p-8 text-center">
             <p className="text-slate-400 text-xs rtl-text">هنوز پرتفو ندارید</p>
@@ -784,6 +821,9 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                           <button onClick={(e) => { e.stopPropagation(); handleTogglePortfolioActive(portfolio.id, portfolio.active); }} className="p-1 rounded hover:bg-brand/10 transition-colors shrink-0" title={portfolio.active ? 'غیرفعال کردن پرتفو' : 'فعال کردن پرتفو'}>
                             {portfolio.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
                           </button>
+                          <button onClick={(e) => { e.stopPropagation(); setEditingPortfolioSms(portfolio); }} className={`p-1 rounded transition-colors shrink-0 ${(portfolioSmsData[portfolio.id] || []).some(t => t.enabled) ? 'text-brand-500 bg-brand-500/10 hover:bg-brand-500/20' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`} title="تنظیمات SMS پرتفو">
+                            <Crosshair className="w-3 h-3" />
+                          </button>
                           <button onClick={(e) => { e.stopPropagation(); setEditingPortfolio(portfolio); }} className="p-1 rounded hover:bg-brand/10 transition-colors shrink-0" title="ویرایش پرتفو">
                             <Pencil className="w-3 h-3 text-brand-500" />
                           </button>
@@ -794,6 +834,9 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                         <div className="hidden sm:flex items-center gap-1">
                           <button onClick={(e) => { e.stopPropagation(); handleTogglePortfolioActive(portfolio.id, portfolio.active); }} className="p-1 rounded hover:bg-brand/10 transition-colors shrink-0" title={portfolio.active ? 'غیرفعال کردن پرتفو' : 'فعال کردن پرتفو'}>
                             {portfolio.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setEditingPortfolioSms(portfolio); }} className={`p-1 rounded transition-colors shrink-0 ${(portfolioSmsData[portfolio.id] || []).some(t => t.enabled) ? 'text-brand-500 bg-brand-500/10 hover:bg-brand-500/20' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`} title="تنظیمات SMS پرتفو">
+                            <Crosshair className="w-3 h-3" />
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); setEditingPortfolio(portfolio); }} className="p-1 rounded hover:bg-brand/10 transition-colors shrink-0" title="ویرایش پرتفو">
                             <Pencil className="w-3 h-3 text-brand-500" />
@@ -848,10 +891,7 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                                             initialQuantity={item.quantity}
                                             initialSellPrice={item.sell_price}
                                             initialLastPrice={item.last_price}
-                                            initialResistance1={item.resistance_1}
-                                            initialResistance2={item.resistance_2}
-                                            initialSupport1={item.support_1}
-                                            initialSupport2={item.support_2}
+                                            initialIsCustom={item.is_custom}
                                             onCancel={() => setEditingItem(null)}
                                             onSave={() => { setEditingItem(null); refreshDashboard(); }}
                                             unit={unit}
@@ -888,12 +928,13 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                                const isInactive = !item.active && portfolio.active !== false && portfolio.active !== 0;
                                  return (
 <tr key={item.id} className={`border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${!item.active && portfolio.active !== false && portfolio.active !== 0 ? 'opacity-75' : ''}`}>
-                                     {visibleColumns.includes('symbol') && (
-                                       <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                                          <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                         {item.symbol}
-                                       </td>
-                                     )}
+                                      {visibleColumns.includes('symbol') && (
+                                        <td className="px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                                           <span className={`w-2 h-2 rounded-full shrink-0 ${isRealized ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                           {item.is_custom && <span className="w-2 h-2 rounded-full shrink-0 bg-red-500" title="نماد در لیست API موجود نیست"></span>}
+                                          {item.symbol}
+                                        </td>
+                                      )}
                                      {visibleColumns.includes('last_price') && (
                                        <td className={`px-2 py-1.5 font-medium text-slate-800 dark:text-slate-200 cursor-pointer whitespace-nowrap ${isStale ? 'opacity-40' : ''}`} onDoubleClick={(e) => handleCopy(e, item.last_price)}>{item.last_price ? formatPrice(item.last_price, unit, 2) : '—'}</td>
                                      )}
@@ -963,10 +1004,13 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                                        <button onClick={() => handleToggleItemActive(portfolio.id, item.id, item.active)} disabled={portfolio.active === false || portfolio.active === 0} className={`p-0.5 rounded transition-colors ${portfolio.active === false || portfolio.active === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand/10'}`} title={portfolio.active === false || portfolio.active === 0 ? 'ابتدا پرتفو را فعال کنید' : (item.active ? 'غیرفعال کردن' : 'فعال کردن')}>
                                            {item.active ? <Eye className="w-3 h-3 text-success" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
                                          </button>
-                                        <button onClick={() => setEditingItem({ portfolioId: portfolio.id, itemId: item.id })} className="p-0.5 rounded hover:bg-brand/10 transition-colors">
-                                          <Pencil className="w-3 h-3 text-brand-500" />
-                                        </button>
-                                        <button onClick={() => handleDeleteItem(portfolio.id, item.id)} className="p-0.5 rounded hover:bg-danger/10 transition-colors">
+                                          <button onClick={() => setEditingLevels({ portfolioId: portfolio.id, itemId: item.id, item })} className={`p-0.5 rounded transition-colors ${item.resistance_1 || item.support_1 ? 'text-brand-500 bg-brand-500/10 hover:bg-brand-500/20' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`} title={item.resistance_1 || item.support_1 ? 'ویرایش سطوح' : 'تعریف سطوح'}>
+                                            <Crosshair className="w-3 h-3" />
+                                          </button>
+                                          <button onClick={() => setEditingItem({ portfolioId: portfolio.id, itemId: item.id })} className="p-0.5 rounded hover:bg-brand/10 transition-colors" title="ویرایش سهم">
+                                            <Pencil className="w-3 h-3 text-brand-500" />
+                                          </button>
+                                         <button onClick={() => handleDeleteItem(portfolio.id, item.id)} className="p-0.5 rounded hover:bg-danger/10 transition-colors">
                                           <Trash2 className="w-3 h-3 text-danger" />
                                         </button>
                                      </td>
@@ -990,6 +1034,11 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
  {plMode === 'unrealized' && (portfolio.items || []).some((item) => !item.sell_price && item.last_price) && (
                            <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
                              <span className="text-amber-500 font-bold">●</span> سهم‌های فروش نرفته (بر اساس آخرین قیمت) در محاسبه لحاظ می‌شوند
+                           </div>
+                         )}
+ {(portfolio.items || []).some((item) => item.is_custom) && (
+                           <div className="px-3 py-1 text-[9px] text-muted-foreground border-t border-slate-100 dark:border-slate-800">
+                             <span className="text-red-500 font-bold">●</span> نمادهای وارد شده به صورت دستی (خارج از لیست نمادها — قیمت به صورت خودکار بروزرسانی نمی‌شود)
                            </div>
                          )}
                     </>
@@ -1072,7 +1121,7 @@ function stripCommas(v) {
   return v.replace(/[,،]/g, '');
 }
 
-function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, initialBuyPrice, initialQuantity, initialSellPrice, initialLastPrice, initialPe, initialResistance1, initialResistance2, initialSupport1, initialSupport2, initialSmsEnabled, unit }) {
+function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, initialBuyPrice, initialQuantity, initialSellPrice, initialLastPrice, initialPe, initialIsCustom, unit }) {
   const toman = unit === 'toman';
   const conv = (v) => toman && v ? v / 10 : v;
   const [symbol, setSymbol] = useState(initialSymbol || '');
@@ -1081,12 +1130,7 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
   const [sellPrice, setSellPrice] = useState(cleanNum(conv(initialSellPrice)));
   const [lastPrice, setLastPrice] = useState(cleanNum(conv(initialLastPrice)));
   const [pe, setPe] = useState(cleanNum(initialPe));
-  const [isApiSymbol, setIsApiSymbol] = useState(Boolean(initialLastPrice));
-  const [resistance1, setResistance1] = useState(cleanNum(conv(initialResistance1)));
-  const [resistance2, setResistance2] = useState(cleanNum(conv(initialResistance2)));
-  const [support1, setSupport1] = useState(cleanNum(conv(initialSupport1)));
-  const [support2, setSupport2] = useState(cleanNum(conv(initialSupport2)));
-  const [smsEnabled, setSmsEnabled] = useState(initialSmsEnabled !== undefined ? initialSmsEnabled : true);
+  const [isApiSymbol, setIsApiSymbol] = useState(initialIsCustom !== undefined ? !initialIsCustom : Boolean(initialLastPrice));
   const [buyIVolume, setBuyIVolume] = useState(null);
   const [buyCountI, setBuyCountI] = useState(null);
   const [sellIVolume, setSellIVolume] = useState(null);
@@ -1098,7 +1142,7 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
     e.preventDefault(); setLoading(true); setError('');
     try {
        const rev = (v) => toman && v ? v * 10 : v;
-        const payload = { symbol, buy_price: rev(buyPrice), quantity, sell_price: rev(sellPrice) || null, last_price: rev(lastPrice) || null, pe: pe || null, resistance_1: rev(resistance1) || null, resistance_2: rev(resistance2) || null, resistance_3: null, support_1: rev(support1) || null, support_2: rev(support2) || null, support_3: null, buy_i_volume: buyIVolume, buy_count_i: buyCountI, sell_i_volume: sellIVolume, sell_count_i: sellCountI, sms_enabled: smsEnabled };
+        const payload = { symbol, buy_price: rev(buyPrice), quantity, sell_price: rev(sellPrice) || null, last_price: rev(lastPrice) || null, pe: pe || null, buy_i_volume: buyIVolume, buy_count_i: buyCountI, sell_i_volume: sellIVolume, sell_count_i: sellCountI, is_custom: !isApiSymbol };
       if (isEdit) {
         await api.put(`/portfolios/${portfolioId}/items/${itemId}`, payload);
       } else {
@@ -1110,6 +1154,10 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
   };
   return (
     <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-3 animate-fade-in">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 rtl-text">{isEdit ? 'ویرایش سهم' : 'افزودن سهم به پرتفو'}</h3>
+        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-3" dir="rtl">
         <div>
           <label className="text-[10px] text-slate-400 rtl-text block mb-1">نماد</label>
@@ -1123,52 +1171,22 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] text-slate-400 rtl-text block mb-1">آخرین قیمت ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="number" inputMode="numeric" value={lastPrice} onChange={(e) => setLastPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" readOnly={isApiSymbol} />
+             <input type="number" inputMode="numeric" value={lastPrice} onChange={(e) => setLastPrice(stripCommas(e.target.value))} dir="ltr" className="input-field text-xs py-2 text-left" readOnly={isApiSymbol} />
+           </div>
+           <div>
+             <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت خرید ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
+             <input type="number" inputMode="numeric" value={buyPrice} onChange={(e) => setBuyPrice(stripCommas(e.target.value))} dir="ltr" className="input-field text-xs py-2 text-left" required />
+           </div>
+         </div>
+         <div className="grid grid-cols-2 gap-2">
+           <div>
+             <label className="text-[10px] text-slate-400 rtl-text block mb-1">تعداد</label>
+             <input type="number" inputMode="numeric" value={quantity} onChange={(e) => setQuantity(stripCommas(e.target.value))} dir="ltr" className="input-field text-xs py-2 text-left" required />
+           </div>
+           <div>
+             <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت فروش ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
+             <input type="number" inputMode="numeric" value={sellPrice} onChange={(e) => setSellPrice(stripCommas(e.target.value))} dir="ltr" className="input-field text-xs py-2 text-left" />
           </div>
-          <div>
-            <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت خرید ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="number" inputMode="numeric" value={buyPrice} onChange={(e) => setBuyPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" required />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] text-slate-400 rtl-text block mb-1">تعداد</label>
-            <input type="number" inputMode="numeric" value={quantity} onChange={(e) => setQuantity(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" required />
-          </div>
-          <div>
-            <label className="text-[10px] text-slate-400 rtl-text block mb-1">قیمت فروش ({unit === 'toman' ? 'تومان' : 'ریال'})</label>
-            <input type="number" inputMode="numeric" value={sellPrice} onChange={(e) => setSellPrice(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-bold text-red-500 rtl-text block mb-1">مقاومت ۱</label>
-            <input type="number" inputMode="numeric" value={resistance1} onChange={(e) => setResistance1(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-red-500 rtl-text block mb-1">مقاومت ۲</label>
-            <input type="number" inputMode="numeric" value={resistance2} onChange={(e) => setResistance2(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-bold text-green-500 rtl-text block mb-1">حمایت ۱</label>
-            <input type="number" inputMode="numeric" value={support1} onChange={(e) => setSupport1(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-green-500 rtl-text block mb-1">حمایت ۲</label>
-            <input type="number" inputMode="numeric" value={support2} onChange={(e) => setSupport2(stripCommas(e.target.value))} className="input-field text-xs py-2 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" />
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
-          <span className="text-[10px] text-slate-400 rtl-text">اعلام پیامک هنگام رسیدن به سطوح</span>
-          <button
-            type="button"
-            onClick={() => setSmsEnabled(!smsEnabled)}
-            className={`relative w-9 h-5 rounded-full transition-colors ${smsEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-          >
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${smsEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
-          </button>
         </div>
         {error && <p className="text-[10px] text-danger">{error}</p>}
         <div className="flex gap-2">
@@ -1176,6 +1194,268 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
           <button type="button" onClick={onCancel} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) {
+  const toman = unit === 'toman';
+  const conv = (v) => toman && v ? v / 10 : v;
+  const rev = (v) => toman && v ? v * 10 : v;
+  const [resistance1, setResistance1] = useState(cleanNum(conv(item.resistance_1)));
+  const [resistance2, setResistance2] = useState(cleanNum(conv(item.resistance_2)));
+  const [support1, setSupport1] = useState(cleanNum(conv(item.support_1)));
+  const [support2, setSupport2] = useState(cleanNum(conv(item.support_2)));
+  const [smsR1, setSmsR1] = useState(item.sms_resistance_1_count || 0);
+  const [smsR2, setSmsR2] = useState(item.sms_resistance_2_count || 0);
+  const [smsS1, setSmsS1] = useState(item.sms_support_1_count || 0);
+  const [smsS2, setSmsS2] = useState(item.sms_support_2_count || 0);
+  const [smsCooldown, setSmsCooldown] = useState(item.sms_cooldown_minutes || 60);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await api.put(`/portfolios/${portfolioId}/items/${itemId}`, {
+        symbol: item.symbol,
+        buy_price: item.buy_price,
+        quantity: item.quantity,
+        sell_price: item.sell_price,
+        last_price: item.last_price,
+        resistance_1: rev(resistance1) || null,
+        resistance_2: rev(resistance2) || null,
+        support_1: rev(support1) || null,
+        support_2: rev(support2) || null,
+        sms_resistance_1_count: parseInt(smsR1) || 0,
+        sms_resistance_2_count: parseInt(smsR2) || 0,
+        sms_support_1_count: parseInt(smsS1) || 0,
+        sms_support_2_count: parseInt(smsS2) || 0,
+        sms_cooldown_minutes: parseInt(smsCooldown) || 60,
+      });
+      onSave();
+    } catch (err) {
+      setError(err.response?.data?.message || 'خطا در ذخیره');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const unitLabel = toman ? 'تومان' : 'ریال';
+  const [sentCounts, setSentCounts] = useState({});
+
+  useEffect(() => {
+    if (item?.symbol) {
+      api.get(`/user-symbol-levels/${item.symbol}/sent-counts`).then(r => setSentCounts(r.data?.data || {})).catch(() => {});
+    }
+  }, [item?.symbol]);
+
+  const SmsBtn = ({ levelKey, value, onChange }) => {
+    const enabled = value > 0;
+    const sent = sentCounts[levelKey] || 0;
+    const completed = enabled && sent >= value;
+
+    return (
+      <div className="flex items-center gap-1">
+        <button type="button" onClick={() => onChange(enabled ? 0 : 1)}
+          className={`h-[30px] w-6 rounded-lg text-[8px] font-bold transition-all flex items-center justify-center ${enabled ? (completed ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500' : 'bg-brand-500 text-white') : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+          title={enabled ? (completed ? 'تمام شده — کلیک: غیرفعال' : 'فعال — کلیک: غیرفعال') : 'غیرفعال — کلیک: فعال'}>
+          {completed ? '✔' : enabled ? '●' : '○'}
+        </button>
+        {enabled && (
+          <div className="flex items-center h-[30px] rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <button type="button" onClick={() => onChange(Math.max(1, value - 1))} className="px-1 py-0.5 text-[10px] font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">−</button>
+            <span className="px-1 text-[9px] font-bold text-slate-700 dark:text-slate-300 min-w-[16px] text-center">{value}</span>
+            <button type="button" onClick={() => onChange(Math.min(100, value + 1))} className="px-1 py-0.5 text-[10px] font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">+</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 max-w-sm w-full mx-4 shadow-xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">سطوح {item.symbol}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-2">
+          <div className="space-y-1.5">
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/10 p-2 space-y-1">
+              <div className="space-y-1">
+                <div>
+                  <label className="text-[10px] font-bold text-red-500 block mb-0.5">مقاومت ۱</label>
+                  <div className="flex items-center gap-1">
+                    <input type="number" inputMode="numeric" value={resistance1} onChange={(e) => setResistance1(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" placeholder={unitLabel} />
+                    <SmsBtn levelKey="resistance_1" value={smsR1} onChange={setSmsR1} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-red-500 block mb-0.5">مقاومت ۲</label>
+                  <div className="flex items-center gap-1">
+                    <input type="number" inputMode="numeric" value={resistance2} onChange={(e) => setResistance2(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-red-200 dark:border-red-900/50 focus:ring-red-500/40 focus:border-red-400" placeholder={unitLabel} />
+                    <SmsBtn levelKey="resistance_2" value={smsR2} onChange={setSmsR2} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-green-50 dark:bg-green-900/10 p-2 space-y-1">
+              <div className="space-y-1">
+                <div>
+                  <label className="text-[10px] font-bold text-green-500 block mb-0.5">حمایت ۱</label>
+                  <div className="flex items-center gap-1">
+                    <input type="number" inputMode="numeric" value={support1} onChange={(e) => setSupport1(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" placeholder={unitLabel} />
+                    <SmsBtn levelKey="support_1" value={smsS1} onChange={setSmsS1} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-green-500 block mb-0.5">حمایت ۲</label>
+                  <div className="flex items-center gap-1">
+                    <input type="number" inputMode="numeric" value={support2} onChange={(e) => setSupport2(stripCommas(e.target.value))} dir="ltr" className="input-field text-[11px] py-1 flex-1 text-left border-green-200 dark:border-green-900/50 focus:ring-green-500/40 focus:border-green-400" placeholder={unitLabel} />
+                    <SmsBtn levelKey="support_2" value={smsS2} onChange={setSmsS2} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {(() => {
+            const showCooldown = [smsR1, smsR2, smsS1, smsS2].some(v => v >= 2);
+            return (
+              <div className={`flex items-center gap-2 rounded-lg p-2 border transition-opacity ${showCooldown ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800' : 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-100/50 dark:border-slate-800/50 opacity-40'}`}>
+                <span className="text-[9px] text-slate-400 shrink-0">حداقل فاصله ارسال:</span>
+                <input type="number" inputMode="numeric" min="1" max="1440" value={smsCooldown} onChange={(e) => setSmsCooldown(e.target.value)} disabled={!showCooldown} className="input-field text-[10px] py-0.5 px-1.5 w-12 text-center disabled:opacity-50 disabled:cursor-not-allowed" />
+                <span className="text-[8px] text-slate-400">دقیقه</span>
+              </div>
+            );
+          })()}
+
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5 space-y-1.5 border border-slate-100 dark:border-slate-800">
+            <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400">راهنمای پیامک سطوح</p>
+            <div className="space-y-1 text-[8px] text-slate-400 dark:text-slate-500 leading-relaxed">
+              <div className="flex items-start gap-1.5">
+                <span className="text-slate-400 shrink-0">○</span>
+                <span>غیرفعال: پیامکی ارسال نمی‌شود.</span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <span className="text-brand-500 shrink-0">●</span>
+                <span>فعال: با +/− تعداد ارسال را مشخص کنید. ۱ = فقط یک‌بار.</span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <span className="text-emerald-400 shrink-0">✔</span>
+                <span>تمام شده. کلیک کنید تا غیرفعال شود.</span>
+              </div>
+            </div>
+          </div>
+
+          {error && <p className="text-[10px] text-danger">{error}</p>}
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving} className="btn-primary text-xs py-1.5 px-3">{saving ? '...' : 'ذخیره سطوح'}</button>
+            <button type="button" onClick={onClose} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PortfolioSmsPopup({ portfolio, times: initialTimes, onClose, onSave }) {
+  const [times, setTimes] = useState(
+    initialTimes.length > 0
+      ? initialTimes.map(t => ({ ...t }))
+      : [{ id: null, send_time: '17:00', enabled: true }]
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const addTime = () => {
+    setTimes(prev => [...prev, { id: null, send_time: '17:00', enabled: true }]);
+  };
+
+  const removeTime = (idx) => {
+    setTimes(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateTime = (idx, field, value) => {
+    setTimes(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  };
+
+  const handleSubmit = async () => {
+    if (times.length === 0) {
+      setError('حداقل یک زمان ارسال لازم است');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await api.put(`/portfolio-sms-settings/${portfolio.id}`, {
+        times: times.map(t => ({ send_time: (t.send_time || '').slice(0, 5), enabled: t.enabled })),
+      });
+      onSave(times.map(t => ({ ...t })));
+    } catch (err) {
+      setError(err.response?.data?.message || 'خطا در ذخیره');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 max-w-sm w-full mx-4 shadow-xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">پیامک روزانه {portfolio.name}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <div className="space-y-3">
+          {times.map((t, idx) => (
+            <div key={idx} className="flex items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+              <input
+                type="time"
+                value={t.send_time}
+                onChange={(e) => updateTime(idx, 'send_time', e.target.value)}
+                className="input-field text-xs py-1.5 flex-1"
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => updateTime(idx, 'enabled', !t.enabled)}
+                className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${t.enabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${t.enabled ? 'translate-x-4' : 'translate-x-0'}`} />
+              </button>
+              {times.length > 1 && (
+                <button onClick={() => removeTime(idx)} className="text-slate-400 hover:text-danger text-xs shrink-0">&times;</button>
+              )}
+            </div>
+          ))}
+
+          <button onClick={addTime} className="w-full text-[10px] text-brand-500 hover:text-brand-600 py-1.5 rounded-lg border border-dashed border-brand-300 dark:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors">
+            + افزودن زمان
+          </button>
+
+          <div className="text-[10px] text-slate-400 rtl-text bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2">
+            <p className="mb-1">📱 محتوای پیامک:</p>
+            <ul className="list-disc list-inside space-y-0.5 text-slate-500">
+              <li>ارزش فعلی پرتفو</li>
+              <li>سود/زیان محقق نشده (مبلغ + درصد)</li>
+            </ul>
+          </div>
+
+          {error && <p className="text-[10px] text-danger">{error}</p>}
+
+          <div className="flex gap-2">
+            <button type="button" onClick={handleSubmit} disabled={saving} className="btn-primary text-xs py-1.5 px-3 flex-1">
+              {saving ? '...' : 'ذخیره'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
