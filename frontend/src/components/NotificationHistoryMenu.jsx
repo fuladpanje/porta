@@ -1,6 +1,28 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Trash2, TrendingUp, TrendingDown, ChevronDown, Loader2 } from 'lucide-react';
+import { Bell, Trash2, TrendingUp, TrendingDown, ChevronDown, Loader2, Volume2, VolumeX } from 'lucide-react';
 import api from '../lib/api';
+
+function playNotificationSound() {
+  try {
+    if (localStorage.getItem('porta_notification_sound') === 'off') return;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(523, now);
+    osc1.frequency.setValueAtTime(659, now + 0.25);
+    osc1.frequency.setValueAtTime(784, now + 0.5);
+    gain1.gain.setValueAtTime(0.08, now);
+    gain1.gain.setValueAtTime(0.12, now + 0.25);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    osc1.start(now);
+    osc1.stop(now + 0.9);
+  } catch {}
+}
 
 function formatPrice(price) {
   if (price == null) return '—';
@@ -25,8 +47,12 @@ export function NotificationHistoryMenu() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [notifSoundEnabled, setNotifSoundEnabled] = useState(() => {
+    try { return localStorage.getItem('porta_notification_sound') !== 'off'; } catch { return true; }
+  });
   const menuRef = useRef(null);
-  const lastCheckedRef = useRef(null);
+  const lastCheckedRef = useRef(Date.now() - 60000);
+  const initialLoadDoneRef = useRef(false);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -34,7 +60,8 @@ export function NotificationHistoryMenu() {
       const res = await api.get('/crossover-notifications?limit=50');
       const all = res.data?.data || [];
       setNotifications(all);
-      if (!lastCheckedRef.current) {
+      if (!initialLoadDoneRef.current) {
+        initialLoadDoneRef.current = true;
         const unread = all.filter(n => {
           const d = new Date(n.detected_at).getTime();
           return Date.now() - d < 24 * 60 * 60 * 1000;
@@ -84,6 +111,7 @@ export function NotificationHistoryMenu() {
           const newOnes = all.filter(n => new Date(n.detected_at).getTime() > lastCheckedRef.current);
           if (newOnes.length > 0) {
             setUnreadCount(prev => prev + newOnes.length);
+            playNotificationSound();
           }
         } catch (e) {
           // silent
@@ -140,16 +168,29 @@ export function NotificationHistoryMenu() {
               <Bell className="w-4 h-4 text-brand-500" />
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">سابقه نوتیفیکیشن‌ها</span>
             </div>
-            {notifications.length > 0 && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleClear}
-                disabled={clearing}
-                className="text-[10px] text-red-500 hover:text-red-600 flex items-center gap-1 transition-colors disabled:opacity-50"
+                onClick={() => {
+                  const newVal = !notifSoundEnabled;
+                  setNotifSoundEnabled(newVal);
+                  try { localStorage.setItem('porta_notification_sound', newVal ? 'on' : 'off'); } catch {}
+                }}
+                className={`p-1 rounded-md transition-colors ${notifSoundEnabled ? 'text-brand-500 hover:bg-brand-500/10' : 'text-slate-300 dark:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                title={notifSoundEnabled ? 'صدای نوتیفیکیشن فعال' : 'صدای نوتیفیکیشن غیرفعال'}
               >
-                {clearing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                پاک کردن
+                {notifSoundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
               </button>
-            )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={handleClear}
+                  disabled={clearing}
+                  className="p-1 rounded-md text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  title="پاک کردن همه"
+                >
+                  {clearing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-80 overflow-y-auto">

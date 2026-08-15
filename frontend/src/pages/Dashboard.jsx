@@ -6,7 +6,7 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter, Crosshair, MessageSquare } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter, Crosshair, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { Chart as ChartComponent, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { Chart as ChartJS } from 'chart.js';
@@ -1211,8 +1211,15 @@ function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) 
   const [smsS1, setSmsS1] = useState(item.sms_support_1_count || 0);
   const [smsS2, setSmsS2] = useState(item.sms_support_2_count || 0);
   const [smsCooldown, setSmsCooldown] = useState(item.sms_cooldown_minutes || 60);
+  const [notifCooldown, setNotifCooldown] = useState(item.notification_cooldown_minutes || 10);
+  const [notifSoundEnabled, setNotifSoundEnabled] = useState(() => {
+    try { return localStorage.getItem('porta_notification_sound') !== 'off'; } catch { return true; }
+  });
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+
+  const hasLevels = !!(resistance1 || resistance2 || support1 || support2);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1234,12 +1241,42 @@ function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) 
         sms_support_1_count: parseInt(smsS1) || 0,
         sms_support_2_count: parseInt(smsS2) || 0,
         sms_cooldown_minutes: parseInt(smsCooldown) || 60,
+        notification_cooldown_minutes: parseInt(notifCooldown) || 10,
       });
       onSave();
     } catch (err) {
       setError(err.response?.data?.message || 'خطا در ذخیره');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteLevels = async () => {
+    setDeleting(true);
+    setError('');
+    try {
+      await api.put(`/portfolios/${portfolioId}/items/${itemId}`, {
+        symbol: item.symbol,
+        buy_price: item.buy_price,
+        quantity: item.quantity,
+        sell_price: item.sell_price,
+        last_price: item.last_price,
+        resistance_1: null,
+        resistance_2: null,
+        support_1: null,
+        support_2: null,
+        sms_resistance_1_count: 0,
+        sms_resistance_2_count: 0,
+        sms_support_1_count: 0,
+        sms_support_2_count: 0,
+        sms_cooldown_minutes: parseInt(smsCooldown) || 60,
+        notification_cooldown_minutes: parseInt(notifCooldown) || 10,
+      });
+      onSave();
+    } catch (err) {
+      setError(err.response?.data?.message || 'خطا در حذف سطوح');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1327,12 +1364,26 @@ function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) 
             const showCooldown = [smsR1, smsR2, smsS1, smsS2].some(v => v >= 2);
             return (
               <div className={`flex items-center gap-2 rounded-lg p-2 border transition-opacity ${showCooldown ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800' : 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-100/50 dark:border-slate-800/50 opacity-40'}`}>
-                <span className="text-[9px] text-slate-400 shrink-0">حداقل فاصله ارسال:</span>
+                <span className="text-[9px] text-slate-400 shrink-0">حداقل فاصله ارسال پیامک:</span>
                 <input type="number" inputMode="numeric" min="1" max="1440" value={smsCooldown} onChange={(e) => setSmsCooldown(e.target.value)} disabled={!showCooldown} className="input-field text-[10px] py-0.5 px-1.5 w-12 text-center disabled:opacity-50 disabled:cursor-not-allowed" />
                 <span className="text-[8px] text-slate-400">دقیقه</span>
               </div>
             );
           })()}
+
+          <div className="flex items-center gap-2 rounded-lg p-2 border bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800">
+            <span className="text-[9px] text-slate-400 shrink-0">فاصله نوتیفیکیشن:</span>
+            <input type="number" inputMode="numeric" min="1" max="1440" value={notifCooldown} onChange={(e) => setNotifCooldown(e.target.value)} className="input-field text-[10px] py-0.5 px-1.5 w-12 text-center" />
+            <span className="text-[8px] text-slate-400">دقیقه</span>
+            <button type="button" onClick={() => {
+              const newVal = !notifSoundEnabled;
+              setNotifSoundEnabled(newVal);
+              try { localStorage.setItem('porta_notification_sound', newVal ? 'on' : 'off'); } catch {}
+            }} className={`mr-auto p-1 rounded-md transition-colors ${notifSoundEnabled ? 'text-brand-500 hover:bg-brand-500/10' : 'text-slate-300 dark:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              title={notifSoundEnabled ? 'صدای نوتیفیکیشن فعال' : 'صدای نوتیفیکیشن غیرفعال'}>
+              {notifSoundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+          </div>
 
           <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5 space-y-1.5 border border-slate-100 dark:border-slate-800">
             <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400">راهنمای پیامک سطوح</p>
@@ -1353,9 +1404,14 @@ function LevelEditorPopup({ portfolioId, itemId, item, unit, onClose, onSave }) 
           </div>
 
           {error && <p className="text-[10px] text-danger">{error}</p>}
-          <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="btn-primary text-xs py-1.5 px-3">{saving ? '...' : 'ذخیره سطوح'}</button>
+          <div className="flex gap-2 mt-4 justify-end">
+            {hasLevels && (
+              <button type="button" onClick={handleDeleteLevels} disabled={deleting} className="text-xs py-1.5 px-3 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors rtl-text">
+                {deleting ? '...' : 'حذف سطوح'}
+              </button>
+            )}
             <button type="button" onClick={onClose} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
+            <button type="submit" disabled={saving} className="btn-primary text-xs py-1.5 px-3">{saving ? '...' : 'ذخیره سطوح'}</button>
           </div>
         </form>
       </div>

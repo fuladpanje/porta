@@ -27,7 +27,7 @@ export default function Settings() {
   const [ippanelSender, setIppanelSender] = useState('');
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [savingSms, setSavingSms] = useState(false);
-  const [smsStats, setSmsStats] = useState({ total_sent: 0, today_sent: 0 });
+  const [smsStats, setSmsStats] = useState({ total_sent: 0, today_sent: 0, portfolio_today_sent: 0, portfolio_total_sent: 0 });
   const [smsHistory, setSmsHistory] = useState([]);
   const [showSmsModal, setShowSmsModal] = useState(false);
   const [showSmsContact, setShowSmsContact] = useState(false);
@@ -522,7 +522,14 @@ export default function Settings() {
                 <span className="text-xs text-slate-700 dark:text-slate-300 rtl-text">پیامک‌های امروز</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[10px] text-slate-400">{toPersianNum(smsStats.today_sent || 0)}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 font-medium">
+                    {toPersianNum(smsStats.today_sent || 0)} سطح
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium">
+                    {toPersianNum(smsStats.portfolio_today_sent || 0)} پرتفو
+                  </span>
+                </div>
               </div>
             </button>
 
@@ -657,17 +664,36 @@ export default function Settings() {
               ) : (
                 <div className="space-y-2">
                   {smsHistory.map((sms) => (
-                    <div key={sms.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${sms.direction === 'مقاومت' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
-                          {sms.level_label}
-                        </span>
-                        <span className="text-xs font-medium text-slate-800 dark:text-slate-200 rtl-text">{sms.symbol}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-slate-500 ltr-text">{toPersianNum(sms.price_at_trigger)}</span>
-                        <span className="text-[10px] text-slate-400 ltr-text">{sms.sent_at}</span>
-                      </div>
+                    <div key={sms.id} className="px-3 py-2.5 rounded-lg bg-slate-50/70 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                      {sms.type === 'portfolio' ? (
+                        <>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium">
+                                پرتفو
+                              </span>
+                              <span className="text-xs font-medium text-slate-800 dark:text-slate-200 rtl-text">{sms.symbol}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 ltr-text">{sms.sent_at}</span>
+                          </div>
+                          {sms.message && (
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 rtl-text leading-relaxed">{sms.message}</p>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${sms.direction === 'مقاومت' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
+                              {sms.level_label}
+                            </span>
+                            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 rtl-text">{sms.symbol}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-slate-500 ltr-text">{toPersianNum(sms.price_at_trigger)}</span>
+                            <span className="text-[10px] text-slate-400 ltr-text">{sms.sent_at}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

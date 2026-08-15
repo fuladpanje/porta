@@ -30,6 +30,7 @@ class PortfolioItem extends Model
         'sms_resistance_2_count',
         'sms_support_1_count',
         'sms_support_2_count',
+        'notification_cooldown_minutes',
         'is_custom',
     ];
 
@@ -54,6 +55,7 @@ class PortfolioItem extends Model
         'sms_resistance_2_count' => 'integer',
         'sms_support_1_count' => 'integer',
         'sms_support_2_count' => 'integer',
+        'notification_cooldown_minutes' => 'integer',
         'is_custom' => 'boolean',
     ];
 

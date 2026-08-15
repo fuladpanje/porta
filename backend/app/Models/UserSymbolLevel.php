@@ -19,6 +19,7 @@ class UserSymbolLevel extends Model
         'sms_support_1_count',
         'sms_support_2_count',
         'sms_cooldown_minutes',
+        'notification_cooldown_minutes',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class UserSymbolLevel extends Model
         'sms_support_1_count' => 'integer',
         'sms_support_2_count' => 'integer',
         'sms_cooldown_minutes' => 'integer',
+        'notification_cooldown_minutes' => 'integer',
     ];
 
     public function user(): BelongsTo

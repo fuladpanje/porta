@@ -276,10 +276,24 @@ class AuthController extends Controller
             ->where('sent_at', '>=', now()->subHours(24))
             ->count();
 
+        // آمار پیامک پرتفو
+        $portfolioTodaySent = \Illuminate\Support\Facades\DB::table('portfolio_daily_sms_log')
+            ->join('portfolio_sms_settings', 'portfolio_daily_sms_log.portfolio_sms_setting_id', '=', 'portfolio_sms_settings.id')
+            ->where('portfolio_sms_settings.user_id', $user->id)
+            ->where('portfolio_daily_sms_log.sent_at', '>=', now()->subHours(24))
+            ->count();
+
+        $portfolioTotalSent = \Illuminate\Support\Facades\DB::table('portfolio_daily_sms_log')
+            ->join('portfolio_sms_settings', 'portfolio_daily_sms_log.portfolio_sms_setting_id', '=', 'portfolio_sms_settings.id')
+            ->where('portfolio_sms_settings.user_id', $user->id)
+            ->count();
+
         return response()->json([
             'data' => [
                 'total_sent' => $totalSent,
                 'today_sent' => $todaySent,
+                'portfolio_today_sent' => $portfolioTodaySent,
+                'portfolio_total_sent' => $portfolioTotalSent,
                 'sms_configured' => $user->hasSmsConfigured(),
             ],
         ]);
@@ -289,36 +303,70 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        // تاریخچه پیامک‌های سطح حمایت و مقاومت
         $notifications = \App\Models\SmsNotification::where('user_id', $user->id)
             ->where('sent_at', '>=', now()->subHours(24))
             ->orderByDesc('sent_at')
             ->get()
             ->map(function ($n) {
-                $levelLabel = match ($n->level_type) {
+                $levelLabels = [
                     'resistance_1' => 'مقاومت ۱',
                     'resistance_2' => 'مقاومت ۲',
                     'resistance_3' => 'مقاومت ۳',
                     'support_1' => 'حمایت ۱',
                     'support_2' => 'حمایت ۲',
                     'support_3' => 'حمایت ۳',
-                    default => $n->level_type,
-                };
+                ];
+                $levelLabel = $levelLabels[$n->level_type] ?? $n->level_type;
 
-                $direction = str_starts_with($n->level_type, 'resistance') ? 'مقاومت' : 'حمایت';
+                $direction = substr($n->level_type, 0, 10) === 'resistance' ? 'مقاومت' : 'حمایت';
 
                 return [
-                    'id' => $n->id,
+                    'id' => 'level_' . $n->id,
+                    'type' => 'level',
                     'symbol' => $n->symbol ?? '—',
                     'level_type' => $n->level_type,
                     'level_label' => $levelLabel,
                     'direction' => $direction,
                     'price_at_trigger' => $n->price_at_trigger,
+                    'message' => null,
                     'sent_at' => $n->sent_at->format('H:i:s'),
                 ];
             });
 
+        // تاریخچه پیامک‌های پرتفو
+        $portfolioSms = \Illuminate\Support\Facades\DB::table('portfolio_daily_sms_log')
+            ->join('portfolio_sms_settings', 'portfolio_daily_sms_log.portfolio_sms_setting_id', '=', 'portfolio_sms_settings.id')
+            ->join('portfolios', 'portfolio_sms_settings.portfolio_id', '=', 'portfolios.id')
+            ->where('portfolio_sms_settings.user_id', $user->id)
+            ->where('portfolio_daily_sms_log.sent_at', '>=', now()->subHours(24))
+            ->orderByDesc('portfolio_daily_sms_log.sent_at')
+            ->select(
+                'portfolio_daily_sms_log.id',
+                'portfolio_daily_sms_log.sent_at',
+                'portfolio_daily_sms_log.message',
+                'portfolios.name as portfolio_name'
+            )
+            ->get()
+            ->map(function ($sms) {
+                return [
+                    'id' => 'portfolio_' . $sms->id,
+                    'type' => 'portfolio',
+                    'symbol' => $sms->portfolio_name,
+                    'level_type' => null,
+                    'level_label' => 'پرتفو',
+                    'direction' => null,
+                    'price_at_trigger' => null,
+                    'message' => $sms->message,
+                    'sent_at' => \Carbon\Carbon::parse($sms->sent_at)->format('H:i:s'),
+                ];
+            });
+
+        // ادغام و مرتب‌سازی بر اساس زمان ارسال
+        $allHistory = $notifications->concat($portfolioSms)->sortByDesc('sent_at')->values();
+
         return response()->json([
-            'data' => $notifications,
+            'data' => $allHistory,
         ]);
     }
 

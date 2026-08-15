@@ -6,7 +6,7 @@ import api, { favoritesApi } from '../lib/api';
 import { stockApi } from '../lib/api';
 import { searchSymbolsLocal } from '../lib/symbolCache';
 import { formatPrice, formatPercent } from '../lib/calculations';
-import { Search, Plus, X, Trash2, Star, Filter, Crosshair, MessageSquare, CircleCheckBig } from 'lucide-react';
+import { Search, Plus, X, Trash2, Star, Filter, Crosshair, MessageSquare, CircleCheckBig, Volume2, VolumeX } from 'lucide-react';
 import { toPersianNum } from '../lib/calculations';
 
 function useDebounce(value, delay) {
@@ -342,9 +342,12 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
   const [showOnlyWithLevels, setShowOnlyWithLevels] = useState(false);
   const [editingLevel, setEditingLevel] = useState(null);
   const [sentCounts, setSentCounts] = useState({});
-  const [levelForm, setLevelForm] = useState({ resistance_1: '', resistance_2: '', support_1: '', support_2: '', sms_resistance_1_count: 0, sms_resistance_2_count: 0, sms_support_1_count: 0, sms_support_2_count: 0, sms_cooldown_minutes: 60 });
+  const [levelForm, setLevelForm] = useState({ resistance_1: '', resistance_2: '', support_1: '', support_2: '', sms_resistance_1_count: 0, sms_resistance_2_count: 0, sms_support_1_count: 0, sms_support_2_count: 0, sms_cooldown_minutes: 60, notification_cooldown_minutes: 10 });
   const [savingLevel, setSavingLevel] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState('');
+  const [notifSoundEnabled, setNotifSoundEnabled] = useState(() => {
+    try { return localStorage.getItem('porta_notification_sound') !== 'off'; } catch { return true; }
+  });
 
   useEffect(() => {
     try { localStorage.setItem('porta_favorites_only', showFavoritesOnly); } catch {}
@@ -417,6 +420,7 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
         sms_support_1_count: parseInt(levelForm.sms_support_1_count) || 0,
         sms_support_2_count: parseInt(levelForm.sms_support_2_count) || 0,
         sms_cooldown_minutes: parseInt(levelForm.sms_cooldown_minutes) || 60,
+        notification_cooldown_minutes: parseInt(levelForm.notification_cooldown_minutes) || 10,
       };
       await api.post('/user-symbol-levels', payload);
       await fetchUserLevels();
@@ -483,6 +487,7 @@ const [visibleColumns, setVisibleColumns] = useState(() => {
       sms_support_1_count: existing.sms_support_1_count || 0,
       sms_support_2_count: existing.sms_support_2_count || 0,
       sms_cooldown_minutes: existing.sms_cooldown_minutes || 60,
+      notification_cooldown_minutes: existing.notification_cooldown_minutes || 10,
     });
     setEditingLevel(symbol);
   };
@@ -857,12 +862,12 @@ const filtered = useMemo(() => {
           className={`p-2 rounded-lg shrink-0 transition-colors ${showOnlyWithLevels ? 'text-brand-500 bg-brand-500/10' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`}
           title={showOnlyWithLevels ? 'نمایش همه' : 'فقط نمادهای دارای سطوح'}
         >
-          <Filter className="w-4 h-4" />
+          <Crosshair className="w-4 h-4" />
         </button>
       </div>
 
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">P/E:</span>
             <div className="flex items-center gap-2 shrink-0">
             {peMode === 'between' ? (
@@ -892,7 +897,7 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">آخرین قیمت ({unit === 'toman' ? 'تومان' : 'ریال'}):</span>
             <div className="flex items-center gap-2 shrink-0">
             {plMode === 'between' ? (
@@ -918,7 +923,7 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">تغییر آخرین:</span>
             <div className="flex items-center gap-2 shrink-0">
             {plpMode === 'between' ? (
@@ -948,7 +953,7 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">تغییر پایانی:</span>
             <div className="flex items-center gap-2 shrink-0">
             {pcpMode === 'between' ? (
@@ -978,7 +983,7 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">اختلاف درصد:</span>
             <div className="flex items-center gap-2 shrink-0">
             {diffMode === 'between' ? (
@@ -1008,7 +1013,7 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">قدرت خریدار:</span>
             <div className="flex items-center gap-2 shrink-0">
             {bpMode === 'between' ? (
@@ -1038,7 +1043,7 @@ const filtered = useMemo(() => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs">
             <span className="text-slate-400 rtl-text font-medium w-36 shrink-0">گروه صنعت:</span>
             <select
               value={selectedIndustry}
@@ -1123,7 +1128,7 @@ const filtered = useMemo(() => {
        <div className="overflow-x-auto">
         <table className="w-full text-[11px]">
 <thead>
-             <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30">
+             <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/30">
                {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((c) => (
                  <th key={c.key} onClick={c.key === 'actions' || c.key === 'star' ? undefined : (() => toggleSort(c.key))} className={`px-3 py-2 text-right font-medium text-slate-400 rtl-text cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none ${c.key === 'star' ? 'w-8' : ''}`}>
                    {c.key === 'star' ? '' : sortLabel(c.key, c.label)}
@@ -1151,7 +1156,7 @@ const filtered = useMemo(() => {
               const sAllSell = sSellIVol > 0 && sSellCntI > 0 ? sSellIVol / sSellCntI : 0;
               const bpVal = sAllBuy > 0 && sAllSell > 0 ? sAllBuy / sAllSell : null;
               return (
-<tr key={s.isin || s.name} className="border-b border-slate-50/50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+<tr key={s.isin || s.name} className="border-b border-slate-200 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
                  {visibleColumns.includes('star') && (
                    <td className="px-3 py-2">
                      <button
@@ -1315,12 +1320,26 @@ const filtered = useMemo(() => {
                 const showCooldown = [parseInt(levelForm.sms_resistance_1_count), parseInt(levelForm.sms_resistance_2_count), parseInt(levelForm.sms_support_1_count), parseInt(levelForm.sms_support_2_count)].some(v => v >= 2);
                 return (
                   <div className={`flex items-center gap-2 rounded-lg p-2 border transition-opacity ${showCooldown ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800' : 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-100/50 dark:border-slate-800/50 opacity-40'}`}>
-                    <span className="text-[9px] text-slate-400 shrink-0 rtl-text">حداقل فاصله ارسال:</span>
+                    <span className="text-[9px] text-slate-400 shrink-0 rtl-text">حداقل فاصله ارسال پیامک:</span>
                     <input type="number" inputMode="numeric" min="1" max="1440" value={levelForm.sms_cooldown_minutes} onChange={(e) => setLevelForm(p => ({...p, sms_cooldown_minutes: e.target.value}))} disabled={!showCooldown} className="input-field text-[10px] py-0.5 px-1.5 w-12 text-center disabled:opacity-50 disabled:cursor-not-allowed" />
                     <span className="text-[8px] text-slate-400 rtl-text">دقیقه</span>
                   </div>
                 );
               })()}
+
+              <div className="flex items-center gap-2 rounded-lg p-2 border bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800">
+                <span className="text-[9px] text-slate-400 shrink-0 rtl-text">فاصله نوتیفیکیشن:</span>
+                <input type="number" inputMode="numeric" min="1" max="1440" value={levelForm.notification_cooldown_minutes} onChange={(e) => setLevelForm(p => ({...p, notification_cooldown_minutes: e.target.value}))} className="input-field text-[10px] py-0.5 px-1.5 w-12 text-center" />
+                <span className="text-[8px] text-slate-400 rtl-text">دقیقه</span>
+                <button type="button" onClick={() => {
+                  const newVal = !notifSoundEnabled;
+                  setNotifSoundEnabled(newVal);
+                  try { localStorage.setItem('porta_notification_sound', newVal ? 'on' : 'off'); } catch {}
+                }} className={`mr-auto p-1 rounded-md transition-colors ${notifSoundEnabled ? 'text-brand-500 hover:bg-brand-500/10' : 'text-slate-300 dark:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                  title={notifSoundEnabled ? 'صدای نوتیفیکیشن فعال' : 'صدای نوتیفیکیشن غیرفعال'}>
+                  {notifSoundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                </button>
+              </div>
 
               <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5 space-y-1.5 border border-slate-100 dark:border-slate-800">
                 <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 rtl-text">راهنمای پیامک سطوح</p>

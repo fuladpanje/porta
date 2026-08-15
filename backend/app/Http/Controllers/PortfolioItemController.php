@@ -7,9 +7,19 @@ use App\Models\PortfolioItem;
 use App\Models\SmsNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Schema;
 
 class PortfolioItemController extends Controller
 {
+    private function hasNotificationCooldownColumn(): bool
+    {
+        static $has = null;
+        if ($has === null) {
+            $has = Schema::hasColumn('portfolio_items', 'notification_cooldown_minutes');
+        }
+        return $has;
+    }
+
     public function index(Request $request, Portfolio $portfolio): JsonResponse
     {
         if ($portfolio->user_id !== auth()->id()) {
@@ -27,7 +37,7 @@ class PortfolioItemController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $validated = $request->validate([
+        $rules = [
             'symbol' => 'required|string|max:255',
             'buy_price' => 'required|numeric|min:0',
             'quantity' => 'required|numeric|min:0',
@@ -50,7 +60,20 @@ class PortfolioItemController extends Controller
             'sms_support_1_count' => 'nullable|integer|min:0|max:100',
             'sms_support_2_count' => 'nullable|integer|min:0|max:100',
             'is_custom' => 'nullable|boolean',
-        ]);
+        ];
+
+        if ($this->hasNotificationCooldownColumn()) {
+            $rules['notification_cooldown_minutes'] = 'nullable|integer|min:1|max:1440';
+        }
+
+        $validated = $request->validate($rules);
+
+        $smsCountFields = ['sms_resistance_1_count', 'sms_resistance_2_count', 'sms_support_1_count', 'sms_support_2_count'];
+        foreach ($smsCountFields as $field) {
+            if (array_key_exists($field, $validated) && $validated[$field] === null) {
+                unset($validated[$field]);
+            }
+        }
 
         $item = $portfolio->items()->create($validated);
 
@@ -80,7 +103,7 @@ class PortfolioItemController extends Controller
 
         $item = $portfolio->items()->findOrFail($itemId);
 
-        $validated = $request->validate([
+        $rules = [
             'symbol' => 'sometimes|required|string|max:255',
             'buy_price' => 'sometimes|required|numeric|min:0',
             'quantity' => 'sometimes|required|numeric|min:0',
@@ -103,7 +126,20 @@ class PortfolioItemController extends Controller
             'sms_support_1_count' => 'nullable|integer|min:0|max:100',
             'sms_support_2_count' => 'nullable|integer|min:0|max:100',
             'is_custom' => 'nullable|boolean',
-        ]);
+        ];
+
+        if ($this->hasNotificationCooldownColumn()) {
+            $rules['notification_cooldown_minutes'] = 'nullable|integer|min:1|max:1440';
+        }
+
+        $validated = $request->validate($rules);
+
+        $smsCountFields = ['sms_resistance_1_count', 'sms_resistance_2_count', 'sms_support_1_count', 'sms_support_2_count'];
+        foreach ($smsCountFields as $field) {
+            if (array_key_exists($field, $validated) && $validated[$field] === null) {
+                unset($validated[$field]);
+            }
+        }
 
         $item->update($validated);
 

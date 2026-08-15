@@ -316,7 +316,7 @@ class RefreshSymbols extends Command
                             $this->warn("SMS check failed for {$item->symbol}: " . $e->getMessage());
                         }
                         try {
-                            $detected = $crossoverService->checkPortfolioItem($item, (float) $pl);
+                            $detected = $crossoverService->checkPortfolioItem($item, (float) $pl, $item->last_price ? (float) $item->last_price : null);
                             $crossoverCount += count($detected);
                         } catch (\Throwable $e) {
                             $this->warn("Crossover check failed for {$item->symbol}: " . $e->getMessage());

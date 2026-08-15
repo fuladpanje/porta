@@ -43,41 +43,59 @@ class SmsService
         }
 
         foreach ($this->levels as $level) {
-            $levelValue = $item->{$level};
+            try {
+                $levelValue = $item->{$level};
 
-            if ($levelValue === null || $levelValue <= 0) {
-                continue;
-            }
+                if ($levelValue === null || $levelValue <= 0) {
+                    continue;
+                }
 
-            $levelValue = (float) $levelValue;
+                $levelValue = (float) $levelValue;
 
-            $countField = 'sms_' . $level . '_count';
-            $maxSend = $item->{$countField} ?? 0;
+                $countField = 'sms_' . $level . '_count';
+                $maxSend = $item->{$countField} ?? 0;
 
-            if ($maxSend <= 0) {
-                continue;
-            }
+                if ($maxSend <= 0) {
+                    continue;
+                }
 
-            $crossed = $this->detectCrossing($level, $oldPrice, $newPrice, $levelValue);
+                $crossed = $this->detectCrossing($level, $oldPrice, $newPrice, $levelValue);
 
-            if (!$crossed) {
-                continue;
-            }
+                if (!$crossed) {
+                    continue;
+                }
 
-            $alreadySent = SmsNotification::where('user_id', $user->id)
-                ->where('symbol', $item->symbol)
-                ->where('level_type', $level)
-                ->count();
+                $alreadySent = SmsNotification::where('user_id', $user->id)
+                    ->where('symbol', $item->symbol)
+                    ->where('level_type', $level)
+                    ->count();
 
-            if ($alreadySent >= $maxSend) {
-                continue;
-            }
+                if ($alreadySent >= $maxSend) {
+                    continue;
+                }
 
-            $result = $this->sendSms($user, $item->symbol, $level, $levelValue, $newPrice);
+                $result = $this->sendSms($user, $item->symbol, $level, $levelValue, $newPrice);
 
-            if ($result) {
-                SmsNotification::record($user->id, $item->symbol, $level, $newPrice);
-                $sent[] = ['level' => $level, 'price' => $newPrice];
+                if ($result) {
+                    try {
+                        SmsNotification::record($user->id, $item->symbol, $level, $newPrice);
+                    } catch (\Throwable $e) {
+                        Log::error('SmsNotification record failed', [
+                            'user_id' => $user->id,
+                            'symbol' => $item->symbol,
+                            'level' => $level,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                    $sent[] = ['level' => $level, 'price' => $newPrice];
+                }
+            } catch (\Throwable $e) {
+                Log::error('SMS level check failed', [
+                    'user_id' => $user->id,
+                    'symbol' => $item->symbol,
+                    'level' => $level,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
@@ -120,41 +138,59 @@ class SmsService
         }
 
         foreach ($this->levels as $level) {
-            $levelValue = $levelRecord->{$level};
+            try {
+                $levelValue = $levelRecord->{$level};
 
-            if ($levelValue === null || $levelValue <= 0) {
-                continue;
-            }
+                if ($levelValue === null || $levelValue <= 0) {
+                    continue;
+                }
 
-            $levelValue = (float) $levelValue;
+                $levelValue = (float) $levelValue;
 
-            $countField = 'sms_' . $level . '_count';
-            $maxSend = $levelRecord->{$countField} ?? 0;
+                $countField = 'sms_' . $level . '_count';
+                $maxSend = $levelRecord->{$countField} ?? 0;
 
-            if ($maxSend <= 0) {
-                continue;
-            }
+                if ($maxSend <= 0) {
+                    continue;
+                }
 
-            $crossed = $this->detectCrossing($level, $oldPrice, $newPrice, $levelValue);
+                $crossed = $this->detectCrossing($level, $oldPrice, $newPrice, $levelValue);
 
-            if (!$crossed) {
-                continue;
-            }
+                if (!$crossed) {
+                    continue;
+                }
 
-            $alreadySent = SmsNotification::where('user_id', $user->id)
-                ->where('symbol', $symbol)
-                ->where('level_type', $level)
-                ->count();
+                $alreadySent = SmsNotification::where('user_id', $user->id)
+                    ->where('symbol', $symbol)
+                    ->where('level_type', $level)
+                    ->count();
 
-            if ($alreadySent >= $maxSend) {
-                continue;
-            }
+                if ($alreadySent >= $maxSend) {
+                    continue;
+                }
 
-            $result = $this->sendSms($user, $symbol, $level, $levelValue, $newPrice);
+                $result = $this->sendSms($user, $symbol, $level, $levelValue, $newPrice);
 
-            if ($result) {
-                SmsNotification::record($user->id, $symbol, $level, $newPrice);
-                $sent[] = ['level' => $level, 'price' => $newPrice];
+                if ($result) {
+                    try {
+                        SmsNotification::record($user->id, $symbol, $level, $newPrice);
+                    } catch (\Throwable $e) {
+                        Log::error('SmsNotification record failed (symbol level)', [
+                            'user_id' => $user->id,
+                            'symbol' => $symbol,
+                            'level' => $level,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                    $sent[] = ['level' => $level, 'price' => $newPrice];
+                }
+            } catch (\Throwable $e) {
+                Log::error('SMS symbol level check failed', [
+                    'user_id' => $user->id,
+                    'symbol' => $symbol,
+                    'level' => $level,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
@@ -189,7 +225,7 @@ class SmsService
      */
     private function detectCrossing(string $level, float $oldPrice, float $newPrice, float $levelValue): bool
     {
-        $isResistance = str_starts_with($level, 'resistance');
+        $isResistance = substr($level, 0, 10) === 'resistance';
 
         if ($isResistance) {
             return $newPrice >= $levelValue;
@@ -207,7 +243,7 @@ class SmsService
             $client = new IPPanelClient($user->ippanel_api_key);
 
             $levelLabel = $this->getLevelLabel($level);
-            $direction = str_starts_with($level, 'resistance') ? 'مقاومت' : 'حمایت';
+            $direction = substr($level, 0, 10) === 'resistance' ? 'مقاومت' : 'حمایت';
             $priceFormat = number_format($currentPrice);
             $levelFormat = number_format($levelValue);
 
@@ -248,12 +284,12 @@ class SmsService
 
     private function getLevelLabel(string $level): string
     {
-        return match ($level) {
+        $labels = [
             'resistance_1' => '۱',
             'resistance_2' => '۲',
             'support_1' => '۱',
             'support_2' => '۲',
-            default => $level,
-        };
+        ];
+        return $labels[$level] ?? $level;
     }
 }

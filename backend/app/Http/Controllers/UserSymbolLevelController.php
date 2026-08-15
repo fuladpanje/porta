@@ -6,9 +6,19 @@ use App\Models\UserSymbolLevel;
 use App\Models\SmsNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class UserSymbolLevelController extends Controller
 {
+    private function hasNotificationCooldownColumn(): bool
+    {
+        static $has = null;
+        if ($has === null) {
+            $has = Schema::hasColumn('user_symbol_levels', 'notification_cooldown_minutes');
+        }
+        return $has;
+    }
+
     public function index(Request $request): JsonResponse
     {
         $levels = UserSymbolLevel::where('user_id', $request->user()->id)
@@ -48,7 +58,7 @@ class UserSymbolLevelController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $rules = [
             'symbol' => 'required|string|max:20',
             'resistance_1' => 'nullable|numeric|min:0',
             'resistance_2' => 'nullable|numeric|min:0',
@@ -59,23 +69,35 @@ class UserSymbolLevelController extends Controller
             'sms_support_1_count' => 'nullable|integer|min:0|max:100',
             'sms_support_2_count' => 'nullable|integer|min:0|max:100',
             'sms_cooldown_minutes' => 'nullable|integer|min:1|max:1440',
-        ]);
+        ];
+
+        if ($this->hasNotificationCooldownColumn()) {
+            $rules['notification_cooldown_minutes'] = 'nullable|integer|min:1|max:1440';
+        }
+
+        $validated = $request->validate($rules);
 
         $user = $request->user();
 
+        $updateData = [
+            'resistance_1' => $validated['resistance_1'] ?? null,
+            'resistance_2' => $validated['resistance_2'] ?? null,
+            'support_1' => $validated['support_1'] ?? null,
+            'support_2' => $validated['support_2'] ?? null,
+            'sms_resistance_1_count' => $validated['sms_resistance_1_count'] ?? 0,
+            'sms_resistance_2_count' => $validated['sms_resistance_2_count'] ?? 0,
+            'sms_support_1_count' => $validated['sms_support_1_count'] ?? 0,
+            'sms_support_2_count' => $validated['sms_support_2_count'] ?? 0,
+            'sms_cooldown_minutes' => $validated['sms_cooldown_minutes'] ?? 60,
+        ];
+
+        if ($this->hasNotificationCooldownColumn()) {
+            $updateData['notification_cooldown_minutes'] = $validated['notification_cooldown_minutes'] ?? 10;
+        }
+
         $level = UserSymbolLevel::updateOrCreate(
             ['user_id' => $user->id, 'symbol' => $validated['symbol']],
-            [
-                'resistance_1' => $validated['resistance_1'] ?? null,
-                'resistance_2' => $validated['resistance_2'] ?? null,
-                'support_1' => $validated['support_1'] ?? null,
-                'support_2' => $validated['support_2'] ?? null,
-                'sms_resistance_1_count' => $validated['sms_resistance_1_count'] ?? 0,
-                'sms_resistance_2_count' => $validated['sms_resistance_2_count'] ?? 0,
-                'sms_support_1_count' => $validated['sms_support_1_count'] ?? 0,
-                'sms_support_2_count' => $validated['sms_support_2_count'] ?? 0,
-                'sms_cooldown_minutes' => $validated['sms_cooldown_minutes'] ?? 60,
-            ]
+            $updateData
         );
 
         return response()->json(['data' => $level]);
@@ -83,18 +105,24 @@ class UserSymbolLevelController extends Controller
 
     public function destroy(Request $request, string $symbol): JsonResponse
     {
+        $updateData = [
+            'resistance_1' => null,
+            'resistance_2' => null,
+            'support_1' => null,
+            'support_2' => null,
+            'sms_resistance_1_count' => 0,
+            'sms_resistance_2_count' => 0,
+            'sms_support_1_count' => 0,
+            'sms_support_2_count' => 0,
+        ];
+
+        if ($this->hasNotificationCooldownColumn()) {
+            $updateData['notification_cooldown_minutes'] = 10;
+        }
+
         UserSymbolLevel::where('user_id', $request->user()->id)
             ->where('symbol', $symbol)
-            ->update([
-                'resistance_1' => null,
-                'resistance_2' => null,
-                'support_1' => null,
-                'support_2' => null,
-                'sms_resistance_1_count' => 0,
-                'sms_resistance_2_count' => 0,
-                'sms_support_1_count' => 0,
-                'sms_support_2_count' => 0,
-            ]);
+            ->update($updateData);
 
         return response()->json(['message' => 'سطوح حذف شدند']);
     }

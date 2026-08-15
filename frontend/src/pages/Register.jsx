@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, User, Mail } from 'lucide-react';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -105,7 +105,6 @@ export default function Register() {
                 رمز عبور
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   id="register-password"
                   type={showPassword ? 'text' : 'password'}
@@ -133,7 +132,6 @@ export default function Register() {
                 تأیید رمز عبور
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   id="confirm-password"
                   type={showConfirm ? 'text' : 'password'}

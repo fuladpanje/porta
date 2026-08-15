@@ -46,18 +46,6 @@ class SendPortfolioDailySms extends Command
                     continue;
                 }
 
-                // ابتدا لاگ ثبت می‌شود (Claim) تا درخواست‌های همزمان تکرار نفرستند
-                try {
-                    DB::table('portfolio_daily_sms_log')->insert([
-                        'portfolio_sms_setting_id' => $setting->id,
-                        'sent_date' => $today,
-                        'sent_at' => $now->toDateTimeString(),
-                    ]);
-                } catch (\Throwable $e) {
-                    // duplicate = قبلاً ارسال شده
-                    continue;
-                }
-
                 $isToman = $user->unit === 'toman';
                 $divider = $isToman ? 10 : 1;
 
@@ -98,6 +86,19 @@ class SendPortfolioDailySms extends Command
                 $message = $portfolio->name . " | ارزش: " . number_format($totalCurrentValue) . " {$unit}"
                     . " | سود/زیان: " . $plSign . number_format(abs($totalPL)) . " {$unit}"
                     . " (" . $plSign . number_format(abs($plPercent), 0) . "%" . ")";
+
+                // ابتدا لاگ ثبت می‌شود (Claim) تا درخواست‌های همزمان تکرار نفرستند
+                try {
+                    DB::table('portfolio_daily_sms_log')->insert([
+                        'portfolio_sms_setting_id' => $setting->id,
+                        'sent_date' => $today,
+                        'sent_at' => $now->toDateTimeString(),
+                        'message' => $message,
+                    ]);
+                } catch (\Throwable $e) {
+                    // duplicate = قبلاً ارسال شده
+                    continue;
+                }
 
                 $client = new IPPanelClient($user->ippanel_api_key);
                 $response = $client->sendWebservice(

@@ -573,7 +573,7 @@ class StockController extends Controller
                                 ]);
                             }
                             try {
-                                $detected = $crossoverService->checkPortfolioItem($item, (float) $pl);
+                                $detected = $crossoverService->checkPortfolioItem($item, (float) $pl, $item->last_price ? (float) $item->last_price : null);
                                 $allCrossovers = array_merge($allCrossovers, $detected);
                             } catch (\Throwable $e) {
                                 self::debugLog('ERROR', "[$itemIdx/$totalItems] Crossover check failed {$item->symbol}", [
@@ -660,9 +660,19 @@ class StockController extends Controller
                 $refreshedAt = now()->utc()->toIso8601String();
             }
 
-            \App\Models\SystemSetting::where('setting_key', $lockKey)->delete();
+            try {
+                \App\Models\SystemSetting::where('setting_key', $lockKey)->delete();
+            } catch (\Throwable $e) {
+                self::debugLog('ERROR', 'Failed to delete lock', ['error' => $e->getMessage()]);
+            }
 
-            \App\Models\CrossoverNotification::cleanup(7);
+            if (\Illuminate\Support\Facades\Schema::hasTable('crossover_notifications')) {
+                try {
+                    \App\Models\CrossoverNotification::cleanup(7);
+                } catch (\Throwable $e) {
+                    self::debugLog('ERROR', 'Failed to cleanup crossover notifications', ['error' => $e->getMessage()]);
+                }
+            }
 
             self::debugLog('DONE', 'Refresh completed successfully', [
                 'updated' => $updated,
