@@ -22,7 +22,12 @@ Schedule::command('symbols:refresh')->when(function () {
     $startTime = $schedule['start_time'] ?? null;
     $endTime   = $schedule['end_time'] ?? null;
     if ($startTime && $endTime) {
-        $now = now()->format('H:i');
+        $now = now()->timezone('Asia/Tehran')->format('H:i');
+
+        if ($now === $endTime) {
+            return false;
+        }
+
         $inRange = ($startTime <= $endTime)
             ? ($now >= $startTime && $now <= $endTime)
             : ($now >= $startTime || $now <= $endTime);
@@ -34,7 +39,7 @@ Schedule::command('symbols:refresh')->when(function () {
 
     // Use database instead of cache for reliability on shared hosting
     $lastRun      = (int) SystemSetting::get('schedule_last_symbols_refresh', '0');
-    $nowTimestamp = now()->timestamp;
+    $nowTimestamp = now()->timezone('Asia/Tehran')->timestamp;
 
     if (($nowTimestamp - $lastRun) >= $totalSeconds) {
         SystemSetting::set('schedule_last_symbols_refresh', (string) $nowTimestamp);
@@ -46,15 +51,30 @@ Schedule::command('symbols:refresh')->when(function () {
 
 // بروزرسانی نهایی دقیقاً ساعت پایان بازار
 Schedule::command('symbols:refresh --final')->when(function () {
-    $endTime = SystemSetting::get('schedule_end_time');
+    $schedule = SystemSetting::getSchedule();
+    if (!$schedule['enabled']) {
+        return false;
+    }
+
+    $endTime = $schedule['end_time'] ?? null;
     if (!$endTime) {
         return false;
     }
 
-    $now = now()->format('H:i');
+    $now = now()->timezone('Asia/Tehran')->format('H:i');
 
     // اجرا در دقیقه دقیق پایان بازار
-    return $now === $endTime;
+    if ($now !== $endTime) {
+        return false;
+    }
+
+    $today = now()->timezone('Asia/Tehran')->format('Y-m-d');
+    if (SystemSetting::get('schedule_last_final_refresh_date') === $today) {
+        return false;
+    }
+
+    SystemSetting::set('schedule_last_final_refresh_date', $today);
+    return true;
 })->everyMinute();
 
 // تلاش مجدد بعد از اتمام بازار (هر ۵ دقیقه، حداکثر ۳ بار)
@@ -65,7 +85,7 @@ Schedule::command('symbols:refresh --post-market')->when(function () {
     }
 
     // فقط بعد از ساعت پایان بازار
-    $now = now()->format('H:i');
+    $now = now()->timezone('Asia/Tehran')->format('H:i');
     if ($now <= $endTime) {
         return false;
     }
@@ -84,7 +104,7 @@ Schedule::command('symbols:refresh --post-market')->when(function () {
 
     // بررسی فاصله زمانی (هر ۵ دقیقه)
     $lastPostMarketRun = (int) SystemSetting::get('schedule_last_post_market_refresh', '0');
-    $nowTimestamp = now()->timestamp;
+    $nowTimestamp = now()->timezone('Asia/Tehran')->timestamp;
 
     if (($nowTimestamp - $lastPostMarketRun) >= 300) { // 5 minutes
         SystemSetting::set('schedule_last_post_market_refresh', (string) $nowTimestamp);
@@ -102,7 +122,7 @@ Schedule::command('symbols:refresh --reset-post-market')->when(function () {
         return false;
     }
 
-    $now = now()->format('H:i');
+    $now = now()->timezone('Asia/Tehran')->format('H:i');
 
     // اجرا در دقیقه دقیق شروع بازار
     if ($now !== $startTime) {
@@ -111,7 +131,7 @@ Schedule::command('symbols:refresh --reset-post-market')->when(function () {
 
     // فقط یکبار در روز اجرا شود
     $lastResetDate = SystemSetting::get('post_market_reset_date');
-    $today = now()->format('Y-m-d');
+    $today = now()->timezone('Asia/Tehran')->format('Y-m-d');
     if ($lastResetDate === $today) {
         return false;
     }

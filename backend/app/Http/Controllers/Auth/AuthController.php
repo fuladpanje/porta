@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -133,6 +134,15 @@ class AuthController extends Controller
             'schedule_start_time' => 'nullable|string',
             'schedule_end_time' => 'nullable|string',
         ]);
+
+        if ($request->user()->is_admin) {
+            SystemSetting::set('schedule_enabled', $validated['schedule_enabled'] ? 'true' : 'false');
+            SystemSetting::set('schedule_seconds', (string) $validated['schedule_seconds']);
+            SystemSetting::set('schedule_minutes', (string) $validated['schedule_minutes']);
+            SystemSetting::set('schedule_hours', (string) $validated['schedule_hours']);
+            SystemSetting::set('schedule_start_time', $validated['schedule_start_time'] ?? null);
+            SystemSetting::set('schedule_end_time', $validated['schedule_end_time'] ?? null);
+        }
 
         $request->user()->update([
             'schedule_enabled' => $validated['schedule_enabled'],

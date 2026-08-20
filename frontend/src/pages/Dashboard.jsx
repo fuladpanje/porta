@@ -1148,7 +1148,6 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
       } else {
         await api.post(`/portfolios/${portfolioId}/items`, payload);
       }
-      try { await api.post('/stocks/refresh', { manual: false }); } catch {}
       onSave();
     } catch (err) { setError(err.response?.data?.message || 'خطا'); } finally { setLoading(false); }
   };

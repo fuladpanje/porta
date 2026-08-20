@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
-import { ArrowLeft, PlusCircle, Edit2, Trash2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Edit2, Trash2 } from 'lucide-react';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
 import { useStaleData } from '../contexts/StaleDataContext';
 
@@ -9,7 +9,6 @@ import { useStaleData } from '../contexts/StaleDataContext';
    const { id } = useParams();
    const [portfolio, setPortfolio] = useState(null);
    const [loading, setLoading] = useState(true);
-   const [refreshing, setRefreshing] = useState(false);
    const [stale, setStale] = useState(false);
    const { setStale: setGlobalStale } = useStaleData();
 
@@ -40,19 +39,6 @@ import { useStaleData } from '../contexts/StaleDataContext';
     await api.delete(`/portfolios/${id}/items/${itemId}`);
     fetchData();
   };
-
-   const handleRefreshPrices = async () => {
-     try {
-       setRefreshing(true);
-       await api.post('/stocks/refresh');
-       fetchData();
-     } catch (err) {
-       toast.error('خطا در بروزرسانی قیمت‌ها');
-       setStale(true);
-     } finally {
-       setRefreshing(false);
-     }
-   };
 
   if (loading) {
     return (
@@ -94,14 +80,6 @@ import { useStaleData } from '../contexts/StaleDataContext';
            </p>
         </div>
         <div className="flex gap-2 self-start">
-          <button
-            onClick={handleRefreshPrices}
-            disabled={refreshing}
-            className="btn-primary flex items-center gap-2"
-          >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'بروزرسانی...' : 'بروزرسانی قیمت‌ها'}
-          </button>
           <Link
             to={`/portfolios/${id}/items/new`}
             className="btn-primary flex items-center gap-2"
