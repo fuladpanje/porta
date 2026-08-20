@@ -49,7 +49,7 @@
 - طراحی ریسپانسیو (موبایل، تبلت، دسکتاپ)
 - واحد پول ریال/تومان
 - کارمزد خرید/فروش قابل تنظیم
-- اعلان پیامکی هنگام رسیدن قیمت به سطوح مقاومت و حمایت
+- اعلان پیامکی و درون‌برنامه‌ای (In-App) هنگام رسیدن قیمت به سطوح مقاومت و حمایت
 
 ## دانلود
 
@@ -86,6 +86,42 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 ```
 
 6. تست کنید
+
+## نصب از ترمینال
+
+> نیاز به PHP 8.2+، Composer، Node.js و MySQL
+
+```bash
+git clone https://github.com/fuladpanje/porta.git
+cd porta
+
+# نصب وابستگی‌های بک‌اند
+cd backend
+cp .env.example .env
+composer install
+php artisan key:generate
+
+# نصب وابستگی‌های فرانت‌اند
+cd ../frontend
+npm install
+```
+
+راه‌اندازی دیتابیس و سرور بک‌اند (در یک ترمینال):
+
+```bash
+cd backend
+php artisan migrate
+php artisan serve
+```
+
+راه‌اندازی سرور فرانت‌اند (در ترمینال دوم):
+
+```bash
+cd frontend
+npm run dev
+```
+
+> فایل `.env` را با اطلاعات دیتابیس (`DB_DATABASE`، `DB_USERNAME`، `DB_PASSWORD`) تنظیم کنید و سپس `php artisan migrate` را اجرا نمایید.
 
 ## تنظیم بروزرسانی خودکار (Cron Job)
 
@@ -263,7 +299,7 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 - Responsive design (mobile, tablet, desktop)
 - Rial/Toman currency unit
 - Configurable buy/sell commission
-- SMS notifications for support/resistance level alerts
+- In-app and SMS notifications for support/resistance level alerts
 
 ## Download
 
@@ -300,6 +336,42 @@ SANCTUM_STATEFUL_DOMAINS=example.com
 ```
 
 6. Test it
+
+## Terminal Installation
+
+> Requires PHP 8.2+, Composer, Node.js, and MySQL
+
+```bash
+git clone https://github.com/fuladpanje/porta.git
+cd porta
+
+# Install backend dependencies
+cd backend
+cp .env.example .env
+composer install
+php artisan key:generate
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+Setup database and start the backend server (in one terminal):
+
+```bash
+cd backend
+php artisan migrate
+php artisan serve
+```
+
+Start the frontend dev server (in a second terminal):
+
+```bash
+cd frontend
+npm run dev
+```
+
+> Configure your database credentials in `.env` (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) and then run `php artisan migrate`.
 
 ## Auto Update (Cron Job)
 
