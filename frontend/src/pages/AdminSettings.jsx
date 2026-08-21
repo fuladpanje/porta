@@ -66,17 +66,20 @@ export default function AdminSettings() {
       setApiKeys(data.api_keys || []);
       setAutoSwitch(data.auto_switch ?? true);
       setScheduleEnabled(data.schedule?.enabled ?? false);
-      const s = data.schedule?.seconds || 0;
-      const m = data.schedule?.minutes || 5;
-      const h = data.schedule?.hours || 0;
+      const s = data.schedule?.seconds ?? 0;
+      const m = data.schedule?.minutes ?? 5;
+      const h = data.schedule?.hours ?? 0;
       if (h > 0) {
         setScheduleInterval(h);
         setScheduleIntervalUnit('hours');
       } else if (m > 0) {
         setScheduleInterval(m);
         setScheduleIntervalUnit('minutes');
+      } else if (s > 0) {
+        setScheduleInterval(s);
+        setScheduleIntervalUnit('seconds');
       } else {
-        setScheduleInterval(s || 5);
+        setScheduleInterval(5);
         setScheduleIntervalUnit('minutes');
       }
       setScheduleStartTime(data.schedule?.start_time || '');
@@ -352,6 +355,10 @@ export default function AdminSettings() {
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${scheduleEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
+
+        <p className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 rtl-text leading-relaxed">
+          در هاست‌های اشتراکی با cPanel، کران معمولاً هر ۱ دقیقه بررسی می‌شود؛ بنابراین مقدارهای ثانیه‌ای مثل ۳۰ یا ۵۰ ثانیه در عمل حدوداً هر ۱ دقیقه بروزرسانی می‌شوند.
+        </p>
 
         {scheduleEnabled && (
           <div className="px-4 py-3 space-y-3 max-w-md">
