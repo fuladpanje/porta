@@ -51,11 +51,15 @@
 - کارمزد خرید/فروش قابل تنظیم
 - اعلان پیامکی و درون‌برنامه‌ای (In-App) هنگام رسیدن قیمت به سطوح مقاومت و حمایت
 
-## دانلود
+## دریافت خروجی نصب (Deploy)
 
-1. به صفحه [Release‌ها](https://github.com/fuladpanje/porta/releases) بروید
-2. آخرین Release را پیدا کنید و فایل **porta-deploy.zip** را دانلود کنید
-3. فایل ZIP را از حالت فشرده خارج کنید و محتوایش را به `public_html/` سایت خود آپلود کنید
+برای تهیه فایل‌های قابل نصب روی هاست، کافیست دستور زیر را در پوشه پروژه (ریشه) اجرا کنید:
+
+```powershell
+.\deploy.ps1
+```
+
+این دستور فرانت‌اند را می‌سازد، وابستگی‌های بک‌اند را نصب می‌کند و پوشه `deploy/` را آماده می‌کند. سپس محتوای پوشه `deploy` را زیپ کرده و در هاست cPanel (داخل `public_html/`) آپلود کنید.
 
 ## نصب روی هاست cPanel
 
@@ -301,11 +305,15 @@ npm run dev
 - Configurable buy/sell commission
 - In-app and SMS notifications for support/resistance level alerts
 
-## Download
+## Build Deploy Package
 
-1. Go to [Releases page](https://github.com/fuladpanje/porta/releases)
-2. Find the latest release and download **porta-deploy.zip**
-3. Extract and upload contents to your site's `public_html/`
+To prepare the files for hosting, run the following command in the project root:
+
+```powershell
+.\deploy.ps1
+```
+
+This builds the frontend, installs backend dependencies, and prepares the `deploy/` folder. Then zip the contents of the `deploy` folder and upload it to your cPanel host (inside `public_html/`).
 
 ## cPanel Installation
 
