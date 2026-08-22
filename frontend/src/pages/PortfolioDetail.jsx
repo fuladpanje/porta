@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
-import { ArrowLeft, PlusCircle, Edit2, Trash2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Edit2, Trash2, Plus } from 'lucide-react';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
 import { useStaleData } from '../contexts/StaleDataContext';
+import { useUnit } from '../contexts/UnitContext';
+import AddPurchaseModal from '../components/AddPurchaseModal';
 
  export default function PortfolioDetail() {
    const { id } = useParams();
    const [portfolio, setPortfolio] = useState(null);
    const [loading, setLoading] = useState(true);
    const [stale, setStale] = useState(false);
+   const [addingItem, setAddingItem] = useState(null);
    const { setStale: setGlobalStale } = useStaleData();
+   const { unit } = useUnit();
 
    const fetchData = async () => {
      try {
@@ -126,6 +130,13 @@ import { useStaleData } from '../contexts/StaleDataContext';
                   </div>
                 </div>
                 <div className="flex gap-2">
+                <button
+                  onClick={() => setAddingItem(item)}
+                  className="p-2 rounded-lg hover:bg-success/10 transition-colors"
+                  title="افزایش موجودی"
+                >
+                  <Plus className="w-4 h-4 text-success" />
+                </button>
                 <Link
                   to={`/portfolios/${portfolio.id}/items/${item.id}/edit`}
                   className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -142,6 +153,15 @@ import { useStaleData } from '../contexts/StaleDataContext';
             </div>
           ))}
         </div>
+      )}
+      {addingItem && (
+        <AddPurchaseModal
+          item={addingItem}
+          portfolioId={id}
+          unit={unit}
+          onClose={() => setAddingItem(null)}
+          onSave={(keepOpen) => { if (!keepOpen) setAddingItem(null); fetchData(); }}
+        />
       )}
     </div>
   );

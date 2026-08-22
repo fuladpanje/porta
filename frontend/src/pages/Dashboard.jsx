@@ -6,7 +6,7 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import api from '../lib/api';
 import { formatPrice, formatPercent, formatNumber, toPersianNum } from '../lib/calculations';
-import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter, Crosshair, MessageSquare, Volume2, VolumeX } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Edit3, FolderOpen, Package, Wallet, TrendingUp, TrendingDown, Pencil, Eye, EyeOff, ArrowUpDown, Tag, CircleCheckBig, Clock, Banknote, Percent, Sigma, Filter, Crosshair, MessageSquare, Volume2, VolumeX, Plus } from 'lucide-react';
 import { Chart as ChartComponent, Bar, Doughnut } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { Chart as ChartJS } from 'chart.js';
@@ -15,6 +15,7 @@ import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
 ChartJS.register(TreemapController, TreemapElement);
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SymbolSearch } from '../components/SymbolSearch';
+import AddPurchaseModal from '../components/AddPurchaseModal';
 
 
 function formatPE(pe) {
@@ -62,6 +63,7 @@ const [showItemForm, setShowItemForm] = useState(null);
       const [editingPortfolioSms, setEditingPortfolioSms] = useState(null);
       const [portfolioSmsData, setPortfolioSmsData] = useState({});
       const [confirm, setConfirm] = useState(null);
+      const [addingItem, setAddingItem] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
     const [portfolioSort, setPortfolioSort] = useState('default');
     const [showPLAmount, setShowPLAmount] = useState(false);
@@ -1007,6 +1009,9 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
                                           <button onClick={() => setEditingLevels({ portfolioId: portfolio.id, itemId: item.id, item })} className={`p-0.5 rounded transition-colors ${item.resistance_1 || item.support_1 ? 'text-brand-500 bg-brand-500/10 hover:bg-brand-500/20' : 'text-slate-400 hover:text-brand-500 hover:bg-brand-500/10'}`} title={item.resistance_1 || item.support_1 ? 'ویرایش سطوح' : 'تعریف سطوح'}>
                                             <Crosshair className="w-3 h-3" />
                                           </button>
+                                          <button onClick={() => setAddingItem({ portfolioId: portfolio.id, item })} className="p-0.5 rounded hover:bg-success/10 transition-colors" title="افزایش موجودی">
+                                            <Plus className="w-3 h-3 text-success" />
+                                          </button>
                                           <button onClick={() => setEditingItem({ portfolioId: portfolio.id, itemId: item.id })} className="p-0.5 rounded hover:bg-brand/10 transition-colors" title="ویرایش سهم">
                                             <Pencil className="w-3 h-3 text-brand-500" />
                                           </button>
@@ -1076,6 +1081,15 @@ case 'pl': aVal = (SafeNumber(a.sell_price) > 0 || SafeNumber(a.last_price) > 0)
            loading={false}
          />
        )}
+        {addingItem && (
+          <AddPurchaseModal
+            item={addingItem.item}
+            portfolioId={addingItem.portfolioId}
+            unit={unit}
+            onClose={() => setAddingItem(null)}
+            onSave={(keepOpen) => { if (!keepOpen) setAddingItem(null); refreshDashboard(); }}
+          />
+        )}
      </div>
    );
  }
@@ -1146,7 +1160,11 @@ function InlineItemForm({ portfolioId, itemId, onCancel, onSave, initialSymbol, 
       if (isEdit) {
         await api.put(`/portfolios/${portfolioId}/items/${itemId}`, payload);
       } else {
-        await api.post(`/portfolios/${portfolioId}/items`, payload);
+        const res = await api.post(`/portfolios/${portfolioId}/items`, payload);
+        if (res.data?.merged) {
+          // اطلاع به کاربر که میانگین‌گیری شد
+          setError('');
+        }
       }
       onSave();
     } catch (err) { setError(err.response?.data?.message || 'خطا'); } finally { setLoading(false); }

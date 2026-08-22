@@ -237,7 +237,7 @@ class CrossoverDetectionService
         if (!$start || !$end) {
             return true;
         }
-        $now = now()->format('H:i');
+        $now = now()->timezone('Asia/Tehran')->format('H:i');
         return $start <= $end
             ? ($now >= $start && $now <= $end)
             : ($now >= $start || $now <= $end);

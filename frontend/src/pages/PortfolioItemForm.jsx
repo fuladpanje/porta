@@ -105,7 +105,11 @@ export default function PortfolioItemForm() {
       if (isEdit) {
         await api.put(`/portfolios/${portfolioId}/items/${itemId}`, data);
       } else {
-        await api.post(`/portfolios/${portfolioId}/items`, data);
+        const res = await api.post(`/portfolios/${portfolioId}/items`, data);
+        if (res.data?.merged) {
+          // اگر سهم تکراری بود، پیام میانگین را نمایش بده
+          // همچنان به صفحه پرتفو برمی‌گردیم
+        }
       }
       navigate(`/portfolios/${portfolioId}`);
     } catch (err) {

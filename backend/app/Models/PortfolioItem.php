@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PortfolioItem extends Model
 {
@@ -62,6 +63,11 @@ class PortfolioItem extends Model
     public function portfolio(): BelongsTo
     {
         return $this->belongsTo(Portfolio::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(PortfolioItemTransaction::class)->orderBy('created_at', 'desc');
     }
 
     public function getProfitLossAttribute(): float

@@ -585,10 +585,9 @@ class StockController extends Controller
                 }
             }
 
-            self::debugLog('STEP4D', 'Checking user symbol levels for SMS...');
+            self::debugLog('STEP4D', 'Checking user symbol levels for SMS/notifications...');
             try {
-                $usersWithSymbolLevels = \App\Models\User::where('sms_enabled', true)
-                    ->whereHas('userSymbolLevels', function ($q) {
+                $usersWithSymbolLevels = \App\Models\User::whereHas('userSymbolLevels', function ($q) {
                         $q->where(function ($q2) {
                             $q2->where('resistance_1', '!=', null)
                                 ->orWhere('resistance_2', '!=', null)
@@ -633,7 +632,7 @@ class StockController extends Controller
                     }
                 }
             } catch (\Throwable $e) {
-                self::debugLog('ERROR', 'User symbol level SMS check failed', ['error' => $e->getMessage()]);
+                self::debugLog('ERROR', 'User symbol level SMS/notification check failed', ['error' => $e->getMessage()]);
             }
 
             self::debugLog('STEP5', 'Checking portfolio daily SMS...');

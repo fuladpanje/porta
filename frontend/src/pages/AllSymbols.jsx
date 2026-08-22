@@ -86,13 +86,34 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
     return unit === 'toman' ? n * 10 : n;
   };
 
+  const existingItem = (() => {
+    if (!portfolioId || !portfolios.length) return null;
+    const pf = portfolios.find((p) => String(p.id) === String(portfolioId));
+    if (!pf || !Array.isArray(pf.items)) return null;
+    return pf.items.find((it) => String(it.symbol).toLowerCase() === String(symbol).toLowerCase()) || null;
+  })();
+
+  const buyNum = Number(buyPrice) || 0;
+  const qtyNum = Number(quantity) || 0;
+  let mergePreview = null;
+  if (existingItem && buyNum > 0 && qtyNum > 0) {
+    const oldQty = Number(existingItem.quantity) || 0;
+    const oldPriceRial = Number(existingItem.buy_price) || 0;
+    const oldPriceDisp = toman ? oldPriceRial / 10 : oldPriceRial;
+    const addPriceRial = toRial(buyPrice) || 0;
+    const newQty = oldQty + qtyNum;
+    const newAvgRial = (oldQty * oldPriceRial + qtyNum * addPriceRial) / newQty;
+    const newAvgDisp = toman ? newAvgRial / 10 : newAvgRial;
+    mergePreview = { oldQty, oldPriceDisp, newQty, newAvgDisp };
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!portfolioId || !buyPrice || !quantity) return;
     setLoading(true);
     setError(null);
     try {
-      await api.post(`/portfolios/${portfolioId}/items`, {
+      const res = await api.post(`/portfolios/${portfolioId}/items`, {
         symbol,
         last_price: toRial(lastPriceValue),
         pe: pe || null,
@@ -101,7 +122,10 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
         sell_price: toRial(sellPrice) || null,
         is_custom: false,
       });
-      onSuccess();
+      if (res.data?.merged) {
+        // پیام موقت نمایش داده می‌شود قبل از بستن مودال
+      }
+      onSuccess(res.data);
     } catch (err) {
       setError(err.response?.data?.message || 'خطا در افزودن آیتم');
     } finally {
@@ -199,12 +223,32 @@ function AddToPortfolioModal({ symbol, lastPrice, pe, onClose, onSuccess }) {
               </div>
             </div>
 
+            {/* هشدار افزایش موجودی اگر تکراری باشد */}
+            {existingItem && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5 space-y-1.5">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                  ⚠️ این نماد قبلاً در این پرتفو موجود است
+                </p>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                  فعلی: {toPersianNum(Number(existingItem.quantity))} عدد با میانگین {Math.round(Number(toman ? existingItem.buy_price/10 : existingItem.buy_price)).toLocaleString('fa-IR')} {unit === 'toman' ? 'تومان' : 'ریال'}
+                  <br />
+                  با افزودن {buyNum ? toPersianNum(qtyNum) : '—'} عدد با قیمت {buyNum ? Math.round(Number(buyPrice)).toLocaleString('fa-IR') : '—'} {unit === 'toman' ? 'تومان' : 'ریال'}، موجودی افزایش یافته و میانگین دوباره محاسبه می‌شود.
+                </p>
+                {mergePreview && (
+                  <div className="bg-white dark:bg-slate-800 rounded-md px-2.5 py-1.5 flex items-center justify-between text-xs border border-amber-100 dark:border-amber-800/50">
+                    <span className="text-slate-500">میانگین جدید</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-300">{toPersianNum(mergePreview.newQty)} عدد × {Math.round(mergePreview.newAvgDisp).toLocaleString('fa-IR')} {unit === 'toman' ? 'تومان' : 'ریال'}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {error && <p className="text-xs text-danger">{error}</p>}
 
             <div className="flex gap-2 mt-4 justify-end">
               <button type="button" onClick={onClose} disabled={loading} className="btn-secondary text-xs py-1.5 px-3">انصراف</button>
               <button type="submit" disabled={loading || !portfolioId || !buyPrice || !quantity} className="btn-primary text-xs py-1.5 px-3">
-                {loading ? 'در حال پردازش...' : 'افزودن'}
+                {loading ? 'در حال پردازش...' : (existingItem ? 'افزایش موجودی' : 'افزودن')}
               </button>
             </div>
           </form>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, Trash2, TrendingUp, TrendingDown, ChevronDown, Loader2, Volume2, VolumeX } from 'lucide-react';
 import api from '../lib/api';
+import { NotificationPopup } from './NotificationPopup';
 
 function playNotificationSound() {
   try {
@@ -47,6 +48,7 @@ export function NotificationHistoryMenu() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [popupNotifications, setPopupNotifications] = useState([]);
   const [notifSoundEnabled, setNotifSoundEnabled] = useState(() => {
     try { return localStorage.getItem('porta_notification_sound') !== 'off'; } catch { return true; }
   });
@@ -84,6 +86,38 @@ export function NotificationHistoryMenu() {
     }
   }, [open]);
 
+  const checkForNewNotifications = useCallback(async () => {
+    if (!lastCheckedRef.current) return;
+
+    try {
+      const res = await api.get('/crossover-notifications?limit=10');
+      const all = res.data?.data || [];
+      const previousCheck = lastCheckedRef.current;
+      const newOnes = all.filter(n => new Date(n.detected_at).getTime() > previousCheck);
+
+      lastCheckedRef.current = Date.now();
+
+      if (newOnes.length === 0) {
+        return;
+      }
+
+      if (open) {
+        setNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const merged = [...newOnes.filter(n => !existingIds.has(n.id)), ...prev];
+          return merged.slice(0, 50);
+        });
+      } else {
+        setUnreadCount(prev => prev + newOnes.length);
+      }
+
+      setPopupNotifications(newOnes);
+      playNotificationSound();
+    } catch (e) {
+      // silent
+    }
+  }, [open]);
+
   useEffect(() => {
     if (open) {
       fetchNotifications();
@@ -104,23 +138,19 @@ export function NotificationHistoryMenu() {
     const handler = async () => {
       if (open) {
         fetchNotifications();
-      } else if (lastCheckedRef.current) {
-        try {
-          const res = await api.get('/crossover-notifications?limit=10');
-          const all = res.data?.data || [];
-          const newOnes = all.filter(n => new Date(n.detected_at).getTime() > lastCheckedRef.current);
-          if (newOnes.length > 0) {
-            setUnreadCount(prev => prev + newOnes.length);
-            playNotificationSound();
-          }
-        } catch (e) {
-          // silent
-        }
+        lastCheckedRef.current = Date.now();
+      } else {
+        checkForNewNotifications();
       }
     };
     window.addEventListener('prices-refreshed', handler);
     return () => window.removeEventListener('prices-refreshed', handler);
-  }, [open, fetchNotifications]);
+  }, [open, fetchNotifications, checkForNewNotifications]);
+
+  useEffect(() => {
+    const interval = setInterval(checkForNewNotifications, 30_000);
+    return () => clearInterval(interval);
+  }, [checkForNewNotifications]);
 
   const handleClear = async () => {
     setClearing(true);
@@ -142,6 +172,12 @@ export function NotificationHistoryMenu() {
   }, {});
 
   return (
+    <>
+    <NotificationPopup
+      crossovers={popupNotifications}
+      onDismissAll={() => setPopupNotifications([])}
+      onDismissOne={(id) => setPopupNotifications(prev => prev.filter(n => n.id !== id))}
+    />
     <div className="relative" ref={menuRef}>
       <button
         onClick={handleOpen}
@@ -247,5 +283,6 @@ export function NotificationHistoryMenu() {
         </div>
       )}
     </div>
+    </>
   );
 }

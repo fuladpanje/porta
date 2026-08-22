@@ -25,6 +25,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('portfolios/{portfolio}/items', [PortfolioItemController::class, 'store']);
     Route::put('portfolios/{portfolio}/items/{item}', [PortfolioItemController::class, 'update']);
     Route::delete('portfolios/{portfolio}/items/{item}', [PortfolioItemController::class, 'destroy']);
+    Route::post('portfolios/{portfolio}/items/{item}/add-purchase', [PortfolioItemController::class, 'addPurchase']);
+    Route::get('portfolios/{portfolio}/items/{item}/transactions', [PortfolioItemController::class, 'transactions']);
+    Route::delete('portfolios/{portfolio}/items/{item}/transactions/{transaction}', [PortfolioItemController::class, 'destroyTransaction']);
     Route::get('portfolios/{portfolio}/items', [PortfolioItemController::class, 'index']);
     Route::get('portfolios/{portfolio}/items/{item}', [PortfolioItemController::class, 'show']);
     Route::post('stocks/refresh', [StockController::class, 'refreshPrices'])
@@ -70,6 +73,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/system/last-refresh', function () {
         $lastRefreshAt = \App\Models\SystemSetting::get('last_refresh_at');
         return response()->json(['data' => ['last_refresh_at' => $lastRefreshAt]]);
+    });
+
+    Route::get('/debug/add-purchase-check', function () {
+        try {
+            $hasTable = \Illuminate\Support\Facades\Schema::hasTable('portfolio_item_transactions');
+            $engine = null;
+            $count = null;
+            try {
+                $status = \Illuminate\Support\Facades\DB::select("SHOW TABLE STATUS LIKE 'portfolio_item_transactions'");
+                $engine = $status[0]->Engine ?? null;
+            } catch (\Throwable $e) { $engine = 'error: '.$e->getMessage(); }
+            try { $count = \Illuminate\Support\Facades\DB::table('portfolio_item_transactions')->count(); } catch (\Throwable $e) { $count = 'error: '.$e->getMessage(); }
+            $canLock = 'unknown';
+            try {
+                \Illuminate\Support\Facades\DB::transaction(function () {
+                    \App\Models\PortfolioItem::query()->lockForUpdate()->first();
+                });
+                $canLock = 'ok';
+            } catch (\Throwable $e) { $canLock = 'fail: '.$e->getMessage(); }
+            return response()->json(['hasTable'=>$hasTable, 'engine'=>$engine, 'count'=>$count, 'canLock'=>$canLock, 'php'=>PHP_VERSION]);
+        } catch (\Throwable $e) {
+            return response()->json(['error'=>$e->getMessage(), 'trace'=>$e->getTraceAsString()], 500);
+        }
     });
 
     // Admin routes

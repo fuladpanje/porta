@@ -327,8 +327,7 @@ class RefreshSymbols extends Command
         }
 
         try {
-            $usersWithSymbolLevels = \App\Models\User::where('sms_enabled', true)
-                ->whereHas('userSymbolLevels', function ($q) {
+            $usersWithSymbolLevels = \App\Models\User::whereHas('userSymbolLevels', function ($q) {
                     $q->where(function ($q2) {
                         $q2->where('resistance_1', '!=', null)
                             ->orWhere('resistance_2', '!=', null)
@@ -367,7 +366,7 @@ class RefreshSymbols extends Command
                 }
             }
         } catch (\Throwable $e) {
-            $this->warn("Failed to check user symbol levels: " . $e->getMessage());
+            $this->warn("Failed to check user symbol levels for SMS/notifications: " . $e->getMessage());
         }
 
         try {
