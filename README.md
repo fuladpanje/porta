@@ -127,7 +127,7 @@ npm run dev
 
 ### اجرای یک‌ضرب روی ویندوز (پیشنهادی)
 
-به‌جای سه ترمینال جدا، کافی است فایل `dev-local.bat` در ریشه پروژه را دابل‌کلیک کنی؛ بک‌اند (`:8000`)، اسکژولر خودکار (`schedule:work`) و فرانت‌اند (`:5173`) با هم بالا می‌آیند. اگر Windows Terminal نصب باشد هر سه در یک پنجره (سه تب) باز می‌شوند، وگرنه در سه پنجره جدا.
+به‌جای سه ترمینال جدا، کافی است فایل `dev-local.bat` در ریشه پروژه را دابل‌کلیک کنی؛ یک منوی مدیریتی تک‌پنجره‌ای باز می‌شود که با زدن عدد `1` تا `3` هر سرویس (بک‌اند `:8000`، اسکژولر خودکار `schedule:work`، فرانت‌اند `:5173`) را جداگانه در همان پنجره روشن می‌کنی، با `4` (سبزرنگ) همه را با هم و با `5` همه را خاموش می‌کنی. (متن‌های این فایل انگلیسی است چون کنسول ویندوز فارسی را درست نشان نمی‌دهد.)
 
 > فایل `.env` را با اطلاعات دیتابیس (`DB_DATABASE`، `DB_USERNAME`، `DB_PASSWORD`) تنظیم کنید و سپس `php artisan migrate` را اجرا نمایید.
 
@@ -386,7 +386,7 @@ npm run dev
 
 ### One-click start on Windows (recommended)
 
-Instead of three separate terminals, just double-click `dev-local.bat` in the project root; it starts the backend (`:8000`), the automatic scheduler (`schedule:work`), and the frontend (`:5173`) together. If Windows Terminal is installed, all three open in a single window (three tabs); otherwise in three separate windows.
+Instead of three separate terminals, just double-click `dev-local.bat` in the project root; it opens a single-window manager console where keys `1`–`3` start each service individually in the same window (backend `:8000`, automatic scheduler `schedule:work`, frontend `:5173`), `4` (highlighted in green) starts all, and `5` stops all. (The batch file uses English text because the Windows console cannot render Persian correctly.)
 
 > Configure your database credentials in `.env` (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) and then run `php artisan migrate`.
 
