@@ -154,6 +154,9 @@ export default function NotificationStatus() {
           </h1>
           <p className="text-[10px] text-slate-400 mt-1 rtl-text">
             این صفحه هر ۱۰ ثانیه وضعیت ثبت کراس را از سرور بررسی می‌کند.
+            {status?.backend_build && (
+              <span className="mr-2 text-slate-300">بیلد بک‌اند: {status.backend_build}</span>
+            )}
           </p>
         </div>
         <button

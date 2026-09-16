@@ -171,6 +171,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
             return response()->json([
                 'user_id' => $user->id,
+                // نشانگر نسخه بک‌اند: اگر این مقدار قدیمی بود یعنی فایل‌های جدید آپلود نشده‌اند
+                'backend_build' => '2026-09-16-e',
                 'schedule' => $schedule,
                 'is_market_open_now' => $isMarketOpen,
                 'now_tehran' => $nowTehran,
