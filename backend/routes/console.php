@@ -3,6 +3,10 @@
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Schedule;
 
+// Scheduler mutexes must not depend on a cache table that is not installed
+// on shared hosting. The interval state itself is stored in system_settings.
+Schedule::useCache('file');
+
 Schedule::command('symbols:refresh')->when(function () {
     $schedule = SystemSetting::getSchedule();
     if (!$schedule['enabled']) {

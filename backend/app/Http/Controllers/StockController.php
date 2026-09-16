@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class StockController extends Controller
 {
@@ -173,15 +175,10 @@ class StockController extends Controller
         $apiSymbols = $this->fetchAllSymbolsWithSystemKeys($force);
 
         if (!empty($apiSymbols)) {
-            try {
-                if ($hasCacheTable) {
-                    $this->saveSymbolsToCache($apiSymbols);
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Failed to save symbols cache', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            // This endpoint is a read/search endpoint. Do not write fresh API prices
+            // here: that would advance symbols_cache without running crossover checks,
+            // allowing a scheduled refresh to miss the transition. The scheduled
+            // command and the full manual refresh are the only cache writers.
             $symbols = $this->transformApiSymbols($apiSymbols, $query);
             return [
                 'data' => $symbols,
@@ -269,28 +266,41 @@ class StockController extends Controller
     private function saveSymbolsToCache(array $apiSymbols): void
     {
         $now = now();
+        $hasPrevCol = Schema::hasColumn('symbols_cache', 'prev_last_price');
 
         foreach ($apiSymbols as $symbol) {
             $isin = $symbol['isin'] ?? '';
             if (empty($isin)) continue;
 
-            \Illuminate\Support\Facades\DB::table('symbols_cache')->updateOrInsert(
+            $newPrice = is_numeric($symbol['pl'] ?? null) ? $symbol['pl'] : null;
+            $updateData = [
+                'symbol' => $symbol['l18'] ?? $symbol['l30'] ?? '',
+                'full_name' => $symbol['l30'] ?? '',
+                'last_price' => $newPrice,
+                'pe' => is_numeric($symbol['pe'] ?? null) ? $symbol['pe'] : null,
+                'price_change_percent' => is_numeric($symbol['plp'] ?? null) ? $symbol['plp'] : null,
+                'price_change' => is_numeric($symbol['pcp'] ?? null) ? $symbol['pcp'] : null,
+                'sector' => is_string($symbol['cs'] ?? null) ? $symbol['cs'] : null,
+                'buy_i_volume' => is_numeric($symbol['Buy_I_Volume'] ?? null) ? $symbol['Buy_I_Volume'] : null,
+                'buy_count_i' => is_numeric($symbol['Buy_CountI'] ?? null) ? $symbol['Buy_CountI'] : null,
+                'sell_i_volume' => is_numeric($symbol['Sell_I_Volume'] ?? null) ? $symbol['Sell_I_Volume'] : null,
+                'sell_count_i' => is_numeric($symbol['Sell_CountI'] ?? null) ? $symbol['Sell_CountI'] : null,
+                'last_updated_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            if ($hasPrevCol && $newPrice !== null) {
+                try {
+                    $existing = DB::table('symbols_cache')->where('isin', $isin)->first();
+                    if ($existing && $existing->last_price !== null && $existing->last_price != $newPrice) {
+                        $updateData['prev_last_price'] = $existing->last_price;
+                    }
+                } catch (\Throwable $e) {}
+            }
+
+            DB::table('symbols_cache')->updateOrInsert(
                 ['isin' => $isin],
-                [
-                    'symbol' => $symbol['l18'] ?? $symbol['l30'] ?? '',
-                    'full_name' => $symbol['l30'] ?? '',
-                    'last_price' => is_numeric($symbol['pl'] ?? null) ? $symbol['pl'] : null,
-                    'pe' => is_numeric($symbol['pe'] ?? null) ? $symbol['pe'] : null,
-                    'price_change_percent' => is_numeric($symbol['plp'] ?? null) ? $symbol['plp'] : null,
-                    'price_change' => is_numeric($symbol['pcp'] ?? null) ? $symbol['pcp'] : null,
-                    'sector' => is_string($symbol['cs'] ?? null) ? $symbol['cs'] : null,
-                    'buy_i_volume' => is_numeric($symbol['Buy_I_Volume'] ?? null) ? $symbol['Buy_I_Volume'] : null,
-                    'buy_count_i' => is_numeric($symbol['Buy_CountI'] ?? null) ? $symbol['Buy_CountI'] : null,
-                    'sell_i_volume' => is_numeric($symbol['Sell_I_Volume'] ?? null) ? $symbol['Sell_I_Volume'] : null,
-                    'sell_count_i' => is_numeric($symbol['Sell_CountI'] ?? null) ? $symbol['Sell_CountI'] : null,
-                    'last_updated_at' => $now,
-                    'updated_at' => $now,
-                ]
+                $updateData
             );
         }
 
@@ -413,7 +423,7 @@ class StockController extends Controller
                     $start = $schedule['start_time'];
                     $end = $schedule['end_time'];
                     if ($start && $end) {
-                        $now = now()->format('H:i');
+                        $now = now()->timezone('Asia/Tehran')->format('H:i');
                         $inRange = $start <= $end
                             ? ($now >= $start && $now <= $end)
                             : ($now >= $start || $now <= $end);
@@ -441,8 +451,11 @@ class StockController extends Controller
             }
 
             self::debugLog('STEP2', 'Fetching symbols from BRS API...');
-            $maxRetries = 3;
-            $retryDelay = 30;
+            // مسیر وب (برخلاف کرون CLI) محدودیت زمانی هاست اشتراکی را دارد؛
+            // خواب ۳۰ ثانیه‌ای بین تلاش‌ها حتماً باعث timeout و خطای ۵۰۰ می‌شد.
+            // پس در رفرش دستی سریع fail می‌کنیم؛ تلاش مجدد با کرون خودکار انجام می‌شود.
+            $maxRetries = 2;
+            $retryDelay = 3;
             $symbols = [];
 
             for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
@@ -470,25 +483,39 @@ class StockController extends Controller
             self::debugLog('STEP3', 'Building symbol map...');
             $symbolMap = [];
             foreach ($symbols as $symbol) {
-                $isin = $symbol['isin'] ?? '';
+                $isin = trim((string) ($symbol['isin'] ?? ''));
                 $name = $symbol['l18'] ?? $symbol['l30'] ?? '';
-                $symbolMap[strtolower($name)] = $symbol;
+                $symbolMap[strtolower(trim($name))] = $symbol;
                 if ($isin) {
-                    $symbolMap[strtolower($isin)] = $symbol;
+                    $symbolMap[strtolower(trim($isin))] = $symbol;
                 }
             }
             self::debugLog('STEP3', 'Symbol map built', ['keys' => count($symbolMap)]);
 
             $oldPrices = [];
-            $isinList = array_filter(array_map(fn($s) => $s['isin'] ?? '', $symbols));
+            $isinList = array_filter(array_map(fn($s) => trim((string) ($s['isin'] ?? '')), $symbols));
             if (!empty($isinList)) {
                 $oldRows = \Illuminate\Support\Facades\DB::table('symbols_cache')
                     ->whereIn('isin', $isinList)
                     ->select('isin', 'last_price')
                     ->get();
                 foreach ($oldRows as $row) {
-                    $oldPrices[$row->isin] = $row->last_price;
+                    $oldPrices[trim((string) $row->isin)] = $row->last_price;
                 }
+            }
+
+            // Keep the cache in sync for a full manual refresh. The old-price
+            // snapshot above must always be collected before this write.
+            try {
+                $this->saveSymbolsToCache($symbols);
+                self::debugLog('STEP3B', 'Market snapshot saved for full refresh', [
+                    'rows' => count($symbols),
+                    'old_price_rows' => count($oldPrices),
+                ]);
+            } catch (\Throwable $e) {
+                self::debugLog('ERROR', 'Saving market snapshot failed', [
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             $updated = 0;
@@ -514,7 +541,7 @@ class StockController extends Controller
             foreach ($allPortfolios as $portfolio) {
                 foreach ($portfolio->items as $item) {
                     $itemIdx++;
-                    $key = strtolower($item->symbol);
+                    $key = strtolower(trim($item->symbol));
                     if (isset($symbolMap[$key])) {
                         $symbol = $symbolMap[$key];
                         $updateData = [];
@@ -524,6 +551,9 @@ class StockController extends Controller
                         $pl = $symbol['pl'] ?? null;
                         $pe = $symbol['pe'] ?? null;
                         if ($pl !== null && $pl != $item->last_price) {
+                            if (Schema::hasColumn('portfolio_items', 'prev_last_price') && $item->last_price !== null) {
+                                $updateData['prev_last_price'] = $item->last_price;
+                            }
                             $updateData['last_price'] = $pl;
                         }
                         if ($pe !== null && $pe != $item->pe) {
@@ -564,19 +594,45 @@ class StockController extends Controller
 
                         if ($pl !== null) {
                             $item->loadMissing('portfolio.user');
+                            // Crossover FIRST: ثبت نوتیفیکیشن نباید به سرنوشت ارسال SMS گره بخورد.
+                            // اگر تماس HTTP پنل SMS روی هاست کند/قفل باشد، رفرش همان‌جا می‌میرد
+                            // و کراس اصلاً اجرا نمی‌شود. ترتیب برعکس این مشکل را حذف می‌کند.
+                            try {
+                                // Use the market snapshot collected before symbols_cache is overwritten.
+                                // This avoids missing a crossover when the portfolio row was updated by
+                                // another refresh request just before this check.
+                                $isin = trim((string) ($symbol['isin'] ?? ''));
+                                $oldPrice = array_key_exists($isin, $oldPrices) && $oldPrices[$isin] !== null
+                                    ? (float) $oldPrices[$isin]
+                                    : ($item->last_price !== null ? (float) $item->last_price : null);
+                                self::debugLog('CROSSOVER', "[$itemIdx/$totalItems] Portfolio check {$item->symbol}", [
+                                    'user_id' => $portfolio->user_id,
+                                    'item_id' => $item->id,
+                                    'isin' => $isin,
+                                    'old_price' => $oldPrice,
+                                    'new_price' => (float) $pl,
+                                    'levels' => [
+                                        'resistance_1' => $item->resistance_1,
+                                        'resistance_2' => $item->resistance_2,
+                                        'support_1' => $item->support_1,
+                                        'support_2' => $item->support_2,
+                                    ],
+                                ]);
+                                $detected = $crossoverService->checkPortfolioItem($item, (float) $pl, $oldPrice);
+                                $allCrossovers = array_merge($allCrossovers, $detected);
+                                self::debugLog('CROSSOVER', "[$itemIdx/$totalItems] Portfolio result {$item->symbol}", [
+                                    'detected' => count($detected),
+                                ]);
+                            } catch (\Throwable $e) {
+                                self::debugLog('ERROR', "[$itemIdx/$totalItems] Crossover check failed {$item->symbol}", [
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
                             try {
                                 $sent = $smsService->checkAndNotify($item, (float) $pl);
                                 $smsCount += count($sent);
                             } catch (\Throwable $e) {
                                 self::debugLog('ERROR', "[$itemIdx/$totalItems] SMS check failed {$item->symbol}", [
-                                    'error' => $e->getMessage(),
-                                ]);
-                            }
-                            try {
-                                $detected = $crossoverService->checkPortfolioItem($item, (float) $pl, $item->last_price ? (float) $item->last_price : null);
-                                $allCrossovers = array_merge($allCrossovers, $detected);
-                            } catch (\Throwable $e) {
-                                self::debugLog('ERROR', "[$itemIdx/$totalItems] Crossover check failed {$item->symbol}", [
                                     'error' => $e->getMessage(),
                                 ]);
                             }
@@ -600,29 +656,45 @@ class StockController extends Controller
                 foreach ($usersWithSymbolLevels as $user) {
                     $levels = $user->userSymbolLevels()->get();
                     foreach ($levels as $levelRecord) {
-                        $key = strtolower($levelRecord->symbol);
+                        $key = strtolower(trim($levelRecord->symbol));
                         if (isset($symbolMap[$key])) {
                             $symbol = $symbolMap[$key];
                             $pl = $symbol['pl'] ?? null;
                             if ($pl !== null) {
                                 try {
-                                    $isin = $symbol['isin'] ?? '';
+                                    $isin = trim((string) ($symbol['isin'] ?? ''));
                                     $oldPrice = $oldPrices[$isin] ?? null;
-                                    $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl, $oldPrice ? (float) $oldPrice : null);
-                                    $smsCount += count($sent);
+                                    self::debugLog('CROSSOVER', "User symbol-level check {$levelRecord->symbol}", [
+                                        'user_id' => $user->id,
+                                        'level_id' => $levelRecord->id,
+                                        'isin' => $isin,
+                                        'old_price' => $oldPrice,
+                                        'new_price' => (float) $pl,
+                                        'levels' => [
+                                            'resistance_1' => $levelRecord->resistance_1,
+                                            'resistance_2' => $levelRecord->resistance_2,
+                                            'support_1' => $levelRecord->support_1,
+                                            'support_2' => $levelRecord->support_2,
+                                        ],
+                                    ]);
+                                    $detected = $crossoverService->checkSymbolLevel($levelRecord, (float) $pl, $oldPrice ? (float) $oldPrice : null);
+                                    $allCrossovers = array_merge($allCrossovers, $detected);
+                                    self::debugLog('CROSSOVER', "User symbol-level result {$levelRecord->symbol}", [
+                                        'detected' => count($detected),
+                                    ]);
                                 } catch (\Throwable $e) {
-                                    self::debugLog('ERROR', "User symbol level SMS check failed {$levelRecord->symbol}", [
+                                    self::debugLog('ERROR', "User symbol level crossover check failed {$levelRecord->symbol}", [
                                         'user_id' => $user->id,
                                         'error' => $e->getMessage(),
                                     ]);
                                 }
                                 try {
-                                    $isin = $symbol['isin'] ?? '';
+                                    $isin = trim((string) ($symbol['isin'] ?? ''));
                                     $oldPrice = $oldPrices[$isin] ?? null;
-                                    $detected = $crossoverService->checkSymbolLevel($levelRecord, (float) $pl, $oldPrice ? (float) $oldPrice : null);
-                                    $allCrossovers = array_merge($allCrossovers, $detected);
+                                    $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl, $oldPrice ? (float) $oldPrice : null);
+                                    $smsCount += count($sent);
                                 } catch (\Throwable $e) {
-                                    self::debugLog('ERROR', "User symbol level crossover check failed {$levelRecord->symbol}", [
+                                    self::debugLog('ERROR', "User symbol level SMS check failed {$levelRecord->symbol}", [
                                         'user_id' => $user->id,
                                         'error' => $e->getMessage(),
                                     ]);

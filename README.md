@@ -125,6 +125,10 @@ cd frontend
 npm run dev
 ```
 
+### اجرای یک‌ضرب روی ویندوز (پیشنهادی)
+
+به‌جای سه ترمینال جدا، کافی است فایل `dev-local.bat` در ریشه پروژه را دابل‌کلیک کنی؛ بک‌اند (`:8000`)، اسکژولر خودکار (`schedule:work`) و فرانت‌اند (`:5173`) با هم بالا می‌آیند. اگر Windows Terminal نصب باشد هر سه در یک پنجره (سه تب) باز می‌شوند، وگرنه در سه پنجره جدا.
+
 > فایل `.env` را با اطلاعات دیتابیس (`DB_DATABASE`، `DB_USERNAME`، `DB_PASSWORD`) تنظیم کنید و سپس `php artisan migrate` را اجرا نمایید.
 
 ## تنظیم بروزرسانی خودکار (Cron Job)
@@ -145,13 +149,14 @@ npm run dev
 | Month | `*` |
 | Weekday | `*` |
 
-4. در فیلد **Command** وارد کنید:
+4. در فیلد **Command** فقط خود دستور را وارد کنید (عبارت `* * * * *` را در این فیلد ننویسید):
 
 ```bash
-(crontab -l 2>/dev/null | grep -v 'schedule:run'; echo '* * * * * cd /home/YOUR_USERNAME/public_html/example.com/backend && /usr/local/bin/php artisan schedule:run >> /home/YOUR_USERNAME/cron-schedule.log 2>&1') | crontab - && crontab -l
+cd /home/YOUR_USERNAME/public_html/example.com/backend && /usr/local/bin/php artisan schedule:run >> /home/YOUR_USERNAME/cron-schedule.log 2>&1
 ```
 
 > مسیر بالا را بر اساس مسیر نصب ساب‌دومین خودتان تنظیم کنید.
+> در cPanel زمان‌بندی را روی اجرای هر دقیقه بگذارید و در انتهای دستور بک‌اسلش (`\`) نگذارید.
 
 ### نقش ادمین
 
@@ -379,6 +384,10 @@ cd frontend
 npm run dev
 ```
 
+### One-click start on Windows (recommended)
+
+Instead of three separate terminals, just double-click `dev-local.bat` in the project root; it starts the backend (`:8000`), the automatic scheduler (`schedule:work`), and the frontend (`:5173`) together. If Windows Terminal is installed, all three open in a single window (three tabs); otherwise in three separate windows.
+
 > Configure your database credentials in `.env` (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) and then run `php artisan migrate`.
 
 ## Auto Update (Cron Job)
@@ -398,13 +407,14 @@ Auto price updates are handled via **Cron Job** in cPanel.
 | Month | `*` |
 | Weekday | `*` |
 
-3. In the **Command** field enter:
+3. In the **Command** field enter only the command (do not include `* * * * *`):
 
 ```bash
-(crontab -l 2>/dev/null | grep -v 'schedule:run'; echo '* * * * * cd /home/YOUR_USERNAME/public_html/example.com/backend && /usr/local/bin/php artisan schedule:run >> /home/YOUR_USERNAME/cron-schedule.log 2>&1') | crontab - && crontab -l
+cd /home/YOUR_USERNAME/public_html/example.com/backend && /usr/local/bin/php artisan schedule:run >> /home/YOUR_USERNAME/cron-schedule.log 2>&1
 ```
 
 > Adjust the path based on your subdomain installation.
+> Set the cPanel schedule to every minute and do not add a trailing backslash (`\`).
 
 ### Admin Role
 

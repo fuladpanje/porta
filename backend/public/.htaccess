@@ -5,12 +5,16 @@
 
     RewriteEngine On
 
+    # Handle Authorization Header (must be before front controller for shared hosting)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    # Some hosts pass it as REDIRECT_HTTP_AUTHORIZATION
+    RewriteCond %{HTTP:Authorization} ^$
+    RewriteCond %{REDIRECT_HTTP_AUTHORIZATION} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{REDIRECT_HTTP_AUTHORIZATION}]
+
     # Handle Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
-
-    # Handle Authorization Header
-    RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>

@@ -55,11 +55,11 @@ exit;
 1. وارد cPanel شوید
 2. بخش **Advanced** > **Cron Jobs** رو باز کنید
 3. در بخش **Add New Cron Job**:
-   - **Common Settings**: `Every 5 minutes (* */5 * * *)`
-   - یا دستی وارد کنید: `*/5 * * * *`
+   - **Common Settings**: `Once Per Minute (* * * * *)`
+   - یا دستی وارد کنید: `* * * * *`
 4. در فیلد **Command** وارد کنید:
    ```bash
-   cd /home/your-username/public_html/backend && php artisan schedule:run >> /dev/null 2>&1
+   cd /home/your-username/public_html/backend && /usr/local/bin/php artisan schedule:run >> /home/your-username/cron-schedule.log 2>&1
    ```
 5. روی **Add New Cron Job** کلیک کنید
 

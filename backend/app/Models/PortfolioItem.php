@@ -12,6 +12,7 @@ class PortfolioItem extends Model
         'portfolio_id',
         'symbol',
         'last_price',
+        'prev_last_price',
         'pe',
         'buy_price',
         'quantity',
@@ -38,6 +39,7 @@ class PortfolioItem extends Model
     protected $casts = [
         'buy_price' => 'decimal:2',
         'last_price' => 'decimal:2',
+        'prev_last_price' => 'decimal:2',
         'pe' => 'decimal:2',
         'quantity' => 'decimal:4',
         'sell_price' => 'decimal:2',

@@ -1,10 +1,18 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || (
+const rawEnvUrl = import.meta.env.VITE_API_URL;
+// اگر VITE_API_URL روی مقدار پیش‌فرض YOUR_DOMAIN باشد نادیده بگیر
+const isPlaceholderUrl = rawEnvUrl && rawEnvUrl.includes('YOUR_DOMAIN');
+const API_BASE = (!isPlaceholderUrl && rawEnvUrl) || (
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api'
     : `${window.location.origin}/api`
 );
+// دیباگ برای هاست اشتراکی - فقط یکبار لاگ کن
+if (typeof window !== 'undefined' && !window.__PORTA_API_LOGGED) {
+  window.__PORTA_API_LOGGED = true;
+  console.info('[Porta API]', { base: API_BASE, host: window.location.hostname, envUrl: rawEnvUrl || '(empty)' });
+}
 
 const api = axios.create({
   baseURL: API_BASE,

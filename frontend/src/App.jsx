@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import AllSymbols from './pages/AllSymbols';
 import AdminSettings from './pages/AdminSettings';
+import NotificationStatus from './pages/NotificationStatus';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -79,6 +80,7 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/symbols" element={<ProtectedRoute><AllSymbols /></ProtectedRoute>} />
       <Route path="/admin-settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+      <Route path="/notification-status" element={<ProtectedRoute><NotificationStatus /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

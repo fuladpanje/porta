@@ -4,8 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\SystemSetting;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class RefreshSymbols extends Command
 {
@@ -14,6 +15,24 @@ class RefreshSymbols extends Command
 
     private int $maxRetries = 3;
     private int $retryDelay = 30;
+
+    private function debugLog(string $message, array $context = []): void
+    {
+        try {
+            $line = '[' . now()->timezone('Asia/Tehran')->format('Y-m-d H:i:s') . '] [REFRESH] ' . $message;
+            if ($context) {
+                $line .= ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+            $line .= PHP_EOL;
+            @file_put_contents(
+                storage_path('logs/refresh-debug.log'),
+                $line,
+                FILE_APPEND | LOCK_EX
+            );
+        } catch (\Throwable $e) {
+            // Diagnostics must never interrupt price refreshes.
+        }
+    }
 
     public function handle(): int
     {
@@ -173,7 +192,7 @@ class RefreshSymbols extends Command
     {
         $isinList = [];
         foreach ($symbols as $symbol) {
-            $isin = $symbol['isin'] ?? '';
+            $isin = trim((string) ($symbol['isin'] ?? ''));
             if ($isin) {
                 $isinList[] = $isin;
             }
@@ -190,7 +209,7 @@ class RefreshSymbols extends Command
 
         $oldPrices = [];
         foreach ($rows as $row) {
-            $oldPrices[$row->isin] = $row->last_price;
+            $oldPrices[trim((string) $row->isin)] = $row->last_price;
         }
 
         return $oldPrices;
@@ -199,17 +218,19 @@ class RefreshSymbols extends Command
     private function saveSymbolsToDatabase(array $symbols): void
     {
         $now = now();
+        $hasPrevCol = Schema::hasColumn('symbols_cache', 'prev_last_price');
         $batch = [];
 
         foreach ($symbols as $symbol) {
             $isin = $symbol['isin'] ?? '';
             if (empty($isin)) continue;
 
-            $batch[] = [
+            $newPrice = is_numeric($symbol['pl'] ?? null) ? $symbol['pl'] : null;
+            $row = [
                 'isin' => $isin,
                 'symbol' => $symbol['l18'] ?? $symbol['l30'] ?? '',
                 'full_name' => $symbol['l30'] ?? '',
-                'last_price' => is_numeric($symbol['pl'] ?? null) ? $symbol['pl'] : null,
+                'last_price' => $newPrice,
                 'pe' => is_numeric($symbol['pe'] ?? null) ? $symbol['pe'] : null,
                 'price_change_percent' => is_numeric($symbol['plp'] ?? null) ? $symbol['plp'] : null,
                 'price_change' => is_numeric($symbol['pcp'] ?? null) ? $symbol['pcp'] : null,
@@ -222,14 +243,32 @@ class RefreshSymbols extends Command
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+
+            if ($hasPrevCol && $newPrice !== null) {
+                try {
+                    $existing = DB::table('symbols_cache')->where('isin', $isin)->first();
+                    if ($existing && $existing->last_price !== null && $existing->last_price != $newPrice) {
+                        $row['prev_last_price'] = $existing->last_price;
+                    }
+                } catch (\Throwable $e) {}
+            }
+
+            $batch[] = $row;
         }
 
         $chunks = array_chunk($batch, 500);
         foreach ($chunks as $chunk) {
             foreach ($chunk as $row) {
+                $isin = $row['isin'];
+                $data = $row;
+                unset($data['isin']);
+                // جداگانه prev_last_price را فقط در صورت نیاز ست کن تا مقدار null قبلی پاک نشود
+                if (!array_key_exists('prev_last_price', $data) || $data['prev_last_price'] === null) {
+                    unset($data['prev_last_price']);
+                }
                 DB::table('symbols_cache')->updateOrInsert(
-                    ['isin' => $row['isin']],
-                    $row
+                    ['isin' => $isin],
+                    $data
                 );
             }
         }
@@ -241,13 +280,18 @@ class RefreshSymbols extends Command
     {
         @set_time_limit(120);
 
+        $this->debugLog('Price snapshot ready', [
+            'api_symbols' => count($symbols),
+            'old_price_rows' => count($oldPrices),
+        ]);
+
         $symbolMap = [];
         foreach ($symbols as $symbol) {
-            $isin = $symbol['isin'] ?? '';
+            $isin = trim((string) ($symbol['isin'] ?? ''));
             $name = $symbol['l18'] ?? $symbol['l30'] ?? '';
-            $symbolMap[strtolower($name)] = $symbol;
+            $symbolMap[strtolower(trim($name))] = $symbol;
             if ($isin) {
-                $symbolMap[strtolower($isin)] = $symbol;
+                $symbolMap[strtolower(trim($isin))] = $symbol;
             }
         }
 
@@ -263,7 +307,7 @@ class RefreshSymbols extends Command
         $portfolios = \App\Models\Portfolio::with('items', 'user')->get();
         foreach ($portfolios as $portfolio) {
             foreach ($portfolio->items as $item) {
-                $key = strtolower($item->symbol);
+                $key = strtolower(trim($item->symbol));
 
                 if (isset($symbolMap[$key])) {
                     $symbol = $symbolMap[$key];
@@ -276,6 +320,9 @@ class RefreshSymbols extends Command
 
                     $updateData = [];
                     if ($pl !== null && $pl != $item->last_price) {
+                        if (Schema::hasColumn('portfolio_items', 'prev_last_price') && $item->last_price !== null) {
+                            $updateData['prev_last_price'] = $item->last_price;
+                        }
                         $updateData['last_price'] = $pl;
                     }
                     if ($pe !== null && $pe != $item->pe) {
@@ -308,6 +355,20 @@ class RefreshSymbols extends Command
                     }
 
                     if ($pl !== null) {
+                        // Crossover FIRST: ثبت نوتیفیکیشن نباید به سرنوشت ارسال SMS گره بخورد.
+                        try {
+                            // Use the market snapshot collected before symbols_cache is overwritten.
+                            // This is more reliable than the portfolio model value when a manual
+                            // refresh and the scheduler run close together on shared hosting.
+                            $isin = trim((string) ($symbol['isin'] ?? ''));
+                            $oldPrice = array_key_exists($isin, $oldPrices) && $oldPrices[$isin] !== null
+                                ? (float) $oldPrices[$isin]
+                                : ($item->last_price !== null ? (float) $item->last_price : null);
+                            $detected = $crossoverService->checkPortfolioItem($item, (float) $pl, $oldPrice);
+                            $crossoverCount += count($detected);
+                        } catch (\Throwable $e) {
+                            $this->warn("Crossover check failed for {$item->symbol}: " . $e->getMessage());
+                        }
                         try {
                             $item->loadMissing('portfolio.user');
                             $sent = $smsService->checkAndNotify($item, (float) $pl);
@@ -315,13 +376,31 @@ class RefreshSymbols extends Command
                         } catch (\Throwable $e) {
                             $this->warn("SMS check failed for {$item->symbol}: " . $e->getMessage());
                         }
-                        try {
-                            $detected = $crossoverService->checkPortfolioItem($item, (float) $pl, $item->last_price ? (float) $item->last_price : null);
-                            $crossoverCount += count($detected);
-                        } catch (\Throwable $e) {
-                            $this->warn("Crossover check failed for {$item->symbol}: " . $e->getMessage());
+
+                        if ($item->resistance_1 || $item->resistance_2 || $item->support_1 || $item->support_2) {
+                            $isin = trim((string) ($symbol['isin'] ?? ''));
+                            $this->debugLog('Portfolio crossover check', [
+                                'user_id' => $portfolio->user_id,
+                                'item_id' => $item->id,
+                                'symbol' => $item->symbol,
+                                'isin' => $isin,
+                                'old_price' => array_key_exists($isin, $oldPrices) ? $oldPrices[$isin] : null,
+                                'new_price' => $pl,
+                                'levels' => [
+                                    'resistance_1' => $item->resistance_1,
+                                    'resistance_2' => $item->resistance_2,
+                                    'support_1' => $item->support_1,
+                                    'support_2' => $item->support_2,
+                                ],
+                            ]);
                         }
                     }
+                } elseif ($item->resistance_1 || $item->resistance_2 || $item->support_1 || $item->support_2) {
+                    $this->debugLog('Portfolio symbol not matched in API response', [
+                        'user_id' => $portfolio->user_id,
+                        'item_id' => $item->id,
+                        'symbol' => $item->symbol,
+                    ]);
                 }
             }
         }
@@ -340,28 +419,49 @@ class RefreshSymbols extends Command
             foreach ($usersWithSymbolLevels as $user) {
                 $levels = $user->userSymbolLevels()->get();
                 foreach ($levels as $levelRecord) {
-                    $key = strtolower($levelRecord->symbol);
+                    $key = strtolower(trim($levelRecord->symbol));
                     if (isset($symbolMap[$key])) {
                         $symbol = $symbolMap[$key];
                         $pl = $symbol['pl'] ?? null;
                         if ($pl !== null) {
+                            $isin = trim((string) ($symbol['isin'] ?? ''));
+                            $this->debugLog('User symbol-level crossover check', [
+                                'user_id' => $user->id,
+                                'level_id' => $levelRecord->id,
+                                'symbol' => $levelRecord->symbol,
+                                'isin' => $isin,
+                                'old_price' => array_key_exists($isin, $oldPrices) ? $oldPrices[$isin] : null,
+                                'new_price' => $pl,
+                                'levels' => [
+                                    'resistance_1' => $levelRecord->resistance_1,
+                                    'resistance_2' => $levelRecord->resistance_2,
+                                    'support_1' => $levelRecord->support_1,
+                                    'support_2' => $levelRecord->support_2,
+                                ],
+                            ]);
                             try {
-                                $isin = $symbol['isin'] ?? '';
-                                $oldPrice = $oldPrices[$isin] ?? null;
-                                $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl, $oldPrice ? (float) $oldPrice : null);
-                                $smsCount += count($sent);
-                            } catch (\Throwable $e) {
-                                $this->warn("User symbol level SMS check failed for {$levelRecord->symbol}: " . $e->getMessage());
-                            }
-                            try {
-                                $isin = $symbol['isin'] ?? '';
+                                $isin = trim((string) ($symbol['isin'] ?? ''));
                                 $oldPrice = $oldPrices[$isin] ?? null;
                                 $detected = $crossoverService->checkSymbolLevel($levelRecord, (float) $pl, $oldPrice ? (float) $oldPrice : null);
                                 $crossoverCount += count($detected);
                             } catch (\Throwable $e) {
                                 $this->warn("User symbol level crossover check failed for {$levelRecord->symbol}: " . $e->getMessage());
                             }
+                            try {
+                                $isin = trim((string) ($symbol['isin'] ?? ''));
+                                $oldPrice = $oldPrices[$isin] ?? null;
+                                $sent = $smsService->checkAndNotifySymbolLevel($user, $levelRecord->symbol, (float) $pl, $oldPrice ? (float) $oldPrice : null);
+                                $smsCount += count($sent);
+                            } catch (\Throwable $e) {
+                                $this->warn("User symbol level SMS check failed for {$levelRecord->symbol}: " . $e->getMessage());
+                            }
                         }
+                    } elseif ($levelRecord->hasAnyLevel()) {
+                        $this->debugLog('User symbol-level symbol not matched in API response', [
+                            'user_id' => $user->id,
+                            'level_id' => $levelRecord->id,
+                            'symbol' => $levelRecord->symbol,
+                        ]);
                     }
                 }
             }

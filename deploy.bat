@@ -117,6 +117,7 @@ echo DB_PASSWORD=YOUR_DB_PASSWORD>> deploy\backend\.env
 echo.>> deploy\backend\.env
 echo BROADCAST_DRIVER=log>> deploy\backend\.env
 echo CACHE_DRIVER=file>> deploy\backend\.env
+echo CACHE_STORE=file>> deploy\backend\.env
 echo FILESYSTEM_DISK=local>> deploy\backend\.env
 echo QUEUE_CONNECTION=sync>> deploy\backend\.env
 echo SESSION_DRIVER=database>> deploy\backend\.env

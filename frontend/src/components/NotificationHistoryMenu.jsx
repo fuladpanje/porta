@@ -53,7 +53,8 @@ export function NotificationHistoryMenu() {
     try { return localStorage.getItem('porta_notification_sound') !== 'off'; } catch { return true; }
   });
   const menuRef = useRef(null);
-  const lastCheckedRef = useRef(Date.now() - 60000);
+  // استفاده از max detected_at به جای Date.now برای جلوگیری از اختلاف ساعت سرور/کلاینت
+  const lastCheckedRef = useRef(0);
   const initialLoadDoneRef = useRef(false);
 
   const fetchNotifications = useCallback(async () => {
@@ -62,6 +63,13 @@ export function NotificationHistoryMenu() {
       const res = await api.get('/crossover-notifications?limit=50');
       const all = res.data?.data || [];
       setNotifications(all);
+      // به‌روزرسانی lastChecked به آخرین detected_at برای جلوگیری از تکرار یا از دست دادن نوتیف
+      if (all.length > 0) {
+        const maxTime = Math.max(...all.map(n => new Date(n.detected_at).getTime()));
+        if (maxTime > lastCheckedRef.current) lastCheckedRef.current = maxTime;
+      } else if (lastCheckedRef.current === 0) {
+        lastCheckedRef.current = Date.now();
+      }
       if (!initialLoadDoneRef.current) {
         initialLoadDoneRef.current = true;
         const unread = all.filter(n => {
@@ -71,31 +79,49 @@ export function NotificationHistoryMenu() {
         setUnreadCount(unread.length);
       }
     } catch (e) {
-      // silent
+      if (e.response?.status !== 401) console.warn('[Notifications] fetch failed', e.response?.status, e.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // بارگذاری اولیه حتی وقتی منو بسته است تا badge درست نمایش داده شود
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
   const handleOpen = useCallback(() => {
     const willOpen = !open;
     setOpen(willOpen);
     if (willOpen) {
-      lastCheckedRef.current = Date.now();
+      // هنگام باز کردن، ماکزیمم زمان دیده‌شده را ذخیره کن
+      if (notifications.length > 0) {
+        const maxTime = Math.max(...notifications.map(n => new Date(n.detected_at).getTime()));
+        lastCheckedRef.current = Math.max(lastCheckedRef.current, maxTime, Date.now());
+      } else {
+        lastCheckedRef.current = Date.now();
+      }
       setUnreadCount(0);
     }
-  }, [open]);
+  }, [open, notifications]);
 
   const checkForNewNotifications = useCallback(async () => {
-    if (!lastCheckedRef.current) return;
-
     try {
       const res = await api.get('/crossover-notifications?limit=10');
       const all = res.data?.data || [];
+      if (all.length === 0) return;
+      // اگر اولین بار است، lastChecked را مقداردهی کن
+      if (lastCheckedRef.current === 0) {
+        const maxTime = Math.max(...all.map(n => new Date(n.detected_at).getTime()));
+        lastCheckedRef.current = maxTime;
+        return;
+      }
       const previousCheck = lastCheckedRef.current;
       const newOnes = all.filter(n => new Date(n.detected_at).getTime() > previousCheck);
 
-      lastCheckedRef.current = Date.now();
+      // به‌روزرسانی به ماکزیمم زمان موجود (نه Date.now) برای مقاومت در برابر اختلاف ساعت
+      const maxAll = Math.max(...all.map(n => new Date(n.detected_at).getTime()));
+      lastCheckedRef.current = Math.max(lastCheckedRef.current, maxAll);
 
       if (newOnes.length === 0) {
         return;
@@ -114,7 +140,8 @@ export function NotificationHistoryMenu() {
       setPopupNotifications(newOnes);
       playNotificationSound();
     } catch (e) {
-      // silent
+      if (e.response?.status === 401) return; // توکن نامعتبر - silent
+      console.warn('[Notifications] poll failed', e.response?.status || e.message);
     }
   }, [open]);
 
@@ -137,10 +164,9 @@ export function NotificationHistoryMenu() {
   useEffect(() => {
     const handler = async () => {
       if (open) {
-        fetchNotifications();
-        lastCheckedRef.current = Date.now();
+        await fetchNotifications();
       } else {
-        checkForNewNotifications();
+        await checkForNewNotifications();
       }
     };
     window.addEventListener('prices-refreshed', handler);
@@ -157,8 +183,10 @@ export function NotificationHistoryMenu() {
     try {
       await api.delete('/crossover-notifications');
       setNotifications([]);
+      setUnreadCount(0);
+      setPopupNotifications([]);
     } catch (e) {
-      // silent
+      console.warn('[Notifications] clear failed', e.response?.status);
     } finally {
       setClearing(false);
     }

@@ -44,7 +44,7 @@ class CrossoverNotificationController extends Controller
                     'direction_label' => $directionLabel,
                     'is_resistance' => substr($n->level_type, 0, 10) === 'resistance',
                     'source' => $n->source,
-                    'detected_at' => $n->detected_at->toISOString(),
+                    'detected_at' => $n->detected_at ? $n->detected_at->toISOString() : ($n->created_at ? $n->created_at->toISOString() : null),
                 ];
             });
 

@@ -5,7 +5,7 @@ import { useProfitLoss } from '../contexts/ProfitLossContext';
 import { useStaleData } from '../contexts/StaleDataContext';
 import { useSize } from '../contexts/SizeContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2, Expand, Bell } from 'lucide-react';
+import { LogOut, BarChart3, RefreshCw, Settings, Coins, Sun, Moon, Key, Clock, List, Repeat, CircleCheckBig, Tag, Sigma, AlertTriangle, Shield, CircleX, Maximize2, Minimize2, Expand, Bell, Activity } from 'lucide-react';
 import { stockApi } from '../lib/api';
 import api from '../lib/api';
 import { NotificationHistoryMenu } from './NotificationHistoryMenu';
@@ -59,6 +59,8 @@ export function Header() {
   const isSettingsPage = location.pathname === '/settings';
   const hidePlBySell = isSymbolsPage || isSettingsPage;
    const [refreshing, setRefreshing] = useState(false);
+   const refreshingRef = useRef(false);
+   const lastRefreshRef = useRef(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [isInScheduleRange, setIsInScheduleRange] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -80,6 +82,12 @@ export function Header() {
 
   // Fetch last_refresh_at from server on mount and keep it in sync.
   // This ensures all browsers/tabs show the same timestamp.
+  // lastRefreshRef همیشه تازه‌ترین مقدار را دارد تا نگهبان رفرش خودکار
+  // بفهمد اسکژولر سرور زنده است یا نه.
+  useEffect(() => {
+    lastRefreshRef.current = lastRefresh;
+  }, [lastRefresh]);
+
   useEffect(() => {
     const fetchLastRefresh = () => {
       api.get('/system/last-refresh')
@@ -154,7 +162,8 @@ export function Header() {
   }, [user, setStale]);
 
    const handleRefresh = async () => {
-     if (refreshing) return;
+     if (refreshingRef.current) return;
+     refreshingRef.current = true;
      setRefreshing(true);
      try {
         if (user?.is_admin) {
@@ -174,10 +183,70 @@ export function Header() {
        setStale(true);
        api.put('/user/stale', { is_stale: true });
        updateUser({ ...user, is_stale: true });
-     } finally {
-       setRefreshing(false);
-     }
-   };
+      } finally {
+        refreshingRef.current = false;
+        setRefreshing(false);
+      }
+    };
+
+   // نگهبان رفرش خودکار (فقط لوکال‌هاست): اگر اسکژولر سرور (cron یا
+   // schedule:work) زنده باشد و رفرش تازه انجام شده باشد، مرورگر هیچ کاری
+   // نمی‌کند. فقط وقتی وارد می‌شود که رفرش سرور از بازه تنظیم‌شده عقب‌تر باشد.
+   // روی هاست این اثر غیرفعال است چون کرون سرور مسئول رفرش است.
+   const schedTotalSeconds =
+     (Number(user?.schedule_hours) || 0) * 3600 +
+     (Number(user?.schedule_minutes) || 0) * 60 +
+     (Number(user?.schedule_seconds) || 0);
+
+   useEffect(() => {
+     const isLocalhost =
+       typeof window !== 'undefined' &&
+       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+     if (!isLocalhost) return;
+     if (!user?.is_admin || !user?.schedule_enabled || !user?.has_api_keys) return;
+     if (schedTotalSeconds <= 0) return;
+
+     // هر چرخه رفرش خودش ده‌ها ثانیه طول می‌کشد؛ کف ۳۰ ثانیه برای محافظت از بک‌اند
+     const intervalMs = Math.max(schedTotalSeconds, 30) * 1000;
+
+     const tehranNow = () => {
+       try {
+         const parts = new Intl.DateTimeFormat('en-GB', {
+           timeZone: 'Asia/Tehran', hour: '2-digit', minute: '2-digit', hour12: false,
+         }).formatToParts(new Date());
+         const get = (t) => parts.find((p) => p.type === t)?.value || '00';
+         return `${get('hour')}:${get('minute')}`;
+       } catch {
+         const now = new Date();
+         return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+       }
+     };
+
+     const inRange = () => {
+       const start = user?.schedule_start_time;
+       const end = user?.schedule_end_time;
+       if (!start || !end) return true;
+       const now = tehranNow();
+       return start <= end ? (now >= start && now <= end) : (now >= start || now <= end);
+     };
+
+     const tick = () => {
+       if (refreshingRef.current) return;
+       if (!inRange()) return;
+       // اگر سرور به‌تازگی رفرش کرده (کرون/schedule:work زنده است)، دخالت نکن
+       const last = lastRefreshRef.current ? new Date(lastRefreshRef.current).getTime() : 0;
+       if (Date.now() - last < intervalMs) return;
+       handleRefresh();
+     };
+
+     const t = setTimeout(tick, 5000);
+     const iv = setInterval(tick, intervalMs);
+     return () => {
+       clearTimeout(t);
+       clearInterval(iv);
+     };
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [user?.is_admin, user?.schedule_enabled, user?.has_api_keys, user?.schedule_start_time, user?.schedule_end_time, schedTotalSeconds]);
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800">
@@ -340,6 +409,16 @@ export function Header() {
                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-2" />
                   </>
                 )}
+
+                <button
+                  onClick={() => { navigate('/notification-status'); setShowSettings(false); }}
+                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-brand-500/10 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300">
+                    <Activity className="w-3.5 h-3.5 text-brand-500" />
+                    وضعیت نوتیفیکیشن
+                  </span>
+                </button>
 
                 {/* تنظیمات */}
                 <button

@@ -104,6 +104,7 @@ $envLines = @(
     "",
     "BROADCAST_DRIVER=log",
     "CACHE_DRIVER=file",
+    "CACHE_STORE=file",
     "FILESYSTEM_DISK=local",
     "QUEUE_CONNECTION=sync",
     "SESSION_DRIVER=database",
