@@ -157,23 +157,30 @@ class CrossoverDetectionService
                 'direction' => $crossDirection,
             ]);
 
+            // ستون symbol فقط ۲۰ کاراکتر است؛ MySQL سخت‌گیر هاست اشتراکی رشته بلند را رد
+            // می‌کند (لوکال فقط truncate می‌کند). مثل test-notification کوتاه می‌کنیم.
+            $safeSymbol = mb_substr((string) $item->symbol, 0, 20);
+            $safeSource = $item->portfolio->name ?? null;
+            if ($safeSource !== null) {
+                $safeSource = mb_substr((string) $safeSource, 0, 255);
+            }
             try {
                 $notification = CrossoverNotification::create([
                     'user_id' => $user->id,
-                    'symbol' => $item->symbol,
+                    'symbol' => $safeSymbol,
                     'level_type' => $level,
                     'level_value' => $levelValue,
                     'price_at_trigger' => $newPrice,
                     'old_price' => $oldPrice,
                     'direction' => $crossDirection,
-                    'source' => $item->portfolio->name ?? null,
+                    'source' => $safeSource,
                     'detected_at' => now()->timezone('Asia/Tehran'),
                 ]);
 
                 $detected[] = [
                     'id' => $notification->id,
-                    'symbol' => $item->symbol,
-                    'source' => $item->portfolio->name ?? null,
+                    'symbol' => $safeSymbol,
+                    'source' => $safeSource,
                     'level' => $level,
                     'level_value' => $levelValue,
                     'price' => $newPrice,
@@ -188,6 +195,48 @@ class CrossoverDetectionService
                     'level' => $level,
                     'error' => $e->getMessage(),
                 ]);
+                // فال‌بک خام مثل test-notification که روی همین هاست جواب داده
+                try {
+                    $nowStr = now()->timezone('Asia/Tehran')->format('Y-m-d H:i:s');
+                    $rawData = [
+                        'user_id' => $user->id,
+                        'symbol' => $safeSymbol,
+                        'level_type' => $level,
+                        'level_value' => $levelValue,
+                        'price_at_trigger' => $newPrice,
+                        'old_price' => $oldPrice,
+                        'direction' => $crossDirection,
+                        'detected_at' => $nowStr,
+                        'created_at' => $nowStr,
+                        'updated_at' => $nowStr,
+                    ];
+                    if (Schema::hasColumn('crossover_notifications', 'source')) {
+                        $rawData['source'] = $safeSource;
+                    }
+                    $rawId = DB::table('crossover_notifications')->insertGetId($rawData);
+                    $detected[] = [
+                        'id' => $rawId,
+                        'symbol' => $safeSymbol,
+                        'source' => $safeSource,
+                        'level' => $level,
+                        'level_value' => $levelValue,
+                        'price' => $newPrice,
+                        'old_price' => $oldPrice,
+                        'direction' => $crossDirection,
+                    ];
+                    $this->debugLog('Created crossover via raw fallback', [
+                        'id' => $rawId,
+                        'symbol' => $safeSymbol,
+                        'level' => $level,
+                    ]);
+                } catch (\Throwable $e2) {
+                    $this->debugLog('CREATE FAILED (raw fallback too)', [
+                        'user_id' => $user->id,
+                        'symbol' => $item->symbol,
+                        'level' => $level,
+                        'error' => $e2->getMessage(),
+                    ]);
+                }
             }
         }
 
@@ -293,10 +342,11 @@ class CrossoverDetectionService
                 continue;
             }
 
+            $safeSymbol = mb_substr((string) $levelRecord->symbol, 0, 20);
             try {
                 $notification = CrossoverNotification::create([
                     'user_id' => $user->id,
-                    'symbol' => $levelRecord->symbol,
+                    'symbol' => $safeSymbol,
                     'level_type' => $level,
                     'level_value' => $levelValue,
                     'price_at_trigger' => $newPrice,
@@ -307,7 +357,7 @@ class CrossoverDetectionService
 
                 $detected[] = [
                     'id' => $notification->id,
-                    'symbol' => $levelRecord->symbol,
+                    'symbol' => $safeSymbol,
                     'level' => $level,
                     'level_value' => $levelValue,
                     'price' => $newPrice,
@@ -322,6 +372,42 @@ class CrossoverDetectionService
                     'level' => $level,
                     'error' => $e->getMessage(),
                 ]);
+                try {
+                    $nowStr = now()->timezone('Asia/Tehran')->format('Y-m-d H:i:s');
+                    $rawId = DB::table('crossover_notifications')->insertGetId([
+                        'user_id' => $user->id,
+                        'symbol' => $safeSymbol,
+                        'level_type' => $level,
+                        'level_value' => $levelValue,
+                        'price_at_trigger' => $newPrice,
+                        'old_price' => $oldPrice,
+                        'direction' => $crossDirection,
+                        'detected_at' => $nowStr,
+                        'created_at' => $nowStr,
+                        'updated_at' => $nowStr,
+                    ]);
+                    $detected[] = [
+                        'id' => $rawId,
+                        'symbol' => $safeSymbol,
+                        'level' => $level,
+                        'level_value' => $levelValue,
+                        'price' => $newPrice,
+                        'old_price' => $oldPrice,
+                        'direction' => $crossDirection,
+                    ];
+                    $this->debugLog('Created crossover (symbol level) via raw fallback', [
+                        'id' => $rawId,
+                        'symbol' => $safeSymbol,
+                        'level' => $level,
+                    ]);
+                } catch (\Throwable $e2) {
+                    $this->debugLog('CREATE FAILED (symbol level raw fallback too)', [
+                        'user_id' => $user->id,
+                        'symbol' => $levelRecord->symbol,
+                        'level' => $level,
+                        'error' => $e2->getMessage(),
+                    ]);
+                }
             }
         }
 
