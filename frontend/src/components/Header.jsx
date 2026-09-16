@@ -10,14 +10,14 @@ import { stockApi } from '../lib/api';
 import api from '../lib/api';
 import { NotificationHistoryMenu } from './NotificationHistoryMenu';
 
-function UserRefreshBadge({ lastRefresh, stale, isInScheduleRange }) {
+function UserRefreshBadge({ lastRefresh, stale, isInScheduleRange, refreshError }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const hasIssue = stale || !isInScheduleRange;
 
   const tooltipText = !isInScheduleRange
     ? 'بازار بسته است — بروزرسانی خودکار تا باز شدن بازار متوقف شده است.'
     : stale
-    ? 'داده‌ها قدیمی هستند — آخرین بروزرسانی با مشکل مواجه شد.'
+    ? `داده‌ها قدیمی هستند — آخرین بروزرسانی با مشکل مواجه شد.${refreshError ? ` ${refreshError}` : ''}`
     : null;
 
   return (
@@ -61,6 +61,7 @@ export function Header() {
    const [refreshing, setRefreshing] = useState(false);
    const refreshingRef = useRef(false);
    const lastRefreshRef = useRef(null);
+   const [refreshError, setRefreshError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(null);
   const [isInScheduleRange, setIsInScheduleRange] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -175,14 +176,17 @@ export function Header() {
            })
            .catch(() => {});
        }
-       window.dispatchEvent(new Event('prices-refreshed'));
-       setStale(false);
+        window.dispatchEvent(new Event('prices-refreshed'));
+        setStale(false);
+        setRefreshError('');
        api.put('/user/stale', { is_stale: false });
        updateUser({ ...user, is_stale: false });
-     } catch (err) {
-       setStale(true);
-       api.put('/user/stale', { is_stale: true });
-       updateUser({ ...user, is_stale: true });
+      } catch (err) {
+        setStale(true);
+        const msg = err.response?.data?.message || err.message || 'خطای نامشخص';
+        setRefreshError(`(${err.response?.status || '؟'}) ${msg}`);
+        api.put('/user/stale', { is_stale: true });
+        updateUser({ ...user, is_stale: true });
       } finally {
         refreshingRef.current = false;
         setRefreshing(false);
@@ -297,6 +301,7 @@ export function Header() {
                 lastRefresh={lastRefresh}
                 stale={stale}
                 isInScheduleRange={isInScheduleRange}
+                refreshError={refreshError}
               />
             )
           )}

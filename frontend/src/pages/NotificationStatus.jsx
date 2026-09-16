@@ -77,6 +77,9 @@ export default function NotificationStatus() {
   const [forceResult, setForceResult] = useState(null);
   const [forceLoading, setForceLoading] = useState(false);
   const [forceError, setForceError] = useState('');
+  const [tableResult, setTableResult] = useState(null);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState('');
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -109,6 +112,25 @@ export default function NotificationStatus() {
       setForceError(message || 'اجرای اجباری ناموفق بود');
     } finally {
       setForceLoading(false);
+    }
+  }, [fetchStatus]);
+
+  // تست مستقیم جدول: بدون هیچ منطق کراسی، یک رکورد واقعی insert می‌زند.
+  // اگر این موفق شود ولی کراس واقعی ثبت نشود → مشکل از منطق تشخیص است.
+  // اگر این هم خطا بدهد → مشکل از خود دیتابیس است (متن خطای SQL نمایش داده می‌شود).
+  const runTableTest = useCallback(async () => {
+    setTableLoading(true);
+    setTableError('');
+    setTableResult(null);
+    try {
+      const res = await api.post('/debug/test-notification', { symbol: 'TEST', level_type: 'resistance_1', level_value: 1000, price: 1005 });
+      setTableResult(res.data);
+      fetchStatus();
+    } catch (err) {
+      const message = err.response?.data?.message || err.response?.data?.error || err.message;
+      setTableError(message || 'تست جدول ناموفق بود');
+    } finally {
+      setTableLoading(false);
     }
   }, [fetchStatus]);
 
@@ -151,6 +173,15 @@ export default function NotificationStatus() {
         >
           <BellRing className={`w-3.5 h-3.5 ${forceLoading ? 'animate-spin' : ''}`} />
           {forceLoading ? 'در حال اجرا...' : 'اجرای اجباری کراس'}
+        </button>
+        <button
+          type="button"
+          onClick={runTableTest}
+          disabled={tableLoading}
+          className="text-xs py-2 px-3 rtl-text flex items-center gap-1.5 rounded-xl bg-warning/10 text-warning hover:bg-warning/20 font-bold"
+        >
+          <Database className={`w-3.5 h-3.5 ${tableLoading ? 'animate-spin' : ''}`} />
+          {tableLoading ? 'در حال تست...' : 'تست مستقیم جدول'}
         </button>
       </div>
 
@@ -232,6 +263,27 @@ export default function NotificationStatus() {
           <div>
             <p className="font-medium">خطا در اجرای اجباری:</p>
             <p className="text-[10px] mt-1 opacity-80 break-words">{forceError}</p>
+          </div>
+        </div>
+      )}
+
+      {tableError && (
+        <div className="bg-danger/5 border border-danger/20 text-danger rounded-xl p-3 flex items-start gap-2 text-xs rtl-text">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">تست مستقیم جدول ناموفق بود (مشکل دیتابیس):</p>
+            <p className="text-[10px] mt-1 opacity-80 break-words" dir="ltr">{tableError}</p>
+          </div>
+        </div>
+      )}
+
+      {tableResult && (
+        <div className="card p-4 border-success/30">
+          <div className="flex items-center gap-2" dir="rtl">
+            <CheckCircle2 className="w-4 h-4 text-success" />
+            <p className="text-xs text-slate-700 dark:text-slate-200 rtl-text">
+              {tableResult.message} (روش: {tableResult.method}) — رکورد #{tableResult.data?.id} ساخته شد. اگر زنگوله آن را نشان می‌دهد، جدول و نمایش سالم‌اند.
+            </p>
           </div>
         </div>
       )}
